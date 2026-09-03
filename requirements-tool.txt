@@ -1,0 +1,6 @@
+av>=14
+huggingface_hub>=0.34
+numpy>=2.0
+Pillow>=11
+requests>=2.32
+scipy>=1.14

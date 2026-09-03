@@ -1,0 +1,27 @@
+# Local runtime and third-party checkout
+.venv/
+ComfyUI/
+__pycache__/
+*.py[cod]
+
+# Large downloaded models and partial downloads
+*.safetensors
+*.gguf
+*.ckpt
+*.pt
+*.pth
+*.part
+
+# Generated/user data
+outputs/
+logs/
+sample/
+
+# Authorization is machine/user specific and must never be distributed
+MINIMAX_H3_LICENSE_APPROVED.txt
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
