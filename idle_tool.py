@@ -22,6 +22,7 @@ import numpy as np
 import requests
 from PIL import Image
 from scipy import ndimage
+from subject_prompts import SUBJECT_DEFAULTS, subject_constraints
 
 
 ROOT = Path(__file__).resolve().parent
@@ -149,7 +150,7 @@ def frame_length(seconds: float) -> int:
 
 
 ANIMATION_DEFAULTS = {
-    "idle": "gentle breathing, subtle blinking, slight hair and clothing sway, feet remain planted",
+    "idle": "one very slow shallow breathing cycle, barely perceptible movement of the upper torso, tiny secondary movement at hair tips and clothing hems, feet stay at their original screen coordinates",
     "walk": "walk cycle in place, alternating steps, natural arm swing, consistent rhythm",
     "run": "run cycle in place, energetic alternating strides and arm swing",
     "attack": "one clear weapon attack, readable anticipation, strike and follow-through",
@@ -170,37 +171,115 @@ FACING_PROMPTS = {
 }
 
 
-def animation_prompt(user_prompt: str, animation_type: str, loop: bool, facing: str = "preserve") -> str:
+MOTION_PROMPTS = {
+    'low': 'Use restrained but visible movement with small joint excursions and minimal secondary motion.',
+    'normal': 'Use clearly visible, natural movement readable at game-sprite scale, with moderate joint excursions and delayed follow-through of hair tips and clothing hems.',
+    'high': 'Use pronounced, controlled movement with larger joint excursions and clear anticipation and follow-through; keep the entire character and equipment inside the canvas.',
+}
+ANIMATION_DEFAULTS['idle'] = 'one slow breathing cycle with a visible rise and fall of the shoulders and chest, a small lateral weight shift through the hips, hair tips and clothing hems follow the body with a slight delay, both feet remain planted at their original screen coordinates'
+
+LEGACY_IDLE_PROMPTS = {
+    ANIMATION_DEFAULTS['idle'],
+    'one very slow shallow breathing cycle, barely perceptible movement of the upper torso, tiny secondary movement at hair tips and clothing hems, feet stay at their original screen coordinates',
+    'gentle breathing, subtle blinking, slight hair and clothing sway, feet remain planted',
+}
+ANIMATION_DEFAULTS['idle'] = 'continuous rhythmic breathing with a visible rise and fall of the shoulders and chest, ongoing small lateral weight shifts through the hips, hair tips and clothing hems follow the body with a slight delay throughout the clip, both feet remain planted at their original screen coordinates'
+PROMPT_REVISION = 'sprite-motion-v6-subject-types'
+DEFAULT_NEGATIVE = 'scenery, textured background, changing background'
+
+
+def guidance_options(payload):
+    enabled = payload.get('negativeEnabled', False)
+    if not isinstance(enabled, bool):
+        raise ValueError('네거티브 사용 여부는 체크박스로 선택하세요.')
+    if not enabled:
+        return False, '', 1.0
+    negative = payload.get('negativePrompt', DEFAULT_NEGATIVE)
+    cfg = payload.get('cfgScale', 1.5)
+    if not isinstance(negative, str) or not negative.strip() or len(negative)>2000:
+        raise ValueError('네거티브 프롬프트는 1~2000자로 입력하세요.')
+    if isinstance(cfg,bool) or not isinstance(cfg,(int,float)) or not 1.1<=cfg<=2.0:
+        raise ValueError('실험 CFG는 1.1~2.0 사이여야 합니다.')
+    return True, negative.strip(), float(cfg)
+
+
+def animation_prompt(user_prompt: str, animation_type: str, loop: bool, facing: str = "preserve",
+                     seconds: float = 5, flat_background: bool = False, blink_mode: str = 'none',
+                     motion_strength: str = 'normal', subject_type: str = 'human') -> str:
+    if subject_type not in ('human', *SUBJECT_DEFAULTS):
+        raise ValueError('잘못된 대상 유형입니다.')
+    if motion_strength not in MOTION_PROMPTS:
+        raise ValueError('잘못된 움직임 강도입니다.')
     animation_type = animation_type if animation_type in ANIMATION_DEFAULTS else "custom"
-    detail = user_prompt.strip() or ANIMATION_DEFAULTS[animation_type]
-    cycle = (
-        "The motion is rhythmic and the final pose, position and silhouette match the opening pose for a seamless loop."
-        if loop else
-        "Perform the action once with a clear readable progression and a distinct final pose. Do not repeat the action."
-    )
+    defaults = ANIMATION_DEFAULTS if subject_type == 'human' else SUBJECT_DEFAULTS[subject_type]
+    detail = user_prompt.strip() or defaults[animation_type]
+    if subject_type == 'human' and animation_type == 'idle' and detail in LEGACY_IDLE_PROMPTS:
+        # Old browser tabs may still submit the former default verbatim.
+        detail = ANIMATION_DEFAULTS['idle']
+    # Keep timestamps consistent with ComfyUI's 17k+5 frame grid.
+    duration = frame_length(seconds) / 24
+    alignment = f'<Picture 1> supplies the complete opening image of [Shot 1] at 0.00 seconds.'
+    if loop:
+        alignment += f' <Picture 2> supplies its closing image at {duration:.2f} seconds; both images show the same composition.'
+    cycle = (f'The movement eases out from the opening pose, develops through a readable motion arc, and settles back into the pose in <Picture 2> by {duration:.2f} seconds. '
+             'The closing character scale and placement match the opening for a seamless loop.' if loop else
+             'The action happens once: readable preparation, execution, then a settled final pose. The viewpoint stays unchanged.')
+    if animation_type == 'idle':
+        cycle = (f'This is a continuous idle motion already in progress at 0.00 seconds and still in progress at {duration:.2f} seconds. '
+                 'Maintain an even breathing rhythm and consistent motion amplitude throughout the entire clip, including its final two seconds. '
+                 'Motion flows through the ending without a finishing gesture, slowdown, or held resting pose. ')
+        if loop:
+            cycle += ('The closing pose matches <Picture 2> at the same phase of the ongoing motion as the opening; '
+                      'movement direction and speed connect smoothly across the loop boundary. '
+                      'The closing character scale and placement match the opening for a seamless loop.')
     facing_prompt = FACING_PROMPTS.get(facing, FACING_PROMPTS["preserve"])
-    return (
-        f"Game character {animation_type} animation. Use <Picture 1> as the exact character and design reference. "
-        "Locked static camera, fixed framing and fixed scale; keep the complete character visible with safety margin. "
-        "Preserve face, anatomy, costume, equipment, colors, silhouette and background consistently in every frame. "
-        f"{facing_prompt} Motion: {detail}. {cycle} "
-        "No camera motion, no zoom, no pan, no cut, no scene change, no morphing, no extra limbs or duplicated equipment. "
-        "Audio: silence."
+    background = (
+        'The character is a separate illustrated element over a perfectly flat, uniform medium-gray color field matching the input matte. '
+        'This gray field fills every exposed area around and between the moving limbs, with the same color and brightness from edge to edge in every frame. '
+        'It is a featureless two-dimensional color layer, not a physical location. '
+        if flat_background else
+        'The background already visible in the opening image stays unchanged in layout, colors and brightness; only the character animates. '
     )
+    eyes = ('The eyelids and visible eye shapes stay exactly as drawn in the opening image throughout the clip; gaze stays fixed. '
+            'No blinking or repeated facial expressions. ' if blink_mode == 'none' else
+            'Allow at most one brief natural blink near the middle of the clip; otherwise retain the opening eye shape and gaze. ')
+    anatomy = 'The opening character size, screen placement, head-to-body proportions, costume, equipment, linework and painted shading are retained. '
+    constraints = facing_prompt + ' ' + eyes + 'The mouth keeps its original shape without speaking. '
+    motion = MOTION_PROMPTS[motion_strength]
+    if subject_type != 'human':
+        anatomy = 'The original subject scale, composition, silhouette, component proportions, linework and painted shading are retained. '
+        constraints, motion = subject_constraints(subject_type, facing, motion_strength, blink_mode, animation_type)
+        cycle = cycle.replace('breathing rhythm', 'motion rhythm')
+        background = background.replace('moving limbs', 'moving parts')
+    return (alignment + '\n\n'
+        'integrated_multimodal_description: [Shot 1] A single continuous game-sprite animation retaining the exact illustration style of the input. '
+        + anatomy + 'The camera holds a static shot throughout: identical framing and magnification, with the full character remaining inside the original canvas. '
+        + background + 'The colors and shading painted on the character remain stable; illumination does not change. '
+        + constraints
+        + f'Subject movement only: {detail}. ' + motion + ' ' + cycle
+        + '\n\noverall_soundscape: N/A\n\nnon_diegetic_music: N/A')
 
 
 def build_workflow(image_name: str, prompt: str, seconds: float, width: int, height: int, seed: int,
-                   animation_type: str = "idle", loop: bool = True, facing: str = "preserve") -> dict:
+                   animation_type: str = "idle", loop: bool = True, facing: str = "preserve",
+                   flat_background: bool = False, blink_mode: str = 'none',
+                   negative_enabled: bool = False, negative_prompt: str = DEFAULT_NEGATIVE,
+                   cfg_scale: float = 1.5, sampling_mode: str = 'quality', motion_strength: str = 'normal',
+                   subject_type: str = 'human') -> dict:
+    if sampling_mode not in ('quality','turbo'):
+        raise ValueError('잘못된 생성 모드입니다.')
+    negative_enabled, negative_prompt, cfg_scale = guidance_options({
+        'negativeEnabled': negative_enabled, 'negativePrompt': negative_prompt, 'cfgScale': cfg_scale})
     video_inputs = {
         "clip": ["3", 0], "vae": ["4", 0], "first_frame": ["1", 0],
-        "prompt": animation_prompt(prompt, animation_type, loop, facing),
+        "prompt": animation_prompt(prompt, animation_type, loop, facing, seconds, flat_background, blink_mode, motion_strength, subject_type),
         "width": width, "height": height, "length": frame_length(seconds),
     }
     # A matching final reference strongly biases cyclic actions toward a closed loop.
     # One-shot actions intentionally omit it so they can end in a different pose.
     if loop:
         video_inputs["last_frame"] = ["1", 0]
-    return {
+    workflow = {
         "1": {"class_type": "LoadImage", "inputs": {"image": image_name}},
         "2": {"class_type": "UNETLoader", "inputs": {
             "unet_name": MODEL_FILES["diffusion"].name, "weight_dtype": "default"}},
@@ -226,6 +305,21 @@ def build_workflow(image_name: str, prompt: str, seconds: float, width: int, hei
         "16": {"class_type": "SaveVideo", "inputs": {
             "video": ["15", 0], "filename_prefix": "h3_idle/idle", "format": "mp4", "codec": {"codec": "h264"}}},
     }
+    if negative_enabled:
+        # Both branches must retain identical image order, keyframes and AV geometry.
+        negative_inputs = dict(video_inputs)
+        alignment = video_inputs['prompt'].split('\n\n',1)[0]
+        negative_inputs['prompt'] = (alignment + '\n\nintegrated_multimodal_description: [Shot 1] '
+            + negative_prompt + '\n\noverall_soundscape: N/A\n\nnon_diegetic_music: N/A')
+        workflow['17'] = {'class_type': 'MiniMaxH3ImageToVideo', 'inputs': negative_inputs}
+        workflow['11'] = {'class_type': 'CFGGuider', 'inputs': {
+            'model': ['7',0], 'positive': ['6',0], 'negative': ['17',0], 'cfg': cfg_scale}}
+    if sampling_mode == 'quality':
+        workflow.pop('7')
+        workflow['10']['inputs']['model'] = ['2',0]
+        workflow['10']['inputs']['steps'] = 20
+        workflow['11']['inputs']['model'] = ['2',0]
+    return workflow
 
 
 def find_saved_video(history: dict) -> Path:
@@ -250,7 +344,26 @@ def find_saved_video(history: dict) -> Path:
     return path
 
 
-def make_sprite_sheet(video_path: Path, output_path: Path, count: int, loop: bool = True) -> None:
+def remove_flat_background(image: Image.Image, tolerance: int = 24) -> Image.Image:
+    """Remove only border-connected colors close to the median border color."""
+    rgba = np.array(image.convert("RGBA"))
+    rgb = rgba[:, :, :3].astype(np.float32)
+    border = np.concatenate((rgb[0], rgb[-1], rgb[:, 0], rgb[:, -1]))
+    color = np.median(border, axis=0)
+    distance = np.max(np.abs(rgb - color), axis=2)
+    candidate = distance <= tolerance
+    seed = np.zeros(candidate.shape, dtype=bool)
+    seed[0] = candidate[0]
+    seed[-1] = candidate[-1]
+    seed[:, 0] = candidate[:, 0]
+    seed[:, -1] = candidate[:, -1]
+    background = ndimage.binary_propagation(seed, mask=candidate)
+    rgba[background, 3] = 0
+    return Image.fromarray(rgba)
+
+
+def make_sprite_sheet(video_path: Path, output_path: Path, count: int, loop: bool = True,
+                      transparent_path: Path | None = None, tolerance: int = 24) -> None:
     container = av.open(str(video_path))
     frames = [frame.to_image().convert("RGBA") for frame in container.decode(video=0)]
     container.close()
@@ -272,6 +385,12 @@ def make_sprite_sheet(video_path: Path, output_path: Path, count: int, loop: boo
         sheet.alpha_composite(image, (x, y))
     output_path.parent.mkdir(parents=True, exist_ok=True)
     sheet.save(output_path, optimize=True)
+    if transparent_path is not None:
+        transparent = Image.new("RGBA", sheet.size, (0, 0, 0, 0))
+        for index, image in enumerate(selected):
+            transparent.alpha_composite(remove_flat_background(image, tolerance),
+                                        ((index % columns) * cell_w, (index // columns) * cell_h))
+        transparent.save(transparent_path, optimize=True)
 
 
 def _subject_bbox(image: Image.Image) -> tuple[int, int, int, int]:
@@ -392,8 +511,6 @@ def run_job(job_id: str, payload: dict) -> None:
         loop = bool(payload.get("loop", animation_type in {"idle", "walk", "run", "jump"}))
         facing = str(payload.get("facing", "preserve"))
         prompt = str(payload.get("prompt", ""))
-        if had_transparency:
-            prompt += ", perfectly uniform neutral gray background, identical in every frame, no lighting or background changes"
         workflow = build_workflow(
             image_name,
             prompt,
@@ -404,7 +521,28 @@ def run_job(job_id: str, payload: dict) -> None:
             animation_type,
             loop,
             facing,
+            flat_background=had_transparency,
+            blink_mode=payload.get('blinkMode','none'),
+            motion_strength=payload.get('motionStrength','normal'),
+            subject_type=payload.get('subjectType','human'),
+            negative_enabled=payload.get('negativeEnabled',False),
+            negative_prompt=payload.get('negativePrompt',DEFAULT_NEGATIVE),
+            cfg_scale=payload.get('cfgScale',1.5),
+            sampling_mode=payload.get('samplingMode','quality'),
         )
+        # Local audit record for reproducible comparisons; never part of the public gallery.
+        (result_dir / 'generation_prompt.json').write_text(json.dumps({
+            'revision': PROMPT_REVISION, 'seed': seed, 'prompt': workflow['6']['inputs']['prompt'],
+            'width': width, 'height': height, 'length': workflow['6']['inputs']['length'],
+            'flatBackground': had_transparency, 'blinkMode': payload.get('blinkMode','none'),
+            'motionStrength': payload.get('motionStrength','normal'),
+            'subjectType': payload.get('subjectType','human'),
+            'negativeEnabled': '17' in workflow,
+            'samplingMode': payload.get('samplingMode','quality'),
+            'steps': workflow['10']['inputs']['steps'],
+            'negativePrompt': workflow.get('17',{}).get('inputs',{}).get('prompt'),
+            'cfgScale': workflow['11']['inputs'].get('cfg',1.0),
+        },ensure_ascii=False,indent=2),encoding='utf-8')
         response = requests.post(f"{COMFY_URL}/prompt", json={"prompt": workflow}, timeout=60)
         if not response.ok:
             raise RuntimeError(f"ComfyUI rejected workflow: {response.text[:2000]}")
@@ -439,7 +577,9 @@ def run_job(job_id: str, payload: dict) -> None:
             shutil.copy2(raw_video_path, video_path)
         update_job(job_id, state="packing", message="프레임을 골라 스프라이트 시트로 패킹 중")
         sheet_path = result_dir / f"{animation_type}_sprite_sheet.png"
-        make_sprite_sheet(video_path, sheet_path, int(payload.get("frameCount", 8)), loop)
+        transparent_path = result_dir / f"{animation_type}_transparent.png" if payload.get("removeBackground", False) else None
+        make_sprite_sheet(video_path, sheet_path, int(payload.get("frameCount", 8)), loop,
+                          transparent_path, int(payload.get("backgroundTolerance", 24)))
         update_job(
             job_id,
             state="complete",
@@ -447,6 +587,7 @@ def run_job(job_id: str, payload: dict) -> None:
             video=f"/outputs/results/{job_id}/{animation_type}.mp4",
             rawVideo=f"/outputs/results/{job_id}/{animation_type}_raw.mp4",
             spriteSheet=f"/outputs/results/{job_id}/{animation_type}_sprite_sheet.png",
+            transparentSheet=f"/outputs/results/{job_id}/{animation_type}_transparent.png" if transparent_path else None,
             seed=seed,
             animationType=animation_type,
             loop=loop,

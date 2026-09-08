@@ -15,7 +15,9 @@ __pycache__/
 # Generated/user data
 outputs/
 logs/
+team-server*.log
 sample/
+data/
 
 # Authorization is machine/user specific and must never be distributed
 MINIMAX_H3_LICENSE_APPROVED.txt
