@@ -16,6 +16,35 @@ import team_server as server
 HEADERS={'X-Sprite-Request':'1'}
 
 class TeamTests(unittest.TestCase):
+    def test_video_poster_cached_and_deleted(self):
+        jid=self.post(self.admin,'generate',**self.payload).json['jobId']
+        root=self.data/'poster-results';folder=root/jid;folder.mkdir(parents=True)
+        video=folder/'idle.mp4'
+        with server.engine.av.open(str(video),mode='w') as container:
+            stream=container.add_stream('libx264',rate=24)
+            stream.width=640;stream.height=800;stream.pix_fmt='yuv420p'
+            frame=server.engine.av.VideoFrame.from_image(Image.new('RGB',(640,800),'red'))
+            for packet in stream.encode(frame): container.mux(packet)
+            for packet in stream.encode(): container.mux(packet)
+        with closing(sqlite3.connect(self.data/'team.sqlite3')) as con:
+            con.execute("UPDATE jobs SET state='complete',result=? WHERE id=?",
+                        (json.dumps(dict(video=f'/outputs/results/{jid}/idle.mp4')),jid))
+            con.commit()
+        with patch.object(server.engine,'RESULT_ROOT',root):
+            url=self.guest.get('/api/gallery').json['jobs'][0]['poster']
+            response=self.guest.get(url)
+            self.assertEqual(response.status_code,200)
+            self.assertEqual(response.mimetype,'image/jpeg')
+            with Image.open(io.BytesIO(response.data)) as image:
+                self.assertEqual(image.size,(384,480))
+            response.close()
+            with patch.object(server.engine,'video_thumbnail',side_effect=AssertionError('cache missed')):
+                cached=self.guest.get(url)
+                self.assertEqual(cached.status_code,200)
+                cached.close()
+            self.post(self.admin,'jobs/'+jid+'/delete')
+            self.assertEqual(self.guest.get(url).status_code,404)
+
     def test_gallery_pages(self):
         with closing(sqlite3.connect(self.data/'team.sqlite3')) as con:
             uid=con.execute('SELECT id FROM users LIMIT 1').fetchone()[0]

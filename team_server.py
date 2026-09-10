@@ -245,20 +245,42 @@ def create_app(data_dir=None, runner=None):
             result=json.loads(row['result'] or '{}')
             p=json.loads(row['payload'])
             items.append(dict(id=row['id'],created=row['created'],animationType=p.get('animationType','idle'),
+                poster=f'/gallery-media/{row["id"]}/poster' if result.get('video') else None,
                 exportSheets={k:f'/gallery-media/{row["id"]}/{k}' for k in result.get('exportSheets',{})},
                 **{k:f'/gallery-media/{row["id"]}/{k}' if result.get(k) else None for k in ('video','spriteSheet','transparentSheet')}))
             if approved:
                 items[-1].update(owner=row['name'],userId=row['user_id'],rawVideo=result.get('rawVideo'))
         return jsonify(jobs=items,page=page,pages=pages,total=total)
 
+    poster_lock=threading.Lock()
+
     @app.get('/gallery-media/<jid>/<kind>')
     def public_result(jid,kind):
         # Only presentation assets are public, never rawVideo or input images.
-        if kind not in ('video','spriteSheet','transparentSheet') and not re.fullmatch(r'sheet_[0-9]+_[0-9a-f]{16}',kind):
+        if kind not in ('video','spriteSheet','transparentSheet','poster') and not re.fullmatch(r'sheet_[0-9]+_[0-9a-f]{16}',kind):
             return jsonify(error='결과를 찾을 수 없습니다.'),404
         with db() as con:
             row=con.execute("SELECT result FROM jobs WHERE id=? AND state='complete'",(jid,)).fetchone()
         result=json.loads(row['result'] or '{}') if row else {}
+        if kind=='poster':
+            relative=result.get('video','')
+            if not relative.startswith(f'/outputs/results/{jid}/'):
+                return jsonify(error='영상이 없습니다.'),404
+            folder=(engine.RESULT_ROOT/jid).resolve()
+            video=(folder/Path(relative).name).resolve()
+            cached=(folder/'gallery-poster-v1.jpg').resolve()
+            if (not folder.is_relative_to(engine.RESULT_ROOT.resolve()) or
+                not video.is_relative_to(folder) or not cached.is_relative_to(folder) or not video.is_file()):
+                return jsonify(error='영상 파일이 없습니다.'),404
+            try:
+                with poster_lock:
+                    if not cached.is_file():
+                        content=engine.video_thumbnail(video)
+                        cached.write_bytes(content)
+            except Exception:
+                app.logger.exception('Gallery thumbnail failed')
+                return jsonify(error='썸네일을 만들 수 없습니다.'),500
+            return send_file(cached,mimetype='image/jpeg',conditional=True,max_age=0)
         relative=result.get('exportSheets',{}).get(kind) if kind.startswith('sheet_') else result.get(kind)
         if not relative or not relative.startswith(f'/outputs/results/{jid}/'):
             return jsonify(error='결과를 찾을 수 없습니다.'),404

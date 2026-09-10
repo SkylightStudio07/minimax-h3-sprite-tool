@@ -365,6 +365,19 @@ def remove_flat_background(image: Image.Image, tolerance: int = 24) -> Image.Ima
     return Image.fromarray(rgba)
 
 
+def video_thumbnail(video_path: Path) -> bytes:
+    """Decode only the first frame; no model inference or full-video loading."""
+    with av.open(str(video_path)) as container:
+        frame = next(container.decode(video=0), None)
+        if frame is None:
+            raise ValueError("Video contains no frames.")
+        preview = frame.to_image().convert("RGB")
+        preview.thumbnail((480, 480), Image.Resampling.LANCZOS)
+        buffer = io.BytesIO()
+        preview.save(buffer, format="JPEG", quality=82)
+        return buffer.getvalue()
+
+
 def make_sprite_sheet(video_path: Path, output_path: Path, count: int, loop: bool = True,
                       transparent_path: Path | None = None, tolerance: int = 24) -> None:
     container = av.open(str(video_path))
