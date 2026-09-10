@@ -229,24 +229,37 @@ def create_app(data_dir=None, runner=None):
 
     @app.get('/api/gallery')
     def public_gallery():
+        try:
+            page=max(1,int(request.args.get('page','1')))
+        except ValueError:
+            raise ValueError('페이지 번호는 정수여야 합니다.')
         with db() as con:
-            rows=con.execute("SELECT id,created,payload,result FROM jobs WHERE state='complete' ORDER BY created DESC").fetchall()
+            total=con.execute("SELECT count(*) FROM jobs WHERE state='complete'").fetchone()[0]
+            pages=max(1,(total+5)//6)
+            page=min(page,pages)
+            viewer=con.execute("SELECT state FROM users WHERE id=?",(session.get('uid'),)).fetchone()
+            approved=viewer and viewer['state']=='approved'
+            rows=con.execute("SELECT j.*,u.name FROM jobs j JOIN users u ON u.id=j.user_id WHERE j.state='complete' ORDER BY j.created DESC,j.id DESC LIMIT 6 OFFSET ?",((page-1)*6,)).fetchall()
         items=[]
         for row in rows:
             result=json.loads(row['result'] or '{}')
             p=json.loads(row['payload'])
             items.append(dict(id=row['id'],created=row['created'],animationType=p.get('animationType','idle'),
+                exportSheets={k:f'/gallery-media/{row["id"]}/{k}' for k in result.get('exportSheets',{})},
                 **{k:f'/gallery-media/{row["id"]}/{k}' if result.get(k) else None for k in ('video','spriteSheet','transparentSheet')}))
-        return jsonify(jobs=items)
+            if approved:
+                items[-1].update(owner=row['name'],userId=row['user_id'],rawVideo=result.get('rawVideo'))
+        return jsonify(jobs=items,page=page,pages=pages,total=total)
 
     @app.get('/gallery-media/<jid>/<kind>')
     def public_result(jid,kind):
         # Only presentation assets are public, never rawVideo or input images.
-        if kind not in ('video','spriteSheet','transparentSheet'):
+        if kind not in ('video','spriteSheet','transparentSheet') and not re.fullmatch(r'sheet_[0-9]+_[0-9a-f]{16}',kind):
             return jsonify(error='결과를 찾을 수 없습니다.'),404
         with db() as con:
             row=con.execute("SELECT result FROM jobs WHERE id=? AND state='complete'",(jid,)).fetchone()
-        relative=json.loads(row['result'] or '{}').get(kind) if row else None
+        result=json.loads(row['result'] or '{}') if row else {}
+        relative=result.get('exportSheets',{}).get(kind) if kind.startswith('sheet_') else result.get(kind)
         if not relative or not relative.startswith(f'/outputs/results/{jid}/'):
             return jsonify(error='결과를 찾을 수 없습니다.'),404
         target=(engine.RESULT_ROOT/jid/Path(relative).name).resolve()
@@ -295,6 +308,8 @@ def create_app(data_dir=None, runner=None):
         if p.get('samplingMode','quality') not in ('quality','turbo'):
             raise ValueError('잘못된 생성 모드입니다.')
         p.setdefault('samplingMode','quality')
+        if type(p.get('motionPadding',10)) is not int or p.get('motionPadding',10) not in (0,10,20,30):
+            raise ValueError('동작 여백은 0, 10, 20, 30% 중 선택하세요.')
         if p.get('subjectType','human') not in ('human', *engine.SUBJECT_DEFAULTS):
             raise ValueError('잘못된 대상 유형입니다.')
         if p.get('motionStrength','normal') not in engine.MOTION_PROMPTS:
@@ -306,9 +321,9 @@ def create_app(data_dir=None, runner=None):
             raise ValueError('해상도는 32의 배수, 256~2048, 총 1.1MP 이하여야 합니다.')
         frames=p.get('frameCount',8)
         if isinstance(frames,bool) or not isinstance(frames,(int,float)) or (isinstance(frames,float) and not frames.is_integer()):
-            raise ValueError('프레임 수는 2~32 사이 정수여야 합니다.')
-        if not 3<=float(p.get('duration',5))<=5 or not 2<=frames<=32 or len(p.get('prompt',''))>4000:
-            raise ValueError('길이는 3~5초, 시트는 2~32프레임, 설명은 4000자 이하여야 합니다.')
+            raise ValueError('프레임 수는 2~64 사이 정수여야 합니다.')
+        if not 3<=float(p.get('duration',5))<=5 or not 2<=frames<=64 or len(p.get('prompt',''))>4000:
+            raise ValueError('길이는 3~5초, 시트는 2~64프레임, 설명은 4000자 이하여야 합니다.')
         if p.get('facing','preserve') not in engine.FACING_PROMPTS:
             raise ValueError('잘못된 방향입니다.')
         if p.get('blinkMode','none') not in ('none','once'):
@@ -341,6 +356,53 @@ def create_app(data_dir=None, runner=None):
             con.execute('INSERT INTO jobs VALUES(?,?,?,?,?,?,?)',
                         (jid,request.team_user['id'],'queued',time.time(),time.time(),json.dumps(p),json.dumps({'message':'대기 중'})))
         return jsonify(jobId=jid),202
+
+    extraction_lock=threading.Lock()
+
+    @app.post('/api/jobs/<jid>/extract')
+    @auth()
+    def extract_sheet(jid):
+        count=payload().get('frameCount')
+        if type(count) is not int or not 2<=count<=64:
+            raise ValueError('프레임 수는 2~64 정수여야 합니다.')
+        with db() as con:
+            row=con.execute('SELECT * FROM jobs WHERE id=?',(jid,)).fetchone()
+        if not row:
+            return jsonify(error='결과를 찾을 수 없습니다.'),404
+        if row['user_id']!=request.team_user['id'] and request.team_user['role']!='admin':
+            return jsonify(error='본인 결과 또는 관리자만 다시 추출할 수 있습니다.'),403
+        if row['state']!='complete':
+            return jsonify(error='완료된 영상만 다시 추출할 수 있습니다.'),409
+        result=json.loads(row['result'] or '{}')
+        relative=result.get('video','')
+        if not relative.startswith(f'/outputs/results/{jid}/'):
+            return jsonify(error='저장된 영상을 찾을 수 없습니다.'),404
+        folder=(engine.RESULT_ROOT/jid).resolve()
+        video=(folder/Path(relative).name).resolve()
+        if not folder.is_relative_to(engine.RESULT_ROOT.resolve()) or not video.is_relative_to(folder) or not video.is_file():
+            return jsonify(error='저장된 영상 파일이 없습니다.'),404
+        if not extraction_lock.acquire(blocking=False):
+            return jsonify(error='다른 시트를 추출 중입니다. 잠시 후 다시 시도하세요.'),409
+        try:
+            key=f'sheet_{count}_{secrets.token_hex(8)}'
+            output=folder/(key+'.png')
+            p=json.loads(row['payload'])
+            engine.make_sprite_sheet(video,output,count,bool(p.get('loop',True)))
+            path=f'/outputs/results/{jid}/{output.name}'
+            with db() as con:
+                con.execute('BEGIN IMMEDIATE')
+                current=con.execute("SELECT result FROM jobs WHERE id=? AND state='complete'",(jid,)).fetchone()
+                if not current:
+                    return jsonify(error='추출 중 결과가 삭제되었습니다.'),409
+                updated=json.loads(current['result'] or '{}')
+                updated.setdefault('exportSheets',{})[key]=path
+                con.execute('UPDATE jobs SET result=? WHERE id=?',(json.dumps(updated),jid))
+            return jsonify(ok=True,spriteSheet=path)
+        except Exception:
+            app.logger.exception('Sprite sheet extraction failed')
+            return jsonify(error='시트 추출에 실패했습니다. 서버 로그를 확인하세요.'),500
+        finally:
+            extraction_lock.release()
 
     @app.post('/api/jobs/<jid>/delete')
     @auth()
@@ -379,7 +441,7 @@ def create_app(data_dir=None, runner=None):
             row=con.execute("SELECT result FROM jobs WHERE id=? AND state='complete'",(jid,)).fetchone()
         allowed=json.loads(row['result']) if row else {}
         relative=f'/outputs/results/{jid}/{filename}'
-        if relative not in [allowed.get(k) for k in ('video','rawVideo','spriteSheet','transparentSheet')]:
+        if relative not in [allowed.get(k) for k in ('video','rawVideo','spriteSheet','transparentSheet')]+list(allowed.get('exportSheets',{}).values()):
             return jsonify(error='결과를 찾을 수 없습니다.'),404
         target=(engine.RESULT_ROOT/jid/filename).resolve()
         if not target.is_relative_to(engine.RESULT_ROOT.resolve()) or not target.is_file():

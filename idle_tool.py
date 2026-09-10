@@ -26,8 +26,9 @@ from subject_prompts import SUBJECT_DEFAULTS, subject_constraints
 
 
 ROOT = Path(__file__).resolve().parent
-COMFY_ROOT = ROOT / "ComfyUI"
-PYTHON = ROOT / ".venv" / "Scripts" / "python.exe"
+AMD_BACKEND = os.environ.get("SPRITE_BACKEND", "nvidia") == "amd"
+COMFY_ROOT = ROOT / ("ComfyUI-amd" if AMD_BACKEND else "ComfyUI")
+PYTHON = ROOT / (".venv-amd" if AMD_BACKEND else ".venv") / "Scripts" / "python.exe"
 WEB_ROOT = ROOT / "web"
 OUTPUT_ROOT = ROOT / "outputs"
 COMFY_OUTPUT = OUTPUT_ROOT / "comfy"
@@ -40,7 +41,7 @@ TOOL_PORT = 7866
 
 MODEL_FILES = {
     "diffusion": COMFY_ROOT / "models" / "diffusion_models" / "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
-    "text_encoder": COMFY_ROOT / "models" / "text_encoders" / "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+    "text_encoder": COMFY_ROOT / "models" / "text_encoders" / ("qwen3vl_32b_minimax_h3_int8_convrot.safetensors" if AMD_BACKEND else "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors"),
     "video_vae": COMFY_ROOT / "models" / "vae" / "minimax_h3_video_vae_fp16.safetensors",
     "audio_vae": COMFY_ROOT / "models" / "vae" / "minimax_h3_audio_vae_fp32.safetensors",
     "turbo_lora": COMFY_ROOT / "models" / "loras" / "minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_bf16.safetensors",
@@ -119,10 +120,12 @@ def upload_image(image_bytes: bytes, filename: str) -> str:
     return payload.get("name", safe_name)
 
 
-def prepare_reference_image(image_bytes: bytes, width: int, height: int) -> bytes:
+def prepare_reference_image(image_bytes: bytes, width: int, height: int, motion_padding: int = 0) -> bytes:
     """Fit the source without distortion onto the exact H3 canvas size."""
     source = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
-    scale = min(width / source.width, height / source.height)
+    if type(motion_padding) is not int or motion_padding not in (0,10,20,30):
+        raise ValueError('동작 여백은 0, 10, 20, 30% 중 선택하세요.')
+    scale = min(width / source.width, height / source.height) * (1-motion_padding/100)
     resized_size = (
         max(1, round(source.width * scale)),
         max(1, round(source.height * scale)),
@@ -431,7 +434,7 @@ def _subject_bbox(image: Image.Image) -> tuple[int, int, int, int]:
     )
 
 
-def stabilize_video(source_path: Path, output_path: Path) -> dict:
+def stabilize_video(source_path: Path, output_path: Path, preserve_padding: bool = False) -> dict:
     """Normalize subject center and scale across frames without changing duration."""
     container = av.open(str(source_path))
     stream = container.streams.video[0]
@@ -450,6 +453,8 @@ def stabilize_video(source_path: Path, output_path: Path) -> dict:
     target_size = np.median(sizes[valid], axis=0)
     # Fill a useful sprite cell while retaining roughly 11% vertical safety margin.
     occupancy_scale = min(1.6, max(0.65, frames[0].height * 0.78 / max(target_size[1], 1)))
+    if preserve_padding:
+        occupancy_scale = min(1.0, occupancy_scale)
     target_size *= occupancy_scale
     stabilized = []
     # Use one transform for the whole clip: this preserves intended breathing/bobbing
@@ -501,7 +506,8 @@ def run_job(job_id: str, payload: dict) -> None:
         height = int(payload.get("height", 480))
         if width % 32 or height % 32 or width < 256 or height < 256:
             raise ValueError("해상도의 가로·세로는 256 이상이며 32의 배수여야 합니다.")
-        prepared_bytes = prepare_reference_image(image_bytes, width, height)
+        motion_padding = payload.get('motionPadding',10)
+        prepared_bytes = prepare_reference_image(image_bytes, width, height, motion_padding)
         result_dir = RESULT_ROOT / job_id
         result_dir.mkdir(parents=True, exist_ok=True)
         (result_dir / "reference_prepared.png").write_bytes(prepared_bytes)
@@ -535,6 +541,7 @@ def run_job(job_id: str, payload: dict) -> None:
             'revision': PROMPT_REVISION, 'seed': seed, 'prompt': workflow['6']['inputs']['prompt'],
             'width': width, 'height': height, 'length': workflow['6']['inputs']['length'],
             'flatBackground': had_transparency, 'blinkMode': payload.get('blinkMode','none'),
+            'motionPadding': motion_padding,
             'motionStrength': payload.get('motionStrength','normal'),
             'subjectType': payload.get('subjectType','human'),
             'negativeEnabled': '17' in workflow,
@@ -569,7 +576,7 @@ def run_job(job_id: str, payload: dict) -> None:
         if payload.get("stabilize", True):
             update_job(job_id, state="stabilizing", message="캐릭터 크기와 프레이밍을 정규화하는 중")
             try:
-                stabilize_video(raw_video_path, video_path)
+                stabilize_video(raw_video_path, video_path, preserve_padding=motion_padding>0)
             except Exception as error:
                 stabilization_warning = str(error)
                 shutil.copy2(raw_video_path, video_path)

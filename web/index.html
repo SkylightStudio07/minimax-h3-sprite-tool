@@ -39,6 +39,10 @@
         <option value="death">Death · 사망</option><option value="jump">Jump · 점프</option>
         <option value="custom">Custom · 직접 입력</option>
       </select>
+      <label for="settingCollection">세팅 모음</label>
+      <select id="settingCollection"><option value="" selected>사용 안 함 · 기본 동작 템플릿</option><option value="aim_idle">조준 대기 · 인간형</option></select>
+      <button id="applySetting" type="button">선택한 세팅 불러오기</button>
+      <p class="notice">선택 후 불러오기를 눌러 적용합니다. ‘사용 안 함’을 불러오면 현재 유형·동작의 기본 설명으로 돌아가며 다른 옵션은 유지합니다. 조준 대기는 작은 좌우 체중 이동과 다리의 교대 보정을 허용하면서 조준선을 유지합니다. 인간형 / Idle / 약함 / 원본 방향 / 깜박임 없음 / 루프 켜짐 적용. 생성 모드·길이·해상도는 유지합니다.</p>
       <label for="facing">캐릭터 방향 고정</label>
       <select id="facing">
         <option value="preserve" selected>입력 이미지 방향 그대로</option>
@@ -60,8 +64,9 @@
           <option value="608x352">직접 지정 · 608×352</option><option value="864x480">직접 지정 · 864×480</option>
           <option value="608x608">직접 지정 · 608×608</option><option value="768x768">직접 지정 · 768×768</option>
         </select><p id="resolution" class="notice">이미지를 넣으면 실제 크기를 계산합니다.</p></div>
-        <div><label for="frames">시트 프레임</label><input id="frames" type="number" min="2" max="32" step="1" value="8" required><small>직접 입력 · 2~32프레임</small></div>
+        <div><label for="frames">시트 프레임</label><input id="frames" type="number" min="2" max="64" step="1" value="8" required><small>직접 입력 · 2~64프레임</small></div>
       </div>
+      <label for="motionPadding">동작 여백</label><select id="motionPadding"><option value="0">없음</option><option value="10" selected>10% (기본)</option><option value="20">20%</option><option value="30">30%</option></select><p class="notice">입력 이미지를 비율 유지 축소하여 중앙 배치합니다. 10%는 좌우·상하 각각 약 5% 여유입니다. 출력 해상도는 유지되며 캐릭터 픽셀 크기는 줄어듭니다. 이미 잘린 부분은 복구되지 않습니다.</p>
       <label class="option"><input id="loop" type="checkbox" checked> 처음과 끝이 이어지는 루프 동작</label>
       <label class="option"><input id="stabilize" type="checkbox" checked> 캐릭터 크기·프레이밍 자동 정규화</label>
       <label class="option"><input id="removeBackground" type="checkbox"> 선택 기능 · 단색 배경 누끼 제거 (시트만)</label><label for="backgroundTolerance">제거 강도 · 높을수록 더 많이 제거</label><input id="backgroundTolerance" type="number" min="4" max="64" step="1" value="24"><p class="notice">가장자리와 연결된 배경색을 제거합니다. 복잡한 배경·캐릭터 사이의 닫힌 공간은 남을 수 있고 비슷한 색의 의상·머리카락은 손상될 수 있습니다. 원본 시트와 영상은 보존됩니다. 영상은 투명해지지 않습니다.</p>
@@ -82,6 +87,30 @@ const subjectPresets={"creature":{"idle":"continuous subtle body expansion and c
 const presets={idle:'continuous rhythmic breathing with a visible rise and fall of the shoulders and chest, ongoing small lateral weight shifts through the hips, hair tips and clothing hems follow the body with a slight delay throughout the clip, both feet remain planted at their original screen coordinates',walk:'walk cycle in place, alternating steps, natural arm swing, consistent rhythm',run:'run cycle in place, energetic alternating strides and arm swing',attack:'one clear weapon attack, readable anticipation, strike and follow-through',cast:'one clear magic casting action, hands gather energy and release it forward',hit:'brief impact reaction, recoil backward and regain balance',death:'lose balance and fall into a clearly readable defeated pose',jump:'crouch, jump upward and land back in the starting position',custom:''};
 function selectedPreset(){return $('subjectType').value==='human'?presets[$('action').value]:subjectPresets[$('subjectType').value][$('action').value]}
 let currentSubject='human';
+const settingCollection={
+    aim_idle:{
+        action:'idle',subject:'human',strength:'low',facing:'preserve',blink:'none',loop:true,
+        prompt:'Maintain the original combat-ready aiming stance throughout the clip. Both boots retain ground contact at their original positions. Slowly alternate a small amount of weight between the supporting legs: one knee gently flexes as the other slightly extends, then reverse smoothly. The pelvis makes a small lateral shift while hip and head height remain nearly level. Keep this lower-body balancing motion small but visible throughout the clip. Keep the muzzle at nearly the same screen position and the barrel at nearly the same angle, aimed at the same off-screen target. The stock stays seated against the shoulder and both hands retain their original grip and contact points. Add gentle continuous expansion and contraction of the chest and abdomen beneath the clothing. The elbows and shoulders make tiny compensating adjustments that absorb breathing and balance shifts, so the rifle moves much less than the torso and its sight line remains steady. Preserve the rigid shape and dimensions of the weapon. Sustain these coordinated motions through the final frame, flowing smoothly into the next loop.'
+    }
+};
+$('applySetting').onclick=()=>{
+    if(!$('settingCollection').value){
+        if(confirm('동작 설명을 현재 유형·동작의 기본 템플릿으로 되돌릴까요? 다른 옵션은 유지됩니다.')){
+            $('prompt').value=selectedPreset();
+        }
+        return;
+    }
+    const setting=settingCollection[$('settingCollection').value];
+    if(!setting||!confirm('현재 동작 설명과 관련 옵션을 선택한 세팅으로 교체할까요?'))return;
+    $('action').value=setting.action;
+    $('subjectType').value=setting.subject;currentSubject=setting.subject;
+    $('motionStrength').value=setting.strength;
+    $('facing').value=setting.facing;
+    $('blink').value=setting.blink;$('blink').disabled=false;
+    $('loop').checked=setting.loop;
+    $('prompt').value=setting.prompt;
+    updateButtonText();
+};
 $('subjectType').onchange=()=>{const prev=currentSubject==='human'?presets[$('action').value]:subjectPresets[currentSubject][$('action').value];if($('prompt').value.trim()&&$('prompt').value!==prev&&!confirm('작성한 설명을 새 유형 템플릿으로 교체할까요?')){$('subjectType').value=currentSubject;return}currentSubject=$('subjectType').value;$('prompt').value=selectedPreset();$('blink').disabled=currentSubject.endsWith('machine')};
 const actionNames={idle:'Idle',walk:'Walk',run:'Run',attack:'Attack',cast:'Cast',hit:'Hit',death:'Death',jump:'Jump',custom:'Custom'};
 function updateButtonText(){$('generate').textContent=`${$('duration').value}초 ${actionNames[$('action').value]} 만들기`}
@@ -92,7 +121,7 @@ $('drop').onclick=()=>$('file').click(); $('file').onchange=e=>setImage(e.target
 $('drop').ondragover=e=>e.preventDefault(); $('drop').ondrop=e=>{e.preventDefault();setImage(e.dataTransfer.files[0])};
 let ready=false,busy=false; function refreshButton(){$('generate').disabled=busy||!(ready&&imageData)}
 async function check(){try{const s=await fetch('/api/status').then(r=>r.json());ready=s.comfy&&s.modelsReady&&s.licenseConfirmed;$('status').className='status '+(ready?'ready':'');let text=s.comfy?'ComfyUI 연결됨':'ComfyUI 연결 안 됨';if(!s.licenseConfirmed)text+=' · MiniMax 별도 라이선스 확인 필요';else if(!s.modelsReady)text+=' · 모델 다운로드 필요';else text+=' · H3 모델 준비 완료';$('status').querySelector('span:last-child').textContent=text;if(!busy)$('message').textContent=ready?'이미지를 넣고 생성을 시작하세요.':'생성 엔진이 아직 준비되지 않았습니다.'}catch(e){ready=false;$('status').querySelector('span:last-child').textContent='서버 연결이 끊겼습니다. 재연결 대기 중…'}refreshButton()}
-$('generate').onclick=async()=>{if(!$('frames').reportValidity()||!$('backgroundTolerance').reportValidity())return;if($('negativeEnabled').checked&&!$('cfgScale').reportValidity())return;const [width,height]=calculatedSize();busy=true;refreshButton();$('result').style.display='none';$('message').textContent='작업 등록 중...';try{const body={imageData,filename,removeBackground:$('removeBackground').checked,backgroundTolerance:Number($('backgroundTolerance').value),animationType:$('action').value,facing:$('facing').value,blinkMode:$('blink').value,motionStrength:$('motionStrength').value,subjectType:$('subjectType').value,samplingMode:$('samplingMode').value,negativeEnabled:$('negativeEnabled').checked,negativePrompt:$('negativePrompt').value,cfgScale:Number($('cfgScale').value),prompt:$('prompt').value,loop:$('loop').checked,duration:Number($('duration').value),width,height,frameCount:Number($('frames').value),seed:$('seed').value,stabilize:$('stabilize').checked};const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw Error(data.error||'등록 실패');poll(data.jobId)}catch(e){$('message').textContent=e.message;busy=false;refreshButton()}};
+$('generate').onclick=async()=>{if(!$('frames').reportValidity()||!$('backgroundTolerance').reportValidity())return;if($('negativeEnabled').checked&&!$('cfgScale').reportValidity())return;const [width,height]=calculatedSize();busy=true;refreshButton();$('result').style.display='none';$('message').textContent='작업 등록 중...';try{const body={imageData,filename,motionPadding:Number($('motionPadding').value),removeBackground:$('removeBackground').checked,backgroundTolerance:Number($('backgroundTolerance').value),animationType:$('action').value,facing:$('facing').value,blinkMode:$('blink').value,motionStrength:$('motionStrength').value,subjectType:$('subjectType').value,samplingMode:$('samplingMode').value,negativeEnabled:$('negativeEnabled').checked,negativePrompt:$('negativePrompt').value,cfgScale:Number($('cfgScale').value),prompt:$('prompt').value,loop:$('loop').checked,duration:Number($('duration').value),width,height,frameCount:Number($('frames').value),seed:$('seed').value,stabilize:$('stabilize').checked};const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw Error(data.error||'등록 실패');poll(data.jobId)}catch(e){$('message').textContent=e.message;busy=false;refreshButton()}};
 $('duration').onchange=updateButtonText;
 $('size').onchange=updateResolution;
 $('resetPrompt').onclick=()=>{if(confirm('작성한 동작 설명을 선택한 동작의 기본 템플릿으로 바꿀까요?'))$('prompt').value=selectedPreset()};

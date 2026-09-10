@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal EnableDelayedExpansion
 cd /d "%~dp0"
 if not exist "MINIMAX_H3_LICENSE_APPROVED.txt" (
   echo.
@@ -7,7 +7,7 @@ if not exist "MINIMAX_H3_LICENSE_APPROVED.txt" (
   echo Run this download only after receiving separate written authorization from MiniMax.
   echo.
   set /p CONFIRM=Type LICENSE-APPROVED if authorization has been received:
-  if /I not "%CONFIRM%"=="LICENSE-APPROVED" exit /b 1
+  if /I not "!CONFIRM!"=="LICENSE-APPROVED" exit /b 1
   >"MINIMAX_H3_LICENSE_APPROVED.txt" echo User confirmed separate MiniMax authorization.
 )
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "scripts\download_models_curl.ps1"

@@ -8,6 +8,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 from PIL import Image
 import team_server as server
@@ -15,6 +16,53 @@ import team_server as server
 HEADERS={'X-Sprite-Request':'1'}
 
 class TeamTests(unittest.TestCase):
+    def test_gallery_pages(self):
+        with closing(sqlite3.connect(self.data/'team.sqlite3')) as con:
+            uid=con.execute('SELECT id FROM users LIMIT 1').fetchone()[0]
+            for i in range(8):
+                con.execute('INSERT INTO jobs VALUES(?,?,?,?,?,?,?)',
+                            (str(i),uid,'complete',i,i,'{}','{}'))
+            con.commit()
+        first=self.guest.get('/api/gallery').json
+        second=self.guest.get('/api/gallery?page=2').json
+        self.assertEqual((len(first['jobs']),first['total'],first['pages']),(6,8,2))
+        self.assertEqual(len(second['jobs']),2)
+        self.assertFalse({j['id'] for j in first['jobs']} & {j['id'] for j in second['jobs']})
+        self.assertNotIn('userId',first['jobs'][0])
+        self.assertIn('userId',self.admin.get('/api/gallery').json['jobs'][0])
+        self.assertEqual(self.guest.get('/api/gallery?page=999').json['page'],2)
+
+    def test_reextract_preserves_original(self):
+        self.approve()
+        jid=self.post(self.admin,'generate',**self.payload).json['jobId']
+        endpoint='jobs/'+jid+'/extract'
+        self.assertEqual(self.post(self.guest,endpoint,frameCount=64).status_code,401)
+        self.assertEqual(self.post(self.member,endpoint,frameCount=64).status_code,403)
+        self.assertEqual(self.post(self.admin,endpoint,frameCount=65).status_code,400)
+        self.assertEqual(self.post(self.admin,endpoint,frameCount=64).status_code,409)
+        root=self.data/'results';folder=root/jid;folder.mkdir(parents=True)
+        (folder/'idle.mp4').touch()
+        original=f'/outputs/results/{jid}/original.png'
+        with closing(sqlite3.connect(self.data/'team.sqlite3')) as con:
+            con.execute("UPDATE jobs SET state='complete',result=? WHERE id=?",
+                        (json.dumps(dict(video=f'/outputs/results/{jid}/idle.mp4',spriteSheet=original)),jid))
+            con.commit()
+        def fake_extract(video,output,count,loop):
+            Image.new('RGBA',(count,1)).save(output)
+        with patch.object(server.engine,'RESULT_ROOT',root),patch.object(server.engine,'make_sprite_sheet',side_effect=fake_extract) as extract:
+            response=self.post(self.admin,endpoint,frameCount=64)
+            self.assertEqual(response.status_code,200)
+            self.assertEqual(extract.call_args.args[2],64)
+            result=self.admin.get('/api/jobs/'+jid).json
+            self.assertEqual(result['spriteSheet'],original)
+            self.assertEqual(len(result['exportSheets']),1)
+            exported=next(iter(self.guest.get('/api/gallery').json['jobs'][0]['exportSheets'].values()))
+            media=self.guest.get(exported)
+            self.assertEqual(media.status_code,200)
+            media.close()
+            self.post(self.admin,'jobs/'+jid+'/delete')
+            self.assertEqual(self.guest.get(exported).status_code,404)
+
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory()
         self.data=Path(self.tmp.name)
@@ -88,9 +136,9 @@ class TeamTests(unittest.TestCase):
             self.assertEqual(self.post(self.admin,'generate',**(self.payload|change)).status_code,400)
 
     def test_custom_frames_private_preview_public_gallery(self):
-        for value in (1,33,2.5,True,'8',None):
+        for value in (1,65,2.5,True,'8',None):
             self.assertEqual(self.post(self.admin,'generate',**(self.payload|{'frameCount':value})).status_code,400)
-        result=self.post(self.admin,'generate',**(self.payload|{'frameCount':17}))
+        result=self.post(self.admin,'generate',**(self.payload|{'frameCount':64}))
         self.assertEqual(result.status_code,202)
         jid=result.json['jobId']
         preview=self.admin.get('/api/jobs/'+jid).json['referencePreview']

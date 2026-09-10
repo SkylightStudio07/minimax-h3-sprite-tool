@@ -1,5 +1,7 @@
 # Local runtime and third-party checkout
 .venv/
+.venv-amd/
+ComfyUI-amd/
 ComfyUI/
 __pycache__/
 *.py[cod]
