@@ -2,6 +2,11 @@
 
 MiniMax H3와 ComfyUI를 이용해 기준 이미지 한 장에서 캐릭터 동작 영상과 스프라이트 시트를 만드는 Windows 로컬 도구입니다.
 
+예시 :  
+
+<img width="832" height="1216" alt="idle" src="https://github.com/user-attachments/assets/3eb02ecb-b94d-48e8-9971-6fb2c513f18d" />
+<img width="768" height="1344" alt="idle (5)" src="https://github.com/user-attachments/assets/bbcb2988-ea0a-42f9-a44d-e1f047887822" />
+
 - 원본 종횡비 유지 및 32픽셀 단위 자동 해상도 계산
 - Idle, Walk, Run, Attack, Cast, Hit, Death, Jump, Custom 동작
 - 루프/1회 동작과 캐릭터 방향 고정
