@@ -22,7 +22,7 @@ video:fullscreen{width:100vw!important;height:100vh!important;object-fit:contain
 <article class="panel"><h3>팀 대기열 · 갤러리 · 계정</h3><p>생성은 등록 순서대로 한 번에 하나씩 처리합니다. 개인 최대 3개, 전체 최대 20개까지 대기 작업을 등록할 수 있습니다. 대기열에서 작업자와 원본 이미지를 확인하며 대기 중인 본인 작업은 취소할 수 있습니다.</p><p>완료 영상과 시트는 로그인 전 공개 갤러리에서도 볼 수 있습니다. 민감한 결과는 업로드·생성 전에 공개 범위를 고려하세요. 생성과 재추출은 승인 계정이 필요합니다.</p><p>갤러리의 ‘결과 삭제’는 본인 또는 관리자만 가능합니다. 공개 갤러리와 다운로드에서 빠지지만 복구용 파일과 기록은 서버에 보관되므로 디스크 영구 삭제는 아닙니다.</p><p>관리자는 ‘계정 승인’에서 가입 요청을 승인하거나 이용을 제한할 수 있습니다.</p></article>
 <article class="panel"><h3>결과가 이상할 때</h3><ul><li>잘림: 동작 여백을 늘리거나 움직임 강도를 낮추세요. 원본 이미지부터 잘린 부분은 복구되지 않습니다.</li><li>몸 전체가 들썩임: 움직일 부위를 좁히고 조준 대기 같은 세팅을 활용하세요.</li><li>배경 생성: 단색 배경 지시도 완벽하지 않습니다. 원본 입력과 다른 설정으로 비교하세요.</li><li>오래 걸림: 일반 20스텝·고해상도·긴 영상은 느립니다. 팀 대기열에서 상태를 먼저 확인하세요.</li><li>옵션 변경: 이미 등록한 작업에는 소급 적용되지 않습니다. 설정을 바꾼 뒤 새 작업을 등록하세요.</li></ul></article>
 </div></section>
-<style>.gallery{grid-template-columns:repeat(3,minmax(0,1fr))}.gallery video{height:360px}.gallery .panel{min-width:0}@media(max-width:1000px){.gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){.gallery{grid-template-columns:1fr}.gallery video{height:380px}}</style>
+<style>.gallery-pagination{margin-bottom:16px}.page-numbers{display:flex;max-width:100%;overflow-x:auto;padding-bottom:3px}.page-numbers button{flex:0 0 auto;min-width:40px;padding:6px 10px;border-radius:0;border:1px solid #424954;background:#20242a;margin-left:-1px}.page-numbers button:first-child{margin-left:0}.page-numbers button:hover{background:#343b44}.page-numbers button.current{position:relative;border-color:#39bfc5;background:#343d43;color:#fff}.page-numbers button:focus-visible{outline:2px solid #39bfc5;outline-offset:-3px}.gallery{grid-template-columns:repeat(3,minmax(0,1fr))}.gallery video{height:360px}.gallery .panel{min-width:0}@media(max-width:1000px){.gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){.gallery{grid-template-columns:1fr}.gallery video{height:380px}}</style>
 </main></div><div id="toast" role="status" hidden></div>
 <script>
 const $=id=>document.getElementById(id),base=new URL('./',location.href);let me=null,registering=false,setup=false,lastGallery='',pane='generate',toastTimer;
@@ -51,7 +51,25 @@ async function openFullscreen(v){try{if(v.requestFullscreen)await v.requestFulls
 function viewportVideo(v){const d=document.createElement('dialog'),marker=document.createComment('video-position'),close=node('button','확대 닫기');d.style.cssText='width:96vw;max-width:none;height:96vh;max-height:none;background:#080b10;border:0;padding:12px';v.before(marker);const before=v.style.cssText;v.style.cssText='display:block;width:100%;height:calc(100% - 60px);object-fit:contain';d.append(v,close);document.body.append(d);close.onclick=()=>d.close();d.onclose=()=>{marker.replaceWith(v);v.style.cssText=before;d.remove()};d.showModal()}
 let publicSignature='',publicRefreshing=false;
 let galleryPage=1,galleryRequest=0;
-async function loadGallery(page=galleryPage){const ticket=++galleryRequest;const logged=!!me;const target=logged?'galleryList':'publicGalleryList';try{const d=await api('api/gallery?page='+page);if(ticket!==galleryRequest||logged!==!!me)return;galleryPage=d.page;drawGallery(d.jobs,target);let controls=$(target+'Pages');if(!controls){controls=node('div',undefined,'row');controls.id=target+'Pages';$(target).before(controls)}controls.replaceChildren();const prev=node('button','← 이전'),next=node('button','다음 →'),reload=node('button','새 결과 확인');prev.disabled=d.page<=1;next.disabled=d.page>=d.pages;prev.onclick=()=>loadGallery(d.page-1);next.onclick=()=>loadGallery(d.page+1);reload.onclick=()=>loadGallery(1);controls.append(prev,node('span',d.page+' / '+d.pages+' 페이지 · '+d.total+'개'),next,reload)}catch(e){toast(e.message)}}
+function pageItems(page,pages){
+    const start=Math.floor((page-1)/10)*10+1,end=Math.min(start+9,pages),items=[];
+    if(start>1)items.push(['«',1,'첫 페이지'],['‹',start-1,'이전 10페이지 묶음']);
+    for(let p=start;p<=end;p++)items.push([String(p),p,p+'페이지']);
+    if(end<pages)items.push(['›',end+1,'다음 10페이지 묶음'],['»',pages,'마지막 페이지']);
+    return items;
+}
+function drawPageControls(controls,d){
+    controls.replaceChildren();
+    const numbers=node('div',undefined,'page-numbers');numbers.setAttribute('role','navigation');numbers.setAttribute('aria-label','갤러리 페이지');
+    for(const [label,page,title] of pageItems(d.page,d.pages)){
+        const button=node('button',label);button.type='button';button.title=title;button.setAttribute('aria-label',title);
+        if(page===d.page){button.className='current';button.setAttribute('aria-current','page')}
+        button.onclick=()=>loadGallery(page);numbers.append(button);
+    }
+    const reload=node('button','새 결과 확인');reload.onclick=()=>loadGallery(1);
+    controls.append(numbers,node('span','총 '+d.total+'개','muted'),reload);
+}
+async function loadGallery(page=galleryPage){const ticket=++galleryRequest;const logged=!!me;const target=logged?'galleryList':'publicGalleryList';try{const d=await api('api/gallery?page='+page);if(ticket!==galleryRequest||logged!==!!me)return;galleryPage=d.page;drawGallery(d.jobs,target);let controls=$(target+'Pages');if(!controls){controls=node('div',undefined,'row gallery-pagination');controls.id=target+'Pages';$(target).before(controls)}drawPageControls(controls,d)}catch(e){toast(e.message)}}
 async function refreshPublicGallery(){if(!me)await loadGallery()}
 boot();setInterval(refresh,3000);
 </script></body></html>
