@@ -12,16 +12,17 @@ import threading
 import time
 from pathlib import Path
 
-from flask import Flask, request, session, jsonify, send_file
+from flask import Flask, request, session, jsonify, send_file, send_from_directory
 from werkzeug.security import generate_password_hash, check_password_hash
-from PIL import Image
+from PIL import Image, ImageChops
 import idle_tool as engine
+import rigging_engine as rigging
 
 ROOT = Path(__file__).resolve().parent
 TERMINAL = ('complete', 'error', 'cancelled')
 
 
-def create_app(data_dir=None, runner=None):
+def create_app(data_dir=None, runner=None, rigging_runner=None):
     data = Path(data_dir or ROOT / 'data')
     data.mkdir(parents=True, exist_ok=True)
     key = data / 'session.key'
@@ -51,6 +52,8 @@ def create_app(data_dir=None, runner=None):
           created REAL, updated REAL, payload TEXT, result TEXT);
         CREATE TABLE IF NOT EXISTS attempts(ip TEXT, created REAL);
         CREATE TABLE IF NOT EXISTS deleted_jobs(id TEXT PRIMARY KEY, record TEXT, deleted REAL, deleted_by INTEGER);
+        CREATE TABLE IF NOT EXISTS rig_shares(token TEXT PRIMARY KEY, job_id TEXT, kind TEXT,
+          created REAL, created_by INTEGER, revoked REAL);
         """)
         con.execute("UPDATE jobs SET state='error',result=? WHERE state NOT IN ('queued','complete','error','cancelled')",
                     (json.dumps({'message':'서버 재시작으로 중단됨. 다시 요청하세요.'}),))
@@ -105,7 +108,7 @@ def create_app(data_dir=None, runner=None):
         p = request.get_json()
         if not isinstance(p,dict):
             raise ValueError('잘못된 요청입니다.')
-        for k in ('username','name','password','setupCode','imageData','prompt','animationType','facing'):
+        for k in ('username','name','password','setupCode','imageData','eyeLeftMask','eyeRightMask','mouthMask','prompt','animationType','facing'):
             if k in p and not isinstance(p[k],str):
                 raise ValueError('문자열 입력이 필요합니다: '+k)
         return p
@@ -144,6 +147,21 @@ def create_app(data_dir=None, runner=None):
         }
         </script>"""
         return html.replace('<head>','<head>'+shim)
+
+    @app.get('/rigging')
+    @auth()
+    def rigging_studio():
+        response=send_file(ROOT / 'web' / 'rigging.html',conditional=False,max_age=0)
+        response.headers['Cache-Control']='no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma']='no-cache'
+        return response
+
+    @app.get('/rigging-player/<path:filename>')
+    @auth()
+    def rigging_player(filename):
+        response=send_from_directory(ROOT / 'vendor' / 'Anime2.5DRig',filename,conditional=False,max_age=0)
+        response.headers['Cache-Control']='no-store, no-cache, must-revalidate, max-age=0'
+        return response
 
     @app.get('/api/me')
     def me():
@@ -217,12 +235,14 @@ def create_app(data_dir=None, runner=None):
     @auth()
     def status():
         s = engine.status_payload()
-        return jsonify({k:s[k] for k in ('comfy','modelsReady','licenseConfirmed')})
+        rs = rigging.status_payload()
+        return jsonify(**{k:s[k] for k in ('comfy','modelsReady','licenseConfirmed')}, rigging=rs)
 
     def job_json(row):
         result = json.loads(row['result'] or '{}')
         p = json.loads(row['payload'])
         return dict(result,id=row['id'],state=row['state'],owner=row['name'],userId=row['user_id'],
+                    jobType=p.get('jobType','video'),
                     created=row['created'],animationType=p.get('animationType','idle'),
                     width=p.get('width'),height=p.get('height'),
                     referencePreview=f'/api/jobs/{row["id"]}/reference' if p.get('imageData') and row['state'] not in TERMINAL else None)
@@ -234,22 +254,24 @@ def create_app(data_dir=None, runner=None):
         except ValueError:
             raise ValueError('페이지 번호는 정수여야 합니다.')
         with db() as con:
-            total=con.execute("SELECT count(*) FROM jobs WHERE state='complete'").fetchone()[0]
-            pages=max(1,(total+5)//6)
-            page=min(page,pages)
             viewer=con.execute("SELECT state FROM users WHERE id=?",(session.get('uid'),)).fetchone()
             approved=viewer and viewer['state']=='approved'
-            rows=con.execute("SELECT j.*,u.name FROM jobs j JOIN users u ON u.id=j.user_id WHERE j.state='complete' ORDER BY j.created DESC,j.id DESC LIMIT 6 OFFSET ?",((page-1)*6,)).fetchall()
+            condition="state='complete'" if approved else "state='complete' AND COALESCE(json_extract(payload,'$.jobType'),'video')='video'"
+            total=con.execute(f"SELECT count(*) FROM jobs WHERE {condition}").fetchone()[0]
+            pages=max(1,(total+5)//6);page=min(page,pages)
+            rows=con.execute(f"""SELECT j.*,u.name FROM jobs j JOIN users u ON u.id=j.user_id
+                WHERE j.{condition} ORDER BY j.created DESC,j.id DESC LIMIT 6 OFFSET ?""",((page-1)*6,)).fetchall()
         items=[]
         for row in rows:
             result=json.loads(row['result'] or '{}')
             p=json.loads(row['payload'])
-            items.append(dict(id=row['id'],created=row['created'],animationType=p.get('animationType','idle'),
+            items.append(dict(id=row['id'],created=row['created'],animationType=p.get('animationType','idle'),jobType=p.get('jobType','video'),
                 poster=f'/gallery-media/{row["id"]}/poster' if result.get('video') else None,
                 exportSheets={k:f'/gallery-media/{row["id"]}/{k}' for k in result.get('exportSheets',{})},
                 **{k:f'/gallery-media/{row["id"]}/{k}' if result.get(k) else None for k in ('video','spriteSheet','transparentSheet')}))
             if approved:
                 items[-1].update(owner=row['name'],userId=row['user_id'],rawVideo=result.get('rawVideo'))
+                if p.get('jobType')=='rigging': items[-1].update(composite=result.get('composite'),psd=result.get('psd'),package=result.get('package'),player=result.get('player'))
         return jsonify(jobs=items,page=page,pages=pages,total=total)
 
     poster_lock=threading.Lock()
@@ -326,6 +348,7 @@ def create_app(data_dir=None, runner=None):
     @auth()
     def generate():
         p=payload()
+        p['jobType']='video'
         engine.guidance_options(p)
         if p.get('samplingMode','quality') not in ('quality','turbo'):
             raise ValueError('잘못된 생성 모드입니다.')
@@ -377,6 +400,71 @@ def create_app(data_dir=None, runner=None):
                 return jsonify(error='전체 20개 또는 개인 3개 대기 한도에 도달했습니다.'),429
             con.execute('INSERT INTO jobs VALUES(?,?,?,?,?,?,?)',
                         (jid,request.team_user['id'],'queued',time.time(),time.time(),json.dumps(p),json.dumps({'message':'대기 중'})))
+        return jsonify(jobId=jid),202
+
+    @app.post('/api/rigging/generate')
+    @auth()
+    def generate_rigging():
+        p=payload()
+        resolution=p.get('resolution',1024)
+        steps=p.get('steps',30)
+        if type(resolution) is not int or resolution not in (768,1024):
+            raise ValueError('리깅 해상도는 768 또는 1024여야 합니다.')
+        if type(steps) is not int or steps not in (20,30):
+            raise ValueError('리깅 스텝은 20 또는 30이어야 합니다.')
+        if p.get('seed') not in (None,''):
+            seed=int(p['seed'])
+            if not 0<=seed<2**31:
+                raise ValueError('Seed는 0 이상 2^31 미만이어야 합니다.')
+            p['seed']=seed
+        try:
+            raw=base64.b64decode(p.get('imageData','').split(',')[-1],validate=True)
+            im=Image.open(io.BytesIO(raw))
+            source_size=im.size
+            if im.width*im.height>24000000:
+                raise ValueError()
+            im.verify()
+        except Exception:
+            raise ValueError('유효한 24MP 이하 이미지를 선택하세요.')
+        for key in ('eyeLeftAbsent','eyeRightAbsent'):
+            if key in p and not isinstance(p[key],bool):
+                raise ValueError('보이지 않는 눈 설정은 체크박스로 선택하세요.')
+            p.setdefault(key,False)
+        def check_mask(key,label,required=True):
+            value=p.get(key,'')
+            if not value:
+                if required:
+                    raise ValueError(label+' 마스크를 칠해 주세요.')
+                return
+            try:
+                mask_raw=base64.b64decode(value.split(',')[-1],validate=True)
+                with Image.open(io.BytesIO(mask_raw)) as opened:
+                    rgba=opened.convert('RGBA')
+                    if rgba.size!=source_size:
+                        raise ValueError()
+                    visible=ImageChops.multiply(rgba.convert('L'),rgba.getchannel('A'))
+                    if not visible.getbbox() or sum(visible.histogram()[1:])<8:
+                        raise ValueError()
+            except Exception:
+                raise ValueError(label+' 마스크가 비어 있거나 이미지 크기와 다릅니다.')
+        for mask_key,absent_key,label in (
+            ('eyeLeftMask','eyeLeftAbsent','화면 왼쪽 눈'),
+            ('eyeRightMask','eyeRightAbsent','화면 오른쪽 눈')):
+            if p[absent_key]:
+                p.pop(mask_key,None)
+            else:
+                check_mask(mask_key,label)
+        check_mask('mouthMask','입')
+        p.update(jobType='rigging',maskVersion=1,resolution=resolution,steps=steps,filename='character.png',animationType='2D 리깅')
+        jid=secrets.token_hex(16)
+        with db() as con:
+            con.execute('BEGIN IMMEDIATE')
+            active=con.execute("SELECT count(*) FROM jobs WHERE state NOT IN ('complete','error','cancelled')").fetchone()[0]
+            mine=con.execute("SELECT count(*) FROM jobs WHERE user_id=? AND state NOT IN ('complete','error','cancelled')",(request.team_user['id'],)).fetchone()[0]
+            if active>=20 or mine>=3:
+                return jsonify(error='전체 20개 또는 개인 3개 대기 한도에 도달했습니다.'),429
+            con.execute('INSERT INTO jobs VALUES(?,?,?,?,?,?,?)',
+                        (jid,request.team_user['id'],'queued',time.time(),time.time(),json.dumps(p),json.dumps({'message':'리깅 대기 중'})))
         return jsonify(jobId=jid),202
 
     extraction_lock=threading.Lock()
@@ -452,7 +540,9 @@ def create_app(data_dir=None, runner=None):
                 return jsonify(error='취소 권한이 없습니다.'),403
             count=con.execute("UPDATE jobs SET state='cancelled' WHERE id=? AND state='queued'",(jid,)).rowcount
             if count:
-                p=json.loads(row['payload']);p.pop('imageData',None)
+                p=json.loads(row['payload'])
+                for key in ('imageData','eyeLeftMask','eyeRightMask','mouthMask'):
+                    p.pop(key,None)
                 con.execute('UPDATE jobs SET payload=? WHERE id=?',(json.dumps(p),jid))
         return jsonify(ok=bool(count)),200 if count else 409
 
@@ -470,10 +560,89 @@ def create_app(data_dir=None, runner=None):
             return jsonify(error='파일을 찾을 수 없습니다.'),404
         return send_file(target,conditional=True)
 
+    @app.get('/outputs/rigging/<jid>/<filename>')
+    @auth()
+    def rigging_media(jid,filename):
+        with db() as con:
+            row=con.execute("SELECT result FROM jobs WHERE id=? AND state='complete'",(jid,)).fetchone()
+        result=json.loads(row['result']) if row else {}
+        relative=f'/outputs/rigging/{jid}/{filename}'
+        if relative not in [result.get(k) for k in ('psd','package','composite','preview','manifest')]:
+            return jsonify(error='리깅 결과를 찾을 수 없습니다.'),404
+        folder=(rigging.RESULT_ROOT/jid).resolve()
+        target=(folder/filename).resolve()
+        if not folder.is_relative_to(rigging.RESULT_ROOT.resolve()) or not target.is_relative_to(folder) or not target.is_file():
+            return jsonify(error='리깅 파일을 찾을 수 없습니다.'),404
+        return send_file(target,conditional=True)
+
+    @app.post('/api/jobs/<jid>/shares')
+    @auth()
+    def create_rig_share(jid):
+        kind=payload().get('kind')
+        if kind not in ('internal','external'): raise ValueError('공유 종류를 확인하세요.')
+        with db() as con:
+            row=con.execute('SELECT * FROM jobs WHERE id=?',(jid,)).fetchone()
+            if not row or row['state']!='complete' or json.loads(row['payload']).get('jobType')!='rigging':
+                return jsonify(error='완료된 리깅 결과를 찾을 수 없습니다.'),404
+            if row['user_id']!=request.team_user['id'] and request.team_user['role']!='admin': return jsonify(error='공유 권한이 없습니다.'),403
+            found=con.execute('SELECT token FROM rig_shares WHERE job_id=? AND kind=? AND revoked IS NULL',(jid,kind)).fetchone()
+            token=found['token'] if found else secrets.token_urlsafe(24)
+            if not found: con.execute('INSERT INTO rig_shares VALUES(?,?,?,?,?,NULL)',(token,jid,kind,time.time(),request.team_user['id']))
+        return jsonify(kind=kind,url=f'/share/rig/{token}')
+
+    def get_share(token):
+        with db() as con: return con.execute("SELECT s.*,j.result FROM rig_shares s JOIN jobs j ON j.id=s.job_id WHERE s.token=? AND s.revoked IS NULL AND j.state='complete'",(token,)).fetchone()
+
+    @app.get('/share/rig/<token>')
+    def share_page(token):
+        row=get_share(token)
+        if not row:return '공유 링크가 없거나 만료되었습니다.',404
+        if row['kind']=='internal':
+            return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>내부 2D 리깅 결과</title><style>body{{margin:0;font:15px system-ui;background:#0c0f16;color:#eee}}header{{display:flex;align-items:center;gap:16px;padding:14px 20px;background:#171d29;border-bottom:1px solid #30384b}}h1{{font-size:18px;margin:0}}p{{margin:0;color:#aeb8cb}}a{{margin-left:auto;padding:9px 15px;background:#7661e3;color:white;border-radius:9px;text-decoration:none}}iframe{{display:block;width:100%;height:calc(100vh - 70px);border:0;background:#101014}}</style></head><body><header><div><h1>2D 리깅 내부 결과</h1><p>PSD를 자동으로 불러왔습니다. 다운로드 파일도 함께 제공됩니다.</p></div><a id="download" href="/share/rig/{token}/asset/character.psd" download>PSD 다운로드</a></header><iframe src="/share/rig/{token}/player" allow="fullscreen" title="2D 리깅 미리보기"></iframe><script>setTimeout(()=>document.getElementById('download').click(),700)</script></body></html>'''
+        return f'''<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width"><title>2D 리깅 쇼케이스</title><style>body{{margin:0;background:radial-gradient(circle,#292044,#090b11);color:white;font:16px system-ui;text-align:center}}main{{min-height:100vh;display:grid;place-items:center}}img{{max-width:82vw;max-height:76vh;filter:drop-shadow(0 25px 30px #0008);animation:f 3s ease-in-out infinite}}@keyframes f{{50%{{transform:translateY(-12px) rotate(.6deg)}}}}a{{color:#c9beff}}</style><main><div><img src="/share/rig/{token}/asset/composite.png"><h1>AI 2D 리깅 쇼케이스</h1><p>한 장의 그림을 움직이는 캐릭터로 만들었습니다.</p><a href="/">나도 만들어 보기</a></div></main>'''
+
+    @app.get('/share/rig/<token>/asset/<filename>')
+    def share_asset(token,filename):
+        row=get_share(token); allowed=('character.psd',) if row and row['kind']=='internal' else ('composite.png',)
+        if not row or filename not in allowed:return jsonify(error='공유할 수 없는 파일입니다.'),404
+        folder=(rigging.RESULT_ROOT/row['job_id']).resolve();target=(folder/filename).resolve()
+        if not target.is_relative_to(folder) or not target.is_file():return jsonify(error='파일을 찾을 수 없습니다.'),404
+        return send_file(target,conditional=True,as_attachment=filename.endswith('.psd'),download_name=filename)
+
+    @app.get('/share/rig/<token>/player')
+    def shared_internal_player(token):
+        row=get_share(token)
+        if not row or row['kind']!='internal':return '공유 링크가 없거나 만료되었습니다.',404
+        html=(ROOT/'vendor'/'Anime2.5DRig'/'index.html').read_text(encoding='utf-8')
+        model_url=f'/share/rig/{token}/asset/character.psd'
+        html=html.replace('<head>','<head><base href="/shared-rig-player/">',1)
+        return html.replace('<script src="lib/app.js"></script>',f'<script>window.SHARED_MODEL_URL={json.dumps(model_url)}</script><script src="lib/app.js"></script>',1)
+
+    @app.get('/shared-rig-player/<path:filename>')
+    def shared_player_asset(filename):
+        allowed={'lib/app.css','lib/ag-psd.min.js','lib/rigger.js','lib/genericparts.js','lib/runtime.js','lib/app.js','lib/ko.js','lib/psd-worker.js','README_KO.md','eye_close.psd','mouth_close.psd'}
+        normalized=filename.replace('\\','/')
+        if normalized not in allowed:return jsonify(error='파일을 찾을 수 없습니다.'),404
+        return send_from_directory(ROOT/'vendor'/'Anime2.5DRig',normalized,conditional=True)
+
     stop=threading.Event()
     def worker():
         while not stop.wait(0.5):
-            if runner is None:
+            with db() as con:
+                candidate=con.execute("""SELECT j.* FROM jobs j JOIN users u ON u.id=j.user_id
+                    WHERE j.state='queued' AND u.state='approved' ORDER BY j.created LIMIT 1""").fetchone()
+            if not candidate:
+                continue
+            candidate_payload=json.loads(candidate['payload'])
+            job_type=candidate_payload.get('jobType','video')
+            if job_type=='rigging' and rigging_runner is None:
+                try:
+                    q=rigging.requests.get(rigging.COMFY_URL+'/queue',timeout=3).json()
+                    if q.get('queue_running') or q.get('queue_pending'):
+                        continue
+                except Exception:
+                    continue
+            elif job_type!='rigging' and runner is None:
                 try:
                     q=engine.requests.get(engine.COMFY_URL+'/queue',timeout=3).json()
                     if q.get('queue_running') or q.get('queue_pending'):
@@ -489,20 +658,26 @@ def create_app(data_dir=None, runner=None):
                     continue
                 con.execute("UPDATE jobs SET state='starting' WHERE id=?",(row['id'],))
             jid=row['id']
+            job_payload=json.loads(row['payload'])
+            job_type=job_payload.get('jobType','video')
             def update(job_id,**changes):
                 with db() as con:
                     current=con.execute('SELECT result FROM jobs WHERE id=?',(job_id,)).fetchone()
                     result=json.loads(current[0] or '{}');result.update(changes)
                     con.execute('UPDATE jobs SET state=?,updated=?,result=? WHERE id=?',
                                 (result.get('state','starting'),time.time(),json.dumps(result),job_id))
-            engine.update_job=update
+            target_engine=rigging if job_type=='rigging' else engine
+            target_engine.update_job=update
             try:
-                (runner or engine.run_job)(jid,json.loads(row['payload']))
-            except Exception:
-                update(jid,state='error',message='생성 중 오류가 발생했습니다.')
+                target_runner=(rigging_runner or rigging.run_job) if job_type=='rigging' else (runner or engine.run_job)
+                target_runner(jid,job_payload)
+            except Exception as error:
+                update(jid,state='error',message=str(error) or '생성 중 오류가 발생했습니다.')
             finally:
                 with db() as con:
-                    p=json.loads(row['payload']);p.pop('imageData',None)
+                    p=json.loads(row['payload'])
+                    for key in ('imageData','eyeLeftMask','eyeRightMask','mouthMask'):
+                        p.pop(key,None)
                     con.execute('UPDATE jobs SET payload=? WHERE id=?',(json.dumps(p),jid))
     app.start_worker=lambda: threading.Thread(target=worker,daemon=True).start()
     app.stop_worker=stop.set
@@ -528,6 +703,12 @@ if __name__=='__main__':
             except Exception as error:
                 print('Generation engine not ready:',error,flush=True)
         threading.Thread(target=boot_engine,daemon=True).start()
+        def boot_rigging_engine():
+            try:
+                rigging.start_comfy()
+            except Exception as error:
+                print('Rigging engine not ready:',error,flush=True)
+        threading.Thread(target=boot_rigging_engine,daemon=True).start()
     app.start_worker()
     print('Team Sprite Lab: http://127.0.0.1:7866',flush=True)
     print('First admin setup code: data/admin-setup-code.txt (local only)',flush=True)

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anime2.5DRig — PSDドロップで動くアバター</title>
+<link rel="stylesheet" href="lib/app.css">
+</head>
+<body>
+<header>
+  <div class="brand"><span class="brand-mark" aria-hidden="true">A</span><div><h1>Anime2.5DRig</h1><span>2.5D AVATAR STUDIO</span></div></div>
+  <div class="sample-actions" role="group" aria-label="サンプルを読み込む">
+    <button class="btn" data-sample="A" title="sample2.psd を読み込む">サンプルA</button>
+    <button class="btn" data-sample="B" title="sample.psd を読み込む">サンプルB</button>
+  </div>
+  <span id="modelName">モデル未読込</span>
+  <div class="header-actions"><button class="btn primary" id="btnOpen">PSDを開く</button><button class="btn" id="btnPause" data-model-action disabled aria-pressed="false">一時停止</button><button class="btn" id="btnPng" data-model-action disabled>PNG保存</button><button class="btn" id="btnReadme">使い方</button></div>
+</header>
+<div id="main">
+  <div id="stage" class="checker">
+    <canvas id="cv" aria-label="アバターのプレビュー"></canvas>
+    <div id="viewControls" aria-label="미리보기 확대 도구"><button class="btn compact" id="viewZoomOut" type="button">−</button><button class="btn compact" id="viewZoomReset" type="button">100%</button><button class="btn compact" id="viewZoomIn" type="button">＋</button><span>휠 확대 · 드래그 이동</span></div>
+    <div id="fps" aria-hidden="true"></div>
+    <div id="stageLabel">PREVIEW <span>背景の市松模様は出力されません</span></div>
+    <div id="appStatus" role="status" aria-live="polite">PSDを読み込むと編集を始められます</div>
+    <div id="drop">
+      <div class="drop-symbol" aria-hidden="true">＋</div><p class="eyebrow">YOUR ART, IN MOTION</p>
+      <h2>イラストに、動きを。</h2>
+      <p>パーツ分けしたPSDをドロップ。<br>目・口・髪を読み取り、その場で動き出します。</p>
+      <p class="drop-hint">RGB / 8bit PSD・128MBまで<br>レイヤー名は face / eyewhite / mouth_open など。フォルダにも対応。</p>
+      <div class="btns" style="justify-content:center">
+        <button class="btn primary" id="btnFile">PSDファイルを選ぶ</button>
+        <button class="btn" data-sample="A" title="sample2.psd を読み込む">サンプルAを読み込む</button>
+        <button class="btn" data-sample="B" title="sample.psd を読み込む">サンプルBを読み込む</button>
+        <button class="btn" id="btnReadme2">READMEを読む</button>
+      </div>
+      <p id="dropStatus"></p>
+      <button class="btn" id="btnCancelLoad" hidden>読み込みを中止</button>
+      <input type="file" id="fileInput" accept=".psd" style="display:none">
+    </div>
+  </div>
+  <div id="panel">
+    <div class="panel-head"><div><p class="eyebrow">WORKSPACE</p><h2>モデルを調整</h2></div><button class="btn compact" id="btnCollapse">すべて畳む</button></div>
+    <label class="search-box">設定を検索<input type="search" id="controlSearch" placeholder="目、髪、口、レイヤー…" autocomplete="off"></label>
+    <p id="searchEmpty" hidden>一致する設定がありません</p>
+    <div class="sec"><h2>自動</h2>
+      <div class="toggles">
+        <div class="tg on" id="tgIdle">アイドル</div>
+        <div class="tg on" id="tgBlink">自動まばたき</div>
+        <div class="tg on" id="tgRand">ランダム動作</div>
+        <div class="tg on" id="tgTalk">ランダム口パク</div>
+        <div class="tg" id="tgCam">カメラ追従</div>
+        <div class="tg" id="tgMouse">マウス追従</div>
+        <div class="tg" id="tgMic">マイク口パク</div>
+        <div class="tg on" id="tgPhys">髪の物理</div>
+      </div>
+    </div>
+    <div class="sec"><h2>表情プリセット</h2>
+      <div class="btns">
+        <button class="btn" data-preset="neutral">通常</button>
+        <button class="btn" data-preset="smile">笑顔</button>
+        <button class="btn" data-preset="usume">薄目</button>
+        <button class="btn" data-preset="surprise">驚き</button>
+        <button class="btn" data-preset="jito">ジト目</button>
+        <button class="btn" data-preset="winkL">ウインク左</button>
+        <button class="btn" data-preset="winkR">ウインク右</button>
+      </div>
+    </div>
+    <div class="sec"><h2>顔の向き</h2>
+      <div class="row"><label>角度 X</label><input type="range" id="pAngleX" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
+      <div class="row"><label>角度 Y</label><input type="range" id="pAngleY" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
+      <div class="row"><label>角度 Z</label><input type="range" id="pAngleZ" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
+    </div>
+    <div class="sec"><h2>目</h2>
+      <div class="row"><label>左目の開き</label><input type="range" id="pEyeL" min="0" max="1" step="0.01" value="1"><span class="val"></span></div>
+      <div class="row"><label>右目の開き</label><input type="range" id="pEyeR" min="0" max="1" step="0.01" value="1"><span class="val"></span></div>
+      <div class="row"><label>視線 X</label><input type="range" id="pEyeX" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
+      <div class="row"><label>視線 Y</label><input type="range" id="pEyeY" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
+      <div class="row"><label>瞳スケール</label><input type="range" id="pIrisScale" min="0.5" max="1.3" step="0.01" value="1"><span class="val"></span></div>
+      <div class="row"><label>閉じ目ｽｹｰﾙ左</label><input type="range" id="pEyeScaleL" min="0.5" max="1.5" step="0.01" value="1"><span class="val"></span></div>
+      <div class="row"><label>閉じ目ｽｹｰﾙ右</label><input type="range" id="pEyeScaleR" min="0.5" max="1.5" step="0.01" value="1"><span class="val"></span></div>
+      <div class="row"><label>閉じやすさ</label><input type="range" id="pEyeEase" min="0" max="1" step="0.01" value="0.3"><span class="val"></span></div>
+      <div class="row"><label>差分 上下</label><input type="range" id="pEyeCY" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
+      <div class="row"><label>差分 角度</label><input type="range" id="pEyeCAng" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
+      </div>
+    <div class="sec"><h2>眉</h2>
+      <div class="row"><label>眉（上下）</label><input type="range" id="pBrow" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
+      <div class="row"><label>眉角度 対称</label><input type="range" id="pBrowAngSym" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
+      <div class="row"><label>眉角度 左</label><input type="range" id="pBrowAngL" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
+      <div class="row"><label>眉角度 右</label><input type="range" id="pBrowAngR" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
+    </div>
+    <div class="sec"><h2>口</h2>
+      <div class="row"><label>開き</label><input type="range" id="pMouthOpen" min="0" max="1" step="0.01" value="0"><span class="val"></span></div>
+      <div class="row"><label>形（笑い）</label><input type="range" id="pMouthForm" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
+      <div class="row"><label>閉じ口 上下</label><input type="range" id="pMouthCY" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
+      <div class="row"><label>閉じやすさ</label><input type="range" id="pMouthEase" min="0" max="1" step="0.01" value="0.72"><span class="val"></span></div>
+      <div class="row"><label>閉じ口 角度</label><input type="range" id="pMouthCAng" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
+      <div class="row"><label>口スケール</label><input type="range" id="pMouthScale" min="0.5" max="1.5" step="0.01" value="1"><span class="val"></span></div>
+    </div>
+    <div class="sec"><h2>前髪</h2>
+      <div class="row"><label>揺れ</label><input type="range" id="pFhAmp" min="0" max="3" step="0.01" value="2.3"><span class="val"></span></div>
+      <div class="row"><label>柔らかさ</label><input type="range" id="pFhSoft" min="0" max="2" step="0.01" value="0.4"><span class="val"></span></div>
+      <div class="row"><label>ブロック左</label><input type="range" id="pBangL" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
+      <div class="row"><label>ブロック中央</label><input type="range" id="pBangC" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
+      <div class="row"><label>ブロック右</label><input type="range" id="pBangR" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
+    </div>
+    <div class="sec"><h2>体・物理</h2>
+      <div class="row"><label>体の傾き</label><input type="range" id="pBody" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
+      <div class="row"><label>腕の高さ</label><input type="range" id="pArmY" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
+      <div class="row"><label>腕位置補正</label><input type="range" id="pArmPos" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
+      <div class="row"><label>胸の揺れ</label><input type="range" id="pBust" min="0" max="4" step="0.01" value="2.5"><span class="val"></span></div>
+      <div class="row"><label>胸位置 上下</label><input type="range" id="pBustY" min="-3" max="3" step="0.01" value="1"><span class="val"></span></div>
+      <div class="row"><label>後髪の揺れ</label><input type="range" id="pPhysAmp" min="0" max="3" step="0.01" value="2.35"><span class="val"></span></div>
+      <div class="row"><label>後髪柔らかさ</label><input type="range" id="pSoft" min="0" max="3" step="0.01" value="2"><span class="val"></span></div>
+    </div>
+    <div class="sec"><h2>ユーティリティ</h2>
+      <div class="btns">
+        <button class="btn" id="btnReset">数値リセット</button>
+        <button class="btn" id="btnSavePsd" data-model-action disabled>軽量PSDを保存</button>
+        <button class="btn" id="btnSaveSettings" data-model-action disabled>調整を保存</button>
+        <button class="btn" id="btnRestoreSettings" data-model-action disabled>保存状態に戻す</button>
+        <button class="btn" id="btnExportSettings" data-model-action disabled>設定JSONを書き出す</button>
+        <button class="btn" id="btnImportSettings" data-model-action disabled>設定JSONを読み込む</button>
+      </div>
+      <p class="section-hint">調整はこのブラウザにモデル別で保存。別の環境へはJSONで持ち出せます。</p>
+      <input type="file" id="settingsInput" accept=".json,application/json" hidden>
+      <div id="utilStatus" role="status" aria-live="polite"></div>
+    </div>
+    <div class="sec"><h2>背景</h2>
+      <div class="btns">
+        <button class="btn" data-bg="checker">透過</button>
+        <button class="btn" data-bg="green">GB</button>
+        <button class="btn" data-bg="dark">ダーク</button>
+      </div>
+    </div>
+    <div class="sec"><h2>レイヤー</h2><p class="section-hint">上が奥、下が手前。表示・濃さ・奥行きを調整できます。</p><button class="btn compact" id="btnResetLayers" data-model-action disabled>レイヤー設定を初期化</button><div id="layers"><p class="section-hint">PSDの読み込み後に表示されます</p></div></div>
+    <div class="sec"><h2>モデル情報</h2><div id="rigInfo">モデル未読込</div></div>
+  </div>
+</div>
+<div id="readmeOverlay" role="dialog" aria-modal="true" aria-labelledby="readmeTitle"><div id="readmeWin">
+  <div id="readmeHead"><b id="readmeTitle">使い方</b><button class="btn" id="readmeClose" aria-label="使い方を閉じる">✕</button></div>
+  <div id="readmeBody"></div>
+</div></div>
+<script src="lib/ag-psd.min.js"></script>
+<script src="lib/rigger.js"></script>
+<script src="lib/genericparts.js"></script>
+<script src="lib/runtime.js"></script>
+<script src="lib/app.js"></script>
+<script src="lib/ko.js"></script>
+</body>
+</html>

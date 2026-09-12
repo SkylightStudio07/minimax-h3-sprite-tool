@@ -106,6 +106,11 @@ class TeamTests(unittest.TestCase):
         self.uid=self.admin.get('/api/users').json['users'][1]['id']
         buf=io.BytesIO();Image.new('RGB',(32,32)).save(buf,format='PNG')
         self.payload=dict(imageData=base64.b64encode(buf.getvalue()).decode(),width=352,height=608,animationType='idle')
+        painted=Image.new('RGBA',(32,32),(0,0,0,0))
+        for x in range(10,22):
+            for y in range(13,19): painted.putpixel((x,y),(255,255,255,255))
+        mask=io.BytesIO();painted.save(mask,format='PNG')
+        self.mask_data=base64.b64encode(mask.getvalue()).decode()
 
     def tearDown(self):
         self.app.stop_worker()
@@ -238,5 +243,65 @@ class TeamTests(unittest.TestCase):
                 self.assertTrue(all('imageData' not in json.loads(r[0]) for r in con.execute('SELECT payload FROM jobs')))
         finally:
             app.stop_worker();server.engine.update_job=old_update;server.engine.RESULT_ROOT=old_root
+
+    def test_rigging_queue_result_and_private_player(self):
+        valid=dict(imageData=self.payload['imageData'],eyeLeftMask=self.mask_data,eyeRightAbsent=True,
+                   mouthMask=self.mask_data,resolution=768,steps=20,seed=7)
+        for change in [dict(resolution=999),dict(steps=21),dict(seed=-1),dict(imageData='bad'),
+                       dict(eyeLeftMask=''),dict(mouthMask=''),dict(eyeRightAbsent=False)]:
+            response=self.post(self.admin,'rigging/generate',**(valid|change))
+            self.assertEqual(response.status_code,400)
+        response=self.post(self.admin,'rigging/generate',**valid)
+        self.assertEqual(response.status_code,202)
+        jid=response.json['jobId']
+        queued=self.admin.get('/api/jobs/'+jid).json
+        self.assertEqual((queued['jobType'],queued['animationType']),('rigging','2D 리깅'))
+        self.assertEqual(self.guest.get('/rigging').status_code,401)
+        rigging_page=self.admin.get('/rigging')
+        self.assertEqual(rigging_page.status_code,200)
+        rigging_page.close()
+        self.assertEqual(self.guest.get('/rigging-player/index.html').status_code,401)
+
+        old_root=server.rigging.RESULT_ROOT
+        root=self.data/'rigging-results';server.rigging.RESULT_ROOT=root
+        finished=threading.Event()
+        def fake_rigging(job_id,payload):
+            folder=root/job_id;folder.mkdir(parents=True)
+            for name in ('character.psd','character-unity-parts.zip','composite.png','preview.png','manifest.json'):
+                (folder/name).write_bytes(b'asset')
+            base=f'/outputs/rigging/{job_id}'
+            server.rigging.update_job(job_id,state='complete',message='done',qualityStatus='needs_review',
+                partCount=20,expressionCount=2,psd=base+'/character.psd',package=base+'/character-unity-parts.zip',
+                composite=base+'/composite.png',preview=base+'/preview.png',manifest=base+'/manifest.json',
+                player=f'/rigging-player/index.html?model={base}/character.psd',warnings=[])
+            finished.set()
+        app=server.create_app(self.data,runner=lambda *_:None,rigging_runner=fake_rigging)
+        client=app.test_client();self.post(client,'login',username='admin',password='long-password')
+        try:
+            app.start_worker();self.assertTrue(finished.wait(5));app.stop_worker();time.sleep(.6)
+            job=client.get('/api/jobs/'+jid).json
+            self.assertEqual((job['state'],job['partCount'],job['expressionCount']),('complete',20,2))
+            asset=client.get(job['package']);self.assertEqual(asset.status_code,200);asset.close()
+            self.assertEqual(self.guest.get(job['package']).status_code,401)
+            self.assertEqual(client.get(job['package'].replace('.zip','.txt')).status_code,404)
+            self.assertFalse(any(item['id']==jid for item in self.guest.get('/api/gallery').json['jobs']))
+            internal=self.post(client,'jobs/'+jid+'/shares',kind='internal').json['url']
+            external=self.post(client,'jobs/'+jid+'/shares',kind='external').json['url']
+            self.assertEqual(self.guest.get(internal).status_code,200)
+            internal_page=self.guest.get(internal)
+            self.assertIn('/player',internal_page.text);self.assertNotIn('/player?model=',internal_page.text);internal_page.close()
+            psd=self.guest.get(internal+'/asset/character.psd')
+            self.assertEqual(psd.status_code,200);self.assertIn('attachment',psd.headers['Content-Disposition']);psd.close()
+            player=self.guest.get(internal+'/player')
+            self.assertEqual(player.status_code,200);self.assertIn('/shared-rig-player/',player.text);self.assertIn('SHARED_MODEL_URL',player.text);player.close()
+            self.assertEqual(self.guest.get('/shared-rig-player/lib/app.js').status_code,200)
+            self.assertEqual(self.guest.get('/shared-rig-player/sample.psd').status_code,404)
+            self.assertEqual(self.guest.get(external).status_code,200)
+            self.assertEqual(self.guest.get(external+'/asset/composite.png').status_code,200)
+            self.assertEqual(self.guest.get(external+'/asset/character.psd').status_code,404)
+            gallery=client.get('/api/gallery').json['jobs']
+            self.assertTrue(any(item['id']==jid and item['jobType']=='rigging' for item in gallery))
+        finally:
+            app.stop_worker();server.rigging.RESULT_ROOT=old_root
 
 if __name__=='__main__':unittest.main()
