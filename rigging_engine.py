@@ -234,7 +234,11 @@ def run_job(job_id: str, payload: dict) -> None:
     try:
         update_job(job_id, state="uploading", message="리깅 입력 이미지를 준비하는 중")
         source = _write_input(job_id, payload["imageData"])
-        for key, name in (("eyeLeftMask", "eye_left"), ("eyeRightMask", "eye_right"), ("mouthMask", "mouth")):
+        for key, name in (("eyeLeftMask", "eye_left"), ("eyeRightMask", "eye_right"),
+                          ("eyebrowLeftMask", "eyebrow_left"), ("eyebrowRightMask", "eyebrow_right"),
+                          ("mouthMask", "mouth")):
+            if name.startswith("eyebrow_") and not payload.get("preserveOriginalEyebrows", True):
+                continue
             if payload.get(key):
                 mask_paths[name] = _write_mask(job_id, name, payload[key])
         resolution = int(payload.get("resolution", 1024))
@@ -265,7 +269,14 @@ def run_job(job_id: str, payload: dict) -> None:
                 "--source-image",
                 str(source),
             ]
-        for name, option in (("eye_left", "--eye-left-mask"), ("eye_right", "--eye-right-mask"), ("mouth", "--mouth-mask")):
+        if payload.get("eyeInputMode") == "closed-stroke":
+            package_command.extend(("--eye-input-mode", "closed-stroke"))
+        if payload.get("preserveOriginalEyes", True):
+            package_command.append("--preserve-original-eyes")
+        package_command.extend(("--mouth-state", payload.get("mouthState", "closed")))
+        for name, option in (("eye_left", "--eye-left-mask"), ("eye_right", "--eye-right-mask"),
+                             ("eyebrow_left", "--eyebrow-left-mask"), ("eyebrow_right", "--eyebrow-right-mask"),
+                             ("mouth", "--mouth-mask")):
             if name in mask_paths:
                 package_command.extend((option, str(mask_paths[name])))
         completed = subprocess.run(
@@ -294,6 +305,10 @@ def run_job(job_id: str, payload: dict) -> None:
             "expressionCount": len(manifest["expressions"]),
             "warnings": manifest["warnings"],
             "expressionSource": manifest.get("expressionSource"),
+            "originalEyePreserved": manifest.get("originalEyePreserved", False),
+            "originalEyebrowsPreserved": manifest.get("originalEyebrowsPreserved", False),
+            "sourceMouthState": manifest.get("sourceMouthState", "closed"),
+            "originalMouthPreserved": manifest.get("originalMouthPreserved", False),
             "psd": base + "/character.psd",
             "package": base + "/character-unity-parts.zip",
             "composite": base + "/composite.png",

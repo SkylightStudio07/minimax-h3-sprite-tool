@@ -10,6 +10,7 @@ import secrets
 import sqlite3
 import threading
 import time
+import zipfile
 from pathlib import Path
 
 from flask import Flask, request, session, jsonify, send_file, send_from_directory
@@ -17,6 +18,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from PIL import Image, ImageChops
 import idle_tool as engine
 import rigging_engine as rigging
+import rigging_editor as rig_edit
+import rigging_showcase as rig_showcase
+import rigging_v2 as rig_v2
 
 ROOT = Path(__file__).resolve().parent
 TERMINAL = ('complete', 'error', 'cancelled')
@@ -108,7 +112,7 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
         p = request.get_json()
         if not isinstance(p,dict):
             raise ValueError('잘못된 요청입니다.')
-        for k in ('username','name','password','setupCode','imageData','eyeLeftMask','eyeRightMask','mouthMask','prompt','animationType','facing'):
+        for k in ('username','name','password','setupCode','imageData','eyeLeftMask','eyeRightMask','eyebrowLeftMask','eyebrowRightMask','mouthMask','prompt','animationType','facing'):
             if k in p and not isinstance(p[k],str):
                 raise ValueError('문자열 입력이 필요합니다: '+k)
         return p
@@ -154,6 +158,13 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
         response=send_file(ROOT / 'web' / 'rigging.html',conditional=False,max_age=0)
         response.headers['Cache-Control']='no-store, no-cache, must-revalidate, max-age=0'
         response.headers['Pragma']='no-cache'
+        return response
+
+    @app.get('/rigging-editor')
+    @auth()
+    def rigging_editor_page():
+        response=send_file(ROOT / 'web' / 'rigging-editor.html',conditional=False,max_age=0)
+        response.headers['Cache-Control']='no-store, no-cache, must-revalidate, max-age=0'
         return response
 
     @app.get('/rigging-player/<path:filename>')
@@ -247,6 +258,16 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
                     width=p.get('width'),height=p.get('height'),
                     referencePreview=f'/api/jobs/{row["id"]}/reference' if p.get('imageData') and row['state'] not in TERMINAL else None)
 
+    def rig_version_payload(jid,current,prefix):
+        folder=(rigging.RESULT_ROOT/jid).resolve()
+        if not folder.is_relative_to(rigging.RESULT_ROOT.resolve()):return []
+        versions=[]
+        for item in rig_edit.list_versions(folder,current):
+            base=f'{prefix}/{item["revision"]}'
+            versions.append(item|{'composite':base+'/composite.png','psd':base+'/character.psd',
+                                  'package':base+'/character-unity-parts.zip'})
+        return versions
+
     @app.get('/api/gallery')
     def public_gallery():
         try:
@@ -260,18 +281,21 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
             total=con.execute(f"SELECT count(*) FROM jobs WHERE {condition}").fetchone()[0]
             pages=max(1,(total+5)//6);page=min(page,pages)
             rows=con.execute(f"""SELECT j.*,u.name FROM jobs j JOIN users u ON u.id=j.user_id
-                WHERE j.{condition} ORDER BY j.created DESC,j.id DESC LIMIT 6 OFFSET ?""",((page-1)*6,)).fetchall()
+                WHERE j.{condition} ORDER BY j.updated DESC,j.id DESC LIMIT 6 OFFSET ?""",((page-1)*6,)).fetchall()
         items=[]
         for row in rows:
             result=json.loads(row['result'] or '{}')
             p=json.loads(row['payload'])
-            items.append(dict(id=row['id'],created=row['created'],animationType=p.get('animationType','idle'),jobType=p.get('jobType','video'),
+            items.append(dict(id=row['id'],created=row['created'],updated=row['updated'],animationType=p.get('animationType','idle'),jobType=p.get('jobType','video'),
                 poster=f'/gallery-media/{row["id"]}/poster' if result.get('video') else None,
                 exportSheets={k:f'/gallery-media/{row["id"]}/{k}' for k in result.get('exportSheets',{})},
                 **{k:f'/gallery-media/{row["id"]}/{k}' if result.get(k) else None for k in ('video','spriteSheet','transparentSheet')}))
             if approved:
                 items[-1].update(owner=row['name'],userId=row['user_id'],rawVideo=result.get('rawVideo'))
-                if p.get('jobType')=='rigging': items[-1].update(composite=result.get('composite'),psd=result.get('psd'),package=result.get('package'),player=result.get('player'))
+                if p.get('jobType')=='rigging':
+                    current=int(result.get('rigRevision',0))
+                    items[-1].update(composite=result.get('composite'),psd=result.get('psd'),package=result.get('package'),packageV2=result.get('packageV2'),rigRevision=current,rigV2BoneCount=result.get('rigV2BoneCount'),player=result.get('player'),
+                                     rigVersions=rig_version_payload(row['id'],current,f'/api/jobs/{row["id"]}/rig-edit/versions'))
         return jsonify(jobs=items,page=page,pages=pages,total=total)
 
     poster_lock=threading.Lock()
@@ -430,6 +454,19 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
             if key in p and not isinstance(p[key],bool):
                 raise ValueError('보이지 않는 눈 설정은 체크박스로 선택하세요.')
             p.setdefault(key,False)
+        eye_input_mode=p.get('eyeInputMode','area')
+        if eye_input_mode not in ('area','closed-stroke'):
+            raise ValueError('지원하지 않는 눈 입력 방식입니다.')
+        mouth_state=p.get('mouthState','closed')
+        if mouth_state not in ('closed','slightly-open'):
+            raise ValueError('원본 입 상태를 닫힌 입 또는 살짝 열린 입으로 선택하세요.')
+        p['mouthState']=mouth_state
+        if 'preserveOriginalEyes' in p and not isinstance(p['preserveOriginalEyes'],bool):
+            raise ValueError('원본 눈 보존 설정은 체크박스로 선택하세요.')
+        p.setdefault('preserveOriginalEyes',True)
+        if 'preserveOriginalEyebrows' in p and not isinstance(p['preserveOriginalEyebrows'],bool):
+            raise ValueError('원본 눈썹 보존 설정은 체크박스로 선택하세요.')
+        p.setdefault('preserveOriginalEyebrows',True)
         def check_mask(key,label,required=True):
             value=p.get(key,'')
             if not value:
@@ -443,19 +480,41 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
                     if rgba.size!=source_size:
                         raise ValueError()
                     visible=ImageChops.multiply(rgba.convert('L'),rgba.getchannel('A'))
-                    if not visible.getbbox() or sum(visible.histogram()[1:])<8:
+                    box=visible.getbbox()
+                    if not box or sum(visible.histogram()[1:])<8:
                         raise ValueError()
             except Exception:
                 raise ValueError(label+' 마스크가 비어 있거나 이미지 크기와 다릅니다.')
+            return box
+        eye_boxes=[]
         for mask_key,absent_key,label in (
             ('eyeLeftMask','eyeLeftAbsent','화면 왼쪽 눈'),
             ('eyeRightMask','eyeRightAbsent','화면 오른쪽 눈')):
             if p[absent_key]:
                 p.pop(mask_key,None)
             else:
-                check_mask(mask_key,label)
-        check_mask('mouthMask','입')
-        p.update(jobType='rigging',maskVersion=1,resolution=resolution,steps=steps,filename='character.png',animationType='2D 리깅')
+                eye_box=check_mask(mask_key,label)
+                eye_boxes.append((label,eye_box))
+        if eye_input_mode=='closed-stroke':
+            for label,(x0,y0,x1,y1) in eye_boxes:
+                eye_width,eye_height=x1-x0,y1-y0
+                if eye_width<max(6,source_size[0]*.006):
+                    raise ValueError(label+'의 감은 눈 선이 너무 짧습니다. 눈 안쪽부터 바깥쪽까지 그어 주세요.')
+                if eye_width>source_size[0]*.45 or eye_height>source_size[1]*.22 or eye_height>max(6,eye_width*.9):
+                    raise ValueError(label+'의 선 범위가 너무 큽니다. 눈썹과 주변 피부를 제외하고 감은 눈 선만 그어 주세요.')
+        mouth_box=check_mask('mouthMask','입')
+        mouth_width=mouth_box[2]-mouth_box[0]
+        mouth_height=mouth_box[3]-mouth_box[1]
+        if mouth_width>source_size[0]*0.25 or mouth_height>source_size[1]*0.18:
+            raise ValueError('입 마스크가 너무 넓습니다. 입술과 입 안 주변만 짧게 칠해 주세요.')
+        for key,label in (('eyebrowLeftMask','화면 왼쪽 눈썹'),('eyebrowRightMask','화면 오른쪽 눈썹')):
+            eyebrow_box=check_mask(key,label,required=False)
+            if eyebrow_box:
+                eyebrow_width=eyebrow_box[2]-eyebrow_box[0]
+                eyebrow_height=eyebrow_box[3]-eyebrow_box[1]
+                if eyebrow_width>source_size[0]*0.35 or eyebrow_height>source_size[1]*0.14:
+                    raise ValueError(label+' 마스크가 너무 넓습니다. 눈썹 선과 외곽만 작게 칠해 주세요.')
+        p.update(jobType='rigging',maskVersion=2 if eye_input_mode=='closed-stroke' else 1,eyeInputMode=eye_input_mode,resolution=resolution,steps=steps,filename='character.png',animationType='2D 리깅')
         jid=secrets.token_hex(16)
         with db() as con:
             con.execute('BEGIN IMMEDIATE')
@@ -468,6 +527,8 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
         return jsonify(jobId=jid),202
 
     extraction_lock=threading.Lock()
+    rig_edit_lock=threading.Lock()
+    showcase_lock=threading.Lock()
 
     @app.post('/api/jobs/<jid>/extract')
     @auth()
@@ -531,6 +592,223 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
             con.execute('DELETE FROM jobs WHERE id=?',(jid,))
         return jsonify(ok=True)
 
+    def editable_rig(jid):
+        with db() as con:
+            row=con.execute('SELECT * FROM jobs WHERE id=?',(jid,)).fetchone()
+        if not row or row['state']!='complete' or json.loads(row['payload']).get('jobType')!='rigging':
+            return None,(jsonify(error='완료된 리깅 결과를 찾을 수 없습니다.'),404)
+        if row['user_id']!=request.team_user['id'] and request.team_user['role']!='admin':
+            return None,(jsonify(error='본인 결과 또는 관리자만 편집할 수 있습니다.'),403)
+        return row,None
+
+    def rig_editor_payload(jid, row, asset_prefix, readonly=False):
+        folder=(rigging.RESULT_ROOT/jid).resolve()
+        if not folder.is_relative_to(rigging.RESULT_ROOT.resolve()):
+            raise FileNotFoundError('리깅 결과 경로를 확인할 수 없습니다.')
+        manifest=rig_edit.read_manifest(folder)
+        result=json.loads(row['result'] or '{}')
+        revision=int(result.get('rigRevision',manifest.get('editRevision',0)))
+        layers=[]
+        records=rig_edit.layer_records(manifest)
+        order=rig_edit.effective_layer_order(manifest)
+        by_key=dict(records)
+        for layer_key in order:
+            part=by_key[layer_key];kind,layer_id=layer_key.split(':',1)
+            asset=f'{asset_prefix}/{kind}/{layer_id}'
+            neutral=(kind=='part' or part.get('fade')=='eyeOpen' or layer_id=='eyebrow' or
+                     (manifest.get('sourceMouthState')=='closed' and layer_id=='mouth_close') or
+                     (manifest.get('sourceMouthState')=='slightly-open' and layer_id=='mouth_open'))
+            layers.append({key:part.get(key) for key in ('id','runtimeName','sourceLayerName','left','top','width','height')}|
+                          {'key':layer_key,'kind':kind,'defaultVisible':neutral,'asset':asset,'originalAsset':asset+'?original=1'})
+        parts=[item for item in layers if item['kind']=='part']
+        version_prefix=asset_prefix.rsplit('/layers',1)[0]+'/versions'
+        versions=rig_version_payload(jid,revision,version_prefix)
+        return dict(jobId=jid,revision=revision,versions=versions,canvas=manifest['canvas'],parts=parts,layers=layers,
+                    layerOrder=order,readonly=readonly,
+                    composite=result.get('composite'),psd=result.get('psd'),package=result.get('package'),
+                    packageV2=result.get('packageV2') if result.get('packageV2SourceRevision')==revision else None,
+                    editedParts=manifest.get('editedParts',[]))
+
+    @app.get('/api/jobs/<jid>/rig-edit')
+    @auth()
+    def rig_edit_info(jid):
+        row,error=editable_rig(jid)
+        if error:return error
+        try:
+            return jsonify(**rig_editor_payload(jid,row,f'/api/jobs/{jid}/rig-edit/layers'))
+        except FileNotFoundError:
+            return jsonify(error='리깅 결과 경로를 확인할 수 없습니다.'),404
+        except Exception:
+            return jsonify(error='편집할 manifest를 읽을 수 없습니다.'),500
+
+    @app.get('/api/jobs/<jid>/rig-edit/layers/<layer_id>')
+    @auth()
+    def rig_edit_layer(jid,layer_id):
+        row,error=editable_rig(jid)
+        if error:return error
+        if not re.fullmatch(r'[a-z0-9_]{1,80}',layer_id):
+            return jsonify(error='레이어를 찾을 수 없습니다.'),404
+        folder=(rigging.RESULT_ROOT/jid).resolve()
+        try:
+            content=rig_edit.layer_bytes(folder,layer_id,original=request.args.get('original')=='1')
+        except (FileNotFoundError,KeyError,zipfile.BadZipFile):
+            return jsonify(error='레이어를 찾을 수 없습니다.'),404
+        return send_file(io.BytesIO(content),mimetype='image/png',conditional=True,download_name=layer_id+'.png')
+
+    @app.get('/api/jobs/<jid>/rig-edit/layers/<kind>/<layer_id>')
+    @auth()
+    def rig_edit_typed_layer(jid,kind,layer_id):
+        row,error=editable_rig(jid)
+        if error:return error
+        if kind not in ('part','expression') or not re.fullmatch(r'[a-z0-9_]{1,80}',layer_id):
+            return jsonify(error='레이어를 찾을 수 없습니다.'),404
+        try:content=rig_edit.layer_bytes((rigging.RESULT_ROOT/jid).resolve(),layer_id,request.args.get('original')=='1',kind)
+        except (FileNotFoundError,KeyError,zipfile.BadZipFile):return jsonify(error='레이어를 찾을 수 없습니다.'),404
+        return send_file(io.BytesIO(content),mimetype='image/png',conditional=True,download_name=layer_id+'.png')
+
+    def save_rig_revision(jid,p,row):
+        expected=p.get('revision')
+        if type(expected) is not int or expected<0:
+            raise ValueError('편집 버전을 확인할 수 없습니다. 페이지를 새로고침하세요.')
+        result=json.loads(row['result'] or '{}')
+        current=int(result.get('rigRevision',0))
+        if expected!=current:
+            return jsonify(error='다른 창에서 결과가 수정되었습니다. 새로고침한 뒤 다시 편집하세요.'),409
+        if not rig_edit_lock.acquire(blocking=False):
+            return jsonify(error='다른 리깅 결과를 저장 중입니다. 잠시 후 다시 시도하세요.'),409
+        try:
+            with db() as con:
+                latest=con.execute("SELECT result FROM jobs WHERE id=? AND state='complete'",(jid,)).fetchone()
+            if not latest:return jsonify(error='결과를 찾을 수 없습니다.'),404
+            latest_result=json.loads(latest['result'] or '{}')
+            if int(latest_result.get('rigRevision',0))!=expected:
+                return jsonify(error='다른 창에서 결과가 수정되었습니다. 새로고침한 뒤 다시 편집하세요.'),409
+            folder=(rigging.RESULT_ROOT/jid).resolve()
+            saved=rig_edit.save_revision(folder,p.get('operations'),expected,ROOT/'tools'/'write_psd.js',layer_order=p.get('layerOrder'))
+            latest_result.update(rigRevision=saved['revision'],editedParts=saved['manifest'].get('editedParts',[]),
+                                 warnings=saved['manifest'].get('warnings',[]),qualityStatus=saved['manifest'].get('status','needs_review'),
+                                 message='레이어 수정본 저장 완료')
+            latest_result.pop('packageV2',None)
+            latest_result.pop('packageV2SourceRevision',None)
+            latest_result.pop('rigV2BoneCount',None)
+            with db() as con:
+                con.execute('UPDATE jobs SET updated=?,result=? WHERE id=?',(time.time(),json.dumps(latest_result,ensure_ascii=False),jid))
+            (folder/rig_v2.V2_FILENAME).unlink(missing_ok=True)
+            (folder/rig_showcase.SHOWCASE_FILENAME).unlink(missing_ok=True)
+            return jsonify(ok=True,revision=saved['revision'],editedParts=saved['manifest'].get('editedParts',[]),
+                           composite=latest_result.get('composite'),psd=latest_result.get('psd'),package=latest_result.get('package'),packageV2=None)
+        except ValueError:
+            raise
+        except Exception:
+            app.logger.exception('Rig layer edit failed')
+            return jsonify(error='수정본 저장에 실패했습니다. 기존 결과는 유지됩니다.'),500
+        finally:
+            rig_edit_lock.release()
+
+    @app.post('/api/jobs/<jid>/rig-edit/revisions')
+    @auth()
+    def save_rig_edit(jid):
+        p=payload()
+        row,error=editable_rig(jid)
+        if error:return error
+        return save_rig_revision(jid,p,row)
+
+    def restore_rig_version(jid,p,row):
+        expected,target=p.get('revision'),p.get('targetRevision')
+        if type(expected) is not int or expected<0 or type(target) is not int or target<0:
+            raise ValueError('복원할 작업 버전을 확인하세요.')
+        result=json.loads(row['result'] or '{}');current=int(result.get('rigRevision',0))
+        if expected!=current:
+            return jsonify(error='다른 창에서 결과가 수정되었습니다. 새로고침한 뒤 다시 복원하세요.'),409
+        if not rig_edit_lock.acquire(blocking=False):
+            return jsonify(error='다른 리깅 결과를 저장 중입니다. 잠시 후 다시 시도하세요.'),409
+        try:
+            with db() as con:
+                latest=con.execute("SELECT result FROM jobs WHERE id=? AND state='complete'",(jid,)).fetchone()
+            if not latest:return jsonify(error='결과를 찾을 수 없습니다.'),404
+            latest_result=json.loads(latest['result'] or '{}')
+            if int(latest_result.get('rigRevision',0))!=expected:
+                return jsonify(error='다른 창에서 결과가 수정되었습니다. 새로고침한 뒤 다시 복원하세요.'),409
+            folder=(rigging.RESULT_ROOT/jid).resolve()
+            restored=rig_edit.restore_version(folder,target,current);manifest=restored['manifest']
+            latest_result.update(rigRevision=restored['revision'],editedParts=manifest.get('editedParts',[]),
+                                 warnings=manifest.get('warnings',[]),qualityStatus=manifest.get('status','needs_review'),
+                                 message=f'작업 버전 v{target+1}을 새 버전으로 복원 완료')
+            for key in ('packageV2','packageV2SourceRevision','rigV2BoneCount'):latest_result.pop(key,None)
+            with db() as con:
+                con.execute('UPDATE jobs SET updated=?,result=? WHERE id=?',(time.time(),json.dumps(latest_result,ensure_ascii=False),jid))
+            (folder/rig_v2.V2_FILENAME).unlink(missing_ok=True)
+            (folder/rig_showcase.SHOWCASE_FILENAME).unlink(missing_ok=True)
+            return jsonify(ok=True,revision=restored['revision'],restoredFrom=target,packageV2=None)
+        except (ValueError,FileNotFoundError):
+            raise
+        except Exception:
+            app.logger.exception('Rig version restore failed')
+            return jsonify(error='이전 작업 버전 복원에 실패했습니다. 현재 결과는 유지됩니다.'),500
+        finally:
+            rig_edit_lock.release()
+
+    @app.post('/api/jobs/<jid>/rig-edit/restore')
+    @auth()
+    def restore_rig_edit(jid):
+        p=payload();row,error=editable_rig(jid)
+        if error:return error
+        return restore_rig_version(jid,p,row)
+
+    @app.get('/api/jobs/<jid>/rig-edit/versions/<int:revision>/<filename>')
+    @auth()
+    def rig_version_asset(jid,revision,filename):
+        with db() as con:
+            row=con.execute("SELECT * FROM jobs WHERE id=? AND state='complete'",(jid,)).fetchone()
+        if not row or json.loads(row['payload']).get('jobType')!='rigging':
+            return jsonify(error='결과를 찾을 수 없습니다.'),404
+        current=int(json.loads(row['result'] or '{}').get('rigRevision',0));folder=(rigging.RESULT_ROOT/jid).resolve()
+        try:target=rig_edit.version_file(folder,revision,current,filename)
+        except FileNotFoundError:return jsonify(error='작업 버전을 찾을 수 없습니다.'),404
+        return send_file(target,conditional=False,max_age=0,as_attachment=filename.endswith(('.psd','.zip')),download_name=filename)
+
+    @app.post('/api/jobs/<jid>/rig-v2')
+    @auth()
+    def build_rig_v2(jid):
+        p=payload()
+        expected=p.get('revision')
+        if type(expected) is not int or expected<0:
+            raise ValueError('편집 버전을 확인할 수 없습니다. 결과를 새로고침하세요.')
+        row,error=editable_rig(jid)
+        if error:return error
+        result=json.loads(row['result'] or '{}')
+        current=int(result.get('rigRevision',0))
+        if expected!=current:
+            return jsonify(error='레이어가 수정되었습니다. 결과를 새로고침한 뒤 V2를 다시 만드세요.'),409
+        folder=(rigging.RESULT_ROOT/jid).resolve()
+        if not folder.is_relative_to(rigging.RESULT_ROOT.resolve()):
+            return jsonify(error='리깅 결과 경로를 확인할 수 없습니다.'),404
+        existing=folder/rig_v2.V2_FILENAME
+        if result.get('packageV2SourceRevision')==current and existing.is_file():
+            return jsonify(ok=True,packageV2=result.get('packageV2'),boneCount=result.get('rigV2BoneCount'),sourceRevision=current,cached=True)
+        if not rig_edit_lock.acquire(blocking=False):
+            return jsonify(error='다른 리깅 패키지를 저장 중입니다. 잠시 후 다시 시도하세요.'),409
+        try:
+            built=rig_v2.build_package(folder,ROOT/'unity-v2',current)
+            relative=f'/outputs/rigging/{jid}/{rig_v2.V2_FILENAME}'
+            with db() as con:
+                latest=con.execute("SELECT result FROM jobs WHERE id=? AND state='complete'",(jid,)).fetchone()
+                if not latest:return jsonify(error='결과를 찾을 수 없습니다.'),404
+                latest_result=json.loads(latest['result'] or '{}')
+                if int(latest_result.get('rigRevision',0))!=current:
+                    existing.unlink(missing_ok=True)
+                    return jsonify(error='저장 중 레이어가 수정되었습니다. V2를 다시 만드세요.'),409
+                latest_result.update(packageV2=relative,packageV2SourceRevision=current,rigV2BoneCount=built['bones'],message='V2 스켈레톤 패키지 생성 완료')
+                con.execute('UPDATE jobs SET updated=?,result=? WHERE id=?',(time.time(),json.dumps(latest_result,ensure_ascii=False),jid))
+            return jsonify(ok=True,packageV2=relative,boneCount=built['bones'],sourceRevision=current,cached=False,warnings=built['warnings'])
+        except (ValueError,FileNotFoundError):
+            raise
+        except Exception:
+            app.logger.exception('Rig V2 package failed')
+            return jsonify(error='V2 스켈레톤 패키지 생성에 실패했습니다. V1 결과는 유지됩니다.'),500
+        finally:
+            rig_edit_lock.release()
+
     @app.post('/api/jobs/<jid>/cancel')
     @auth()
     def cancel(jid):
@@ -541,7 +819,7 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
             count=con.execute("UPDATE jobs SET state='cancelled' WHERE id=? AND state='queued'",(jid,)).rowcount
             if count:
                 p=json.loads(row['payload'])
-                for key in ('imageData','eyeLeftMask','eyeRightMask','mouthMask'):
+                for key in ('imageData','eyeLeftMask','eyeRightMask','eyebrowLeftMask','eyebrowRightMask','mouthMask'):
                     p.pop(key,None)
                 con.execute('UPDATE jobs SET payload=? WHERE id=?',(json.dumps(p),jid))
         return jsonify(ok=bool(count)),200 if count else 409
@@ -567,7 +845,7 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
             row=con.execute("SELECT result FROM jobs WHERE id=? AND state='complete'",(jid,)).fetchone()
         result=json.loads(row['result']) if row else {}
         relative=f'/outputs/rigging/{jid}/{filename}'
-        if relative not in [result.get(k) for k in ('psd','package','composite','preview','manifest')]:
+        if relative not in [result.get(k) for k in ('psd','package','packageV2','composite','preview','manifest')]:
             return jsonify(error='리깅 결과를 찾을 수 없습니다.'),404
         folder=(rigging.RESULT_ROOT/jid).resolve()
         target=(folder/filename).resolve()
@@ -598,16 +876,89 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
         row=get_share(token)
         if not row:return '공유 링크가 없거나 만료되었습니다.',404
         if row['kind']=='internal':
-            return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>내부 2D 리깅 결과</title><style>body{{margin:0;font:15px system-ui;background:#0c0f16;color:#eee}}header{{display:flex;align-items:center;gap:16px;padding:14px 20px;background:#171d29;border-bottom:1px solid #30384b}}h1{{font-size:18px;margin:0}}p{{margin:0;color:#aeb8cb}}a{{margin-left:auto;padding:9px 15px;background:#7661e3;color:white;border-radius:9px;text-decoration:none}}iframe{{display:block;width:100%;height:calc(100vh - 70px);border:0;background:#101014}}</style></head><body><header><div><h1>2D 리깅 내부 결과</h1><p>PSD를 자동으로 불러왔습니다. 다운로드 파일도 함께 제공됩니다.</p></div><a id="download" href="/share/rig/{token}/asset/character.psd" download>PSD 다운로드</a></header><iframe src="/share/rig/{token}/player" allow="fullscreen" title="2D 리깅 미리보기"></iframe><script>setTimeout(()=>document.getElementById('download').click(),700)</script></body></html>'''
-        return f'''<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width"><title>2D 리깅 쇼케이스</title><style>body{{margin:0;background:radial-gradient(circle,#292044,#090b11);color:white;font:16px system-ui;text-align:center}}main{{min-height:100vh;display:grid;place-items:center}}img{{max-width:82vw;max-height:76vh;filter:drop-shadow(0 25px 30px #0008);animation:f 3s ease-in-out infinite}}@keyframes f{{50%{{transform:translateY(-12px) rotate(.6deg)}}}}a{{color:#c9beff}}</style><main><div><img src="/share/rig/{token}/asset/composite.png"><h1>AI 2D 리깅 쇼케이스</h1><p>한 장의 그림을 움직이는 캐릭터로 만들었습니다.</p><a href="/">나도 만들어 보기</a></div></main>'''
+            return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>내부 2D 리깅 결과</title><style>body{{margin:0;font:15px system-ui;background:#0c0f16;color:#eee}}header{{display:flex;align-items:center;gap:12px;padding:14px 20px;background:#171d29;border-bottom:1px solid #30384b}}h1{{font-size:18px;margin:0}}p{{margin:0;color:#aeb8cb}}.copy{{margin-right:auto}}a{{padding:9px 15px;background:#2b3549;color:white;border:1px solid #46536c;border-radius:9px;text-decoration:none}}a.primary{{background:#7661e3;border-color:#9686f4}}iframe{{display:block;width:100%;height:calc(100vh - 70px);border:0;background:#101014}}</style></head><body><header><div class="copy"><h1>2D 리깅 내부 결과</h1><p>동아리 공유 링크에서 레이어를 확인하고 함께 수정할 수 있습니다.</p></div><a href="/share/rig/{token}/inspector">레이어 편집</a><a id="download" class="primary" href="/share/rig/{token}/asset/character.psd" download>PSD 다운로드</a></header><iframe src="/share/rig/{token}/player" allow="fullscreen" title="2D 리깅 미리보기"></iframe><script>setTimeout(()=>document.getElementById('download').click(),700)</script></body></html>'''
+        return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>2D 리깅 쇼케이스</title><style>body{{margin:0;background:radial-gradient(circle,#292044,#090b11);color:white;font:16px system-ui;text-align:center}}main{{min-height:100vh;display:grid;place-items:center;padding:24px;box-sizing:border-box}}img{{display:block;max-width:82vw;max-height:76vh;margin:auto;filter:drop-shadow(0 25px 30px #0008)}}h1{{margin:14px 0 8px}}p{{margin:0 0 12px;color:#d4cfea}}a{{color:#c9beff}}</style></head><body><main><div><img src="/share/rig/{token}/asset/showcase.webp" alt="움직이는 2D 캐릭터"><h1>AI 2D 리깅 쇼케이스</h1><p>눈 깜박임과 표정, 머리카락 움직임을 적용했습니다.</p><a href="/">나도 만들어 보기</a></div></main></body></html>'''
 
     @app.get('/share/rig/<token>/asset/<filename>')
     def share_asset(token,filename):
-        row=get_share(token); allowed=('character.psd',) if row and row['kind']=='internal' else ('composite.png',)
+        row=get_share(token); allowed=('character.psd',) if row and row['kind']=='internal' else ('composite.png','showcase.webp')
         if not row or filename not in allowed:return jsonify(error='공유할 수 없는 파일입니다.'),404
         folder=(rigging.RESULT_ROOT/row['job_id']).resolve();target=(folder/filename).resolve()
+        if row['kind']=='external' and filename=='showcase.webp' and not target.is_file():
+            with showcase_lock:
+                if not target.is_file():
+                    try:
+                        rig_showcase.build_showcase(folder,target)
+                    except Exception:
+                        app.logger.exception('Rig showcase rendering failed')
+                        target=folder/'composite.png'
         if not target.is_relative_to(folder) or not target.is_file():return jsonify(error='파일을 찾을 수 없습니다.'),404
-        return send_file(target,conditional=True,as_attachment=filename.endswith('.psd'),download_name=filename)
+        mimetype='image/webp' if filename=='showcase.webp' and target.name=='showcase.webp' else None
+        return send_file(target,conditional=True,as_attachment=filename.endswith('.psd'),download_name=filename,mimetype=mimetype)
+
+    @app.get('/share/rig/<token>/inspector')
+    def shared_rig_inspector(token):
+        row=get_share(token)
+        if not row or row['kind']!='internal':return '공유 링크가 없거나 만료되었습니다.',404
+        response=send_file(ROOT/'web'/'rigging-editor.html',conditional=False,max_age=0)
+        response.headers['Cache-Control']='no-store, no-cache, must-revalidate, max-age=0'
+        return response
+
+    @app.get('/share/rig/<token>/rig-edit')
+    def shared_rig_edit_info(token):
+        row=get_share(token)
+        if not row or row['kind']!='internal':return jsonify(error='공유 링크가 없거나 만료되었습니다.'),404
+        try:
+            data=rig_editor_payload(row['job_id'],row,f'/share/rig/{token}/layers',readonly=False)
+            data.update(psd=f'/share/rig/{token}/asset/character.psd',package=None,packageV2=None,composite=None)
+            return jsonify(**data)
+        except FileNotFoundError:
+            return jsonify(error='리깅 결과를 찾을 수 없습니다.'),404
+        except Exception:
+            app.logger.exception('Shared rig inspector failed')
+            return jsonify(error='레이어 정보를 읽을 수 없습니다.'),500
+
+    @app.get('/share/rig/<token>/layers/<layer_id>')
+    def shared_rig_layer(token,layer_id):
+        row=get_share(token)
+        if not row or row['kind']!='internal' or not re.fullmatch(r'[a-z0-9_]{1,80}',layer_id):
+            return jsonify(error='레이어를 찾을 수 없습니다.'),404
+        folder=(rigging.RESULT_ROOT/row['job_id']).resolve()
+        try:
+            content=rig_edit.layer_bytes(folder,layer_id,original=request.args.get('original')=='1')
+        except (FileNotFoundError,KeyError,zipfile.BadZipFile):
+            return jsonify(error='레이어를 찾을 수 없습니다.'),404
+        return send_file(io.BytesIO(content),mimetype='image/png',conditional=True,download_name=layer_id+'.png')
+
+    @app.get('/share/rig/<token>/layers/<kind>/<layer_id>')
+    def shared_rig_typed_layer(token,kind,layer_id):
+        row=get_share(token)
+        if not row or row['kind']!='internal' or kind not in ('part','expression') or not re.fullmatch(r'[a-z0-9_]{1,80}',layer_id):
+            return jsonify(error='레이어를 찾을 수 없습니다.'),404
+        try:content=rig_edit.layer_bytes((rigging.RESULT_ROOT/row['job_id']).resolve(),layer_id,request.args.get('original')=='1',kind)
+        except (FileNotFoundError,KeyError,zipfile.BadZipFile):return jsonify(error='레이어를 찾을 수 없습니다.'),404
+        return send_file(io.BytesIO(content),mimetype='image/png',conditional=True,download_name=layer_id+'.png')
+
+    @app.post('/share/rig/<token>/rig-edit/revisions')
+    def shared_save_rig_edit(token):
+        row=get_share(token)
+        if not row or row['kind']!='internal':return jsonify(error='공유 링크가 없거나 만료되었습니다.'),404
+        return save_rig_revision(row['job_id'],payload(),row)
+
+    @app.post('/share/rig/<token>/rig-edit/restore')
+    def shared_restore_rig_edit(token):
+        row=get_share(token)
+        if not row or row['kind']!='internal':return jsonify(error='공유 링크가 없거나 만료되었습니다.'),404
+        return restore_rig_version(row['job_id'],payload(),row)
+
+    @app.get('/share/rig/<token>/versions/<int:revision>/<filename>')
+    def shared_rig_version_asset(token,revision,filename):
+        row=get_share(token)
+        if not row or row['kind']!='internal':return jsonify(error='공유 링크가 없거나 만료되었습니다.'),404
+        current=int(json.loads(row['result'] or '{}').get('rigRevision',0));folder=(rigging.RESULT_ROOT/row['job_id']).resolve()
+        try:target=rig_edit.version_file(folder,revision,current,filename)
+        except FileNotFoundError:return jsonify(error='작업 버전을 찾을 수 없습니다.'),404
+        return send_file(target,conditional=False,max_age=0,as_attachment=filename.endswith(('.psd','.zip')),download_name=filename)
 
     @app.get('/share/rig/<token>/player')
     def shared_internal_player(token):
@@ -676,7 +1027,7 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
             finally:
                 with db() as con:
                     p=json.loads(row['payload'])
-                    for key in ('imageData','eyeLeftMask','eyeRightMask','mouthMask'):
+                    for key in ('imageData','eyeLeftMask','eyeRightMask','eyebrowLeftMask','eyebrowRightMask','mouthMask'):
                         p.pop(key,None)
                     con.execute('UPDATE jobs SET payload=? WHERE id=?',(json.dumps(p),jid))
     app.start_worker=lambda: threading.Thread(target=worker,daemon=True).start()

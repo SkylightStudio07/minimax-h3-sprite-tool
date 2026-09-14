@@ -8,9 +8,10 @@ import tempfile
 import threading
 import time
 import unittest
+import zipfile
 from unittest.mock import patch
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageDraw
 import team_server as server
 
 HEADERS={'X-Sprite-Request':'1'}
@@ -107,10 +108,13 @@ class TeamTests(unittest.TestCase):
         buf=io.BytesIO();Image.new('RGB',(32,32)).save(buf,format='PNG')
         self.payload=dict(imageData=base64.b64encode(buf.getvalue()).decode(),width=352,height=608,animationType='idle')
         painted=Image.new('RGBA',(32,32),(0,0,0,0))
-        for x in range(10,22):
-            for y in range(13,19): painted.putpixel((x,y),(255,255,255,255))
+        ImageDraw.Draw(painted).line((10,17,22,15),fill=(255,255,255,255),width=2)
         mask=io.BytesIO();painted.save(mask,format='PNG')
         self.mask_data=base64.b64encode(mask.getvalue()).decode()
+        mouth=Image.new('RGBA',(32,32),(0,0,0,0))
+        ImageDraw.Draw(mouth).rectangle((13,15,19,17),fill=(255,255,255,255))
+        mouth_data=io.BytesIO();mouth.save(mouth_data,format='PNG')
+        self.mouth_mask_data=base64.b64encode(mouth_data.getvalue()).decode()
 
     def tearDown(self):
         self.app.stop_worker()
@@ -246,20 +250,41 @@ class TeamTests(unittest.TestCase):
 
     def test_rigging_queue_result_and_private_player(self):
         valid=dict(imageData=self.payload['imageData'],eyeLeftMask=self.mask_data,eyeRightAbsent=True,
-                   mouthMask=self.mask_data,resolution=768,steps=20,seed=7)
+                   mouthMask=self.mouth_mask_data,resolution=768,steps=20,seed=7,
+                   maskVersion=2,eyeInputMode='closed-stroke')
         for change in [dict(resolution=999),dict(steps=21),dict(seed=-1),dict(imageData='bad'),
                        dict(eyeLeftMask=''),dict(mouthMask=''),dict(eyeRightAbsent=False)]:
             response=self.post(self.admin,'rigging/generate',**(valid|change))
             self.assertEqual(response.status_code,400)
+        wide=Image.new('RGBA',(32,32),(0,0,0,0));ImageDraw.Draw(wide).rectangle((1,14,30,17),fill=(255,255,255,255))
+        encoded=io.BytesIO();wide.save(encoded,format='PNG')
+        too_wide='data:image/png;base64,'+base64.b64encode(encoded.getvalue()).decode()
+        response=self.post(self.admin,'rigging/generate',**(valid|{'mouthMask':too_wide}))
+        self.assertEqual(response.status_code,400)
+        self.assertIn('입 마스크가 너무 넓습니다',response.json['error'])
+        tall=Image.new('RGBA',(32,32),(0,0,0,0));ImageDraw.Draw(tall).line((15,5,16,26),fill=(255,255,255,255),width=2)
+        encoded=io.BytesIO();tall.save(encoded,format='PNG')
+        too_tall='data:image/png;base64,'+base64.b64encode(encoded.getvalue()).decode()
+        response=self.post(self.admin,'rigging/generate',**(valid|{'eyeLeftMask':too_tall}))
+        self.assertEqual(response.status_code,400)
+        self.assertIn('감은 눈 선',response.json['error'])
         response=self.post(self.admin,'rigging/generate',**valid)
         self.assertEqual(response.status_code,202)
         jid=response.json['jobId']
         queued=self.admin.get('/api/jobs/'+jid).json
         self.assertEqual((queued['jobType'],queued['animationType']),('rigging','2D 리깅'))
+        with closing(sqlite3.connect(self.data/'team.sqlite3')) as con:
+            stored=json.loads(con.execute('SELECT payload FROM jobs WHERE id=?',(jid,)).fetchone()[0])
+        self.assertEqual((stored['maskVersion'],stored['eyeInputMode']),(2,'closed-stroke'))
         self.assertEqual(self.guest.get('/rigging').status_code,401)
         rigging_page=self.admin.get('/rigging')
         self.assertEqual(rigging_page.status_code,200)
+        self.assertIn('눈 마스킹 가이드',rigging_page.text)
+        self.assertIn('maskGuideTab',rigging_page.text)
         rigging_page.close()
+        team_page=self.admin.get('/')
+        self.assertIn('갤러리에서 내리기',team_page.text)
+        team_page.close()
         self.assertEqual(self.guest.get('/rigging-player/index.html').status_code,401)
 
         old_root=server.rigging.RESULT_ROOT
@@ -289,19 +314,124 @@ class TeamTests(unittest.TestCase):
             external=self.post(client,'jobs/'+jid+'/shares',kind='external').json['url']
             self.assertEqual(self.guest.get(internal).status_code,200)
             internal_page=self.guest.get(internal)
-            self.assertIn('/player',internal_page.text);self.assertNotIn('/player?model=',internal_page.text);internal_page.close()
+            self.assertIn('/player',internal_page.text);self.assertIn('/inspector',internal_page.text);self.assertIn('레이어 편집',internal_page.text);self.assertNotIn('/player?model=',internal_page.text);internal_page.close()
             psd=self.guest.get(internal+'/asset/character.psd')
             self.assertEqual(psd.status_code,200);self.assertIn('attachment',psd.headers['Content-Disposition']);psd.close()
             player=self.guest.get(internal+'/player')
             self.assertEqual(player.status_code,200);self.assertIn('/shared-rig-player/',player.text);self.assertIn('SHARED_MODEL_URL',player.text);player.close()
             self.assertEqual(self.guest.get('/shared-rig-player/lib/app.js').status_code,200)
             self.assertEqual(self.guest.get('/shared-rig-player/sample.psd').status_code,404)
-            self.assertEqual(self.guest.get(external).status_code,200)
+            inspector=self.guest.get(internal+'/inspector');self.assertEqual(inspector.status_code,200);self.assertIn('moveTool',inspector.text);inspector.close()
+            external_page=self.guest.get(external)
+            self.assertEqual(external_page.status_code,200);self.assertIn('/asset/showcase.webp',external_page.text);external_page.close()
+            with patch.object(server.rig_showcase,'build_showcase',side_effect=lambda folder,target: target.write_bytes(b'animated')) as build:
+                showcase=self.guest.get(external+'/asset/showcase.webp')
+                self.assertEqual(showcase.status_code,200);self.assertEqual(showcase.mimetype,'image/webp');showcase.close()
+                build.assert_called_once()
             self.assertEqual(self.guest.get(external+'/asset/composite.png').status_code,200)
             self.assertEqual(self.guest.get(external+'/asset/character.psd').status_code,404)
+            self.assertEqual(self.guest.get(external+'/inspector').status_code,404)
+            self.assertEqual(self.guest.get(external+'/rig-edit').status_code,404)
+            self.assertEqual(self.guest.get(external+'/layers/front_hair').status_code,404)
+            self.assertEqual(self.guest.get(external+'/versions/0/composite.png').status_code,404)
+            self.assertEqual(self.guest.post(external+'/rig-edit/revisions',json={'revision':0,'operations':[]},headers=HEADERS).status_code,404)
+            self.assertEqual(self.guest.post(external+'/rig-edit/restore',json={'revision':0,'targetRevision':0},headers=HEADERS).status_code,404)
             gallery=client.get('/api/gallery').json['jobs']
             self.assertTrue(any(item['id']==jid and item['jobType']=='rigging' for item in gallery))
         finally:
             app.stop_worker();server.rigging.RESULT_ROOT=old_root
+
+    def test_rigging_layer_editor_permissions_assets_and_revision(self):
+        self.approve()
+        jid='a'*32
+        root=self.data/'edit-results';folder=root/jid;folder.mkdir(parents=True)
+        layer=io.BytesIO();Image.new('RGBA',(12,10),(20,30,40,255)).save(layer,format='PNG')
+        manifest={'schemaVersion':1,'status':'ready','canvas':{'width':32,'height':32,'origin':'top-left'},
+                  'parts':[{'id':'headwear','runtimeName':'headwear','sourceLayerName':'headwear','file':'layers/headwear.png','left':5,'top':4,'width':12,'height':10}],
+                  'expressions':[],'anchors':{},'warnings':[],'synthetic':{'eye':False,'mouth':False}}
+        (folder/'manifest.json').write_text(json.dumps(manifest),encoding='utf-8')
+        with zipfile.ZipFile(folder/'character-unity-parts.zip','w') as archive:
+            archive.writestr('layers/headwear.png',layer.getvalue())
+            archive.writestr('manifest.json',json.dumps(manifest))
+        for name in ('character.psd','composite.png'):(folder/name).write_bytes(b'asset')
+        (folder/'showcase.webp').write_bytes(b'old animation')
+        result={'state':'complete','psd':f'/outputs/rigging/{jid}/character.psd','package':f'/outputs/rigging/{jid}/character-unity-parts.zip',
+                'composite':f'/outputs/rigging/{jid}/composite.png','manifest':f'/outputs/rigging/{jid}/manifest.json'}
+        with closing(sqlite3.connect(self.data/'team.sqlite3')) as con:
+            con.execute('INSERT INTO jobs VALUES(?,?,?,?,?,?,?)',(jid,1,'complete',time.time(),time.time(),json.dumps({'jobType':'rigging','animationType':'2D 리깅'}),json.dumps(result)))
+            con.commit()
+        old_root=server.rigging.RESULT_ROOT;server.rigging.RESULT_ROOT=root
+        try:
+            page=self.admin.get('/rigging-editor?job='+jid);self.assertEqual(page.status_code,200)
+            self.assertIn('eraserTool',page.text);self.assertIn('brushTool',page.text);page.close()
+            self.assertEqual(self.guest.get('/api/jobs/'+jid+'/rig-edit').status_code,401)
+            self.assertEqual(self.member.get('/api/jobs/'+jid+'/rig-edit').status_code,403)
+            info=self.admin.get('/api/jobs/'+jid+'/rig-edit').json
+            self.assertEqual((info['revision'],info['parts'][0]['id']),(0,'headwear'))
+            self.assertIn('originalAsset',info['parts'][0])
+            self.assertEqual((info['versions'][0]['revision'],info['versions'][0]['label']),(0,'작업 버전 v1'))
+            image=self.admin.get(info['parts'][0]['asset']);self.assertEqual(image.status_code,200);image.close()
+            version_image=self.admin.get(info['versions'][0]['composite']);self.assertEqual(version_image.status_code,200);version_image.close()
+            self.assertEqual(self.guest.get(info['versions'][0]['composite']).status_code,401)
+            internal=self.post(self.admin,'jobs/'+jid+'/shares',kind='internal').json['url']
+            inspect_info=self.guest.get(internal+'/rig-edit');self.assertEqual(inspect_info.status_code,200);self.assertFalse(inspect_info.json['readonly'])
+            self.assertEqual(inspect_info.json['versions'][0]['label'],'작업 버전 v1')
+            inspect_layer=self.guest.get(inspect_info.json['parts'][0]['asset']);self.assertEqual(inspect_layer.status_code,200);inspect_layer.close()
+            shared_version=self.guest.get(inspect_info.json['versions'][0]['composite']);self.assertEqual(shared_version.status_code,200);shared_version.close()
+            saved={'revision':1,'editedParts':['headwear'],'manifest':manifest|{'editRevision':1,'editedParts':['headwear']}}
+            with patch.object(server.rig_edit,'save_revision',return_value=saved):
+                response=self.post(self.admin,'jobs/'+jid+'/rig-edit/revisions',revision=0,operations=[{'layerId':'headwear'}])
+            self.assertEqual(response.status_code,200)
+            self.assertEqual(response.json['revision'],1)
+            self.assertFalse((folder/'showcase.webp').exists())
+            shared_saved={'revision':2,'editedParts':['headwear'],'manifest':manifest|{'editRevision':2,'editedParts':['headwear']}}
+            with patch.object(server.rig_edit,'save_revision',return_value=shared_saved):
+                shared_response=self.guest.post(internal+'/rig-edit/revisions',json={'revision':1,'operations':[{'layerId':'headwear'}]},headers=HEADERS)
+            self.assertEqual(shared_response.status_code,200)
+            self.assertEqual(shared_response.json['revision'],2)
+            (folder/'showcase.webp').write_bytes(b'old animation')
+            restored={'revision':3,'targetRevision':0,'manifest':manifest|{'editRevision':3,'editedParts':[]}}
+            self.assertEqual(self.guest.post('/api/jobs/'+jid+'/rig-edit/restore',json={'revision':2,'targetRevision':0},headers=HEADERS).status_code,401)
+            self.assertEqual(self.post(self.member,'jobs/'+jid+'/rig-edit/restore',revision=2,targetRevision=0).status_code,403)
+            with patch.object(server.rig_edit,'restore_version',return_value=restored):
+                restored_response=self.post(self.admin,'jobs/'+jid+'/rig-edit/restore',revision=2,targetRevision=0)
+            self.assertEqual((restored_response.status_code,restored_response.json['revision']),(200,3))
+            self.assertFalse((folder/'showcase.webp').exists())
+            self.assertEqual(self.post(self.admin,'jobs/'+jid+'/rig-edit/revisions',revision=0,operations=[]).status_code,409)
+            gallery=next(item for item in self.admin.get('/api/gallery').json['jobs'] if item['id']==jid)
+            self.assertEqual((gallery['rigRevision'],gallery['rigVersions'][-1]['label']),(3,'작업 버전 v4'))
+        finally:
+            server.rigging.RESULT_ROOT=old_root
+
+    def test_rigging_v2_generation_permissions_revision_and_download(self):
+        self.approve()
+        jid='b'*32
+        root=self.data/'v2-results';folder=root/jid;folder.mkdir(parents=True)
+        for name in ('character.psd','character-unity-parts.zip','composite.png','manifest.json'):(folder/name).write_bytes(b'asset')
+        result={'state':'complete','rigRevision':2,'psd':f'/outputs/rigging/{jid}/character.psd','package':f'/outputs/rigging/{jid}/character-unity-parts.zip',
+                'composite':f'/outputs/rigging/{jid}/composite.png','manifest':f'/outputs/rigging/{jid}/manifest.json'}
+        with closing(sqlite3.connect(self.data/'team.sqlite3')) as con:
+            con.execute('INSERT INTO jobs VALUES(?,?,?,?,?,?,?)',(jid,1,'complete',time.time(),time.time(),json.dumps({'jobType':'rigging','animationType':'2D 리깅'}),json.dumps(result)))
+            con.commit()
+        old_root=server.rigging.RESULT_ROOT;server.rigging.RESULT_ROOT=root
+        try:
+            endpoint='jobs/'+jid+'/rig-v2'
+            self.assertEqual(self.guest.post('/api/'+endpoint,json={'revision':2},headers={'X-Sprite-Request':'1'}).status_code,401)
+            self.assertEqual(self.post(self.member,endpoint,revision=2).status_code,403)
+            self.assertEqual(self.post(self.admin,endpoint,revision=1).status_code,409)
+            package=folder/server.rig_v2.V2_FILENAME
+            def build(*_):
+                package.write_bytes(b'v2-package')
+                return {'path':package,'bones':17,'sourceRevision':2,'warnings':['draft']}
+            with patch.object(server.rig_v2,'build_package',side_effect=build):
+                response=self.post(self.admin,endpoint,revision=2)
+            self.assertEqual(response.status_code,200)
+            self.assertEqual(response.json['boneCount'],17)
+            job=self.admin.get('/api/jobs/'+jid).json
+            self.assertEqual((job['packageV2SourceRevision'],job['rigV2BoneCount']),(2,17))
+            asset=self.admin.get(job['packageV2']);self.assertEqual(asset.status_code,200);asset.close()
+            self.assertEqual(self.guest.get(job['packageV2']).status_code,401)
+        finally:
+            server.rigging.RESULT_ROOT=old_root
 
 if __name__=='__main__':unittest.main()

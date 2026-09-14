@@ -123,7 +123,7 @@ function applyRig(rig){
   CHEST={cx:NP.cx,cy:A.neckBottom+(A.face.y1-A.face.y0)*0.60,rx:Math.max(1,(A.face.x1-A.face.x0)*0.60),ry:Math.max(1,(A.face.y1-A.face.y0)*0.45)};
   Object.assign(bounce,{x:0,v:0,dy:0}); lastFrame=null; blinkT=-1;blinkVariant=1;irisBounceT=-1;
   hasEyeClose2=layers.some(L=>L.bn==='eye_close2');
-  cv.width=CW; cv.height=CH; fit();
+  cv.width=CW; cv.height=CH; resetView();
   renderLayerList();
   const nStr=layers.reduce((s,L)=>s+(L.strands?L.strands.length:0),0);
   document.getElementById('rigInfo').textContent =
@@ -253,7 +253,7 @@ async function loadModelUrl(value){
     return r.arrayBuffer();
   },target.pathname.split('/').pop()||'character.psd');
 }
-const MODEL_URL=QUERY.get('model')||window.SHARED_MODEL_URL;
+const MODEL_URL=window.SHARED_MODEL_URL||QUERY.get('model');
 if(MODEL_URL)loadModelUrl(MODEL_URL).catch(err=>status('エラー: '+err.message,true));
 else if(OBS_MODE)loadSample();
 (function(){ const miss=[];
@@ -269,10 +269,10 @@ window.addEventListener('drop',async e=>{
 
 // ---------- params ----------
 const P = { angleX:0, angleY:0, angleZ:0, eyeOpenL:1, eyeOpenR:1, eyeX:0, eyeY:0, brow:0,
-            mouthOpen:0, mouthForm:0, mouthCY:0, body:0, physAmp:2.35, soft:2,
+            mouthOpen:0, mouthForm:0, mouthCY:0, body:0, physAmp:2, soft:2,
             browAngL:0, browAngR:0, browAngSym:0, bangL:0, bangC:0, bangR:0,
             armY:0, armPos:0, bust:2.5, bustY:1, irisScale:1, mouthEase:0.72, eyeEase:0.3,
-            fhAmp:2.3, fhSoft:0.4, eyeCY:0, eyeCAng:0, mouthCAng:0, eyeScaleL:1, eyeScaleR:1, mouthScale:1 };
+            fhAmp:2, fhSoft:0.4, eyeCY:0, eyeCAng:0, mouthCAng:0, eyeScaleL:1, eyeScaleR:1, mouthScale:1 };
 const DEFAULTS = Object.assign({}, P);
 let lastPsd=null, lastPre=null;
 const T = Object.assign({}, P);
@@ -443,12 +443,13 @@ async function openReadme(){
   if(readmeLoaded) return;
   const body=document.getElementById('readmeBody');
   try{
-    const r=await fetch('README_KO.md');
+    const r=await fetch('README.md');
     if(!r.ok) throw new Error('HTTP '+r.status);
     body.innerHTML=mdToHtml(await r.text());
     readmeLoaded=true;
   }catch(err){
-    body.innerHTML='<p>한국어 사용법을 불러오지 못했습니다.</p>';
+    body.innerHTML='<p>README.md を取得できませんでした。'+
+      '<a href="https://github.com/852wa/Anime2.5DRig#readme" target="_blank" rel="noopener">GitHubで読む</a></p>';
   }
 }
 document.getElementById('btnReadme').addEventListener('click',openReadme);
@@ -721,7 +722,7 @@ function deform(L, e){
         x+=e.eyeX*11*FS; y+=e.eyeY*6*FS;
         const tl=smooth((0.32-vOpen)/0.32);           // iris stays round until nearly closed
         y = EA.closeY + (y-EA.closeY)*(1-0.80*tl);
-      } else {
+      } else if(bn!=='eye_open_original') {
         y = EA.closeY + (y-EA.closeY)*(1-0.85*(1-vOpen));   // lid compression
       }
     }
@@ -753,10 +754,8 @@ function deform(L, e){
       y += mo*6*FS*smooth((y-A.mouth.cy)/(A.face.y1-A.mouth.cy));
     }
     // --- head transform ---
-    let hw = isHead?1:(L.group==='body'?0.16:0);   // body subtly follows head XYZ
-    // Keep the neck bridging the independently moving head and torso.  A weak
-    // head weight exposes a transparent gap during idle motion on short necks.
-    if(bn==='neck') hw = 0.82*smooth((A.neckBottom-y)/Math.max(1,A.neckBottom-A.neckTop));
+    let hw = L.headFollow==null?(isHead?1:(L.group==='body'?0.16:0)):L.headFollow;
+    if(bn==='neck') hw = 0.55*smooth((A.neckBottom-y)/Math.max(1,A.neckBottom-A.neckTop));
     if(hw>0){
       let rx=x-NP.cx, ry=y-NP.cy;
       const rx2=rx*cz-ry*sz, ry2=rx*sz+ry*cz;
@@ -809,27 +808,55 @@ function deform(L, e){
   }
 }
 
+// ---------- preview zoom / pan ----------
+const stage=document.getElementById('stage'), viewZoomLabel=document.getElementById('viewZoomReset');
+let viewZoom=1,viewFitScale=1,viewPanX=0,viewPanY=0,viewDragging=false,viewDragX=0,viewDragY=0;
+function clampViewPan(){
+  const width=CW*viewFitScale*viewZoom,height=CH*viewFitScale*viewZoom;
+  const limitX=Math.max(0,(width-stage.clientWidth)/2),limitY=Math.max(0,(height-stage.clientHeight)/2);
+  viewPanX=clamp(viewPanX,-limitX,limitX);viewPanY=clamp(viewPanY,-limitY,limitY);
+}
+function applyView(){
+  const width=CW*viewFitScale*viewZoom,height=CH*viewFitScale*viewZoom;
+  clampViewPan();cv.style.width=width+'px';cv.style.height=height+'px';
+  cv.style.transform='translate('+viewPanX+'px,'+viewPanY+'px)';
+  viewZoomLabel.textContent=Math.round(viewZoom*100)+'%';
+  stage.classList.toggle('view-pannable',viewZoom>1.001);
+}
+function fit(){
+  viewFitScale=Math.min(stage.clientWidth/CW,stage.clientHeight/CH);
+  if(!Number.isFinite(viewFitScale)||viewFitScale<=0)viewFitScale=1;
+  applyView();
+}
+function resetView(){viewZoom=1;viewPanX=0;viewPanY=0;fit();}
+function setViewZoom(next,clientX,clientY){
+  next=clamp(next,0.5,4);if(Math.abs(next-viewZoom)<0.001)return;
+  const before=cv.getBoundingClientRect(),hasPoint=Number.isFinite(clientX)&&Number.isFinite(clientY);
+  const ux=hasPoint?(clientX-before.left)/Math.max(1,before.width):0.5;
+  const uy=hasPoint?(clientY-before.top)/Math.max(1,before.height):0.5;
+  viewZoom=next;applyView();
+  if(hasPoint){const after=cv.getBoundingClientRect();viewPanX+=clientX-(after.left+ux*after.width);viewPanY+=clientY-(after.top+uy*after.height);applyView();}
+}
+document.getElementById('viewZoomOut').addEventListener('click',()=>setViewZoom(viewZoom-0.25));
+document.getElementById('viewZoomIn').addEventListener('click',()=>setViewZoom(viewZoom+0.25));
+viewZoomLabel.addEventListener('click',resetView);
+stage.addEventListener('wheel',event=>{
+  if(event.target.closest('#viewControls'))return;
+  event.preventDefault();setViewZoom(viewZoom*(event.deltaY<0?1.15:1/1.15),event.clientX,event.clientY);
+},{passive:false});
+cv.addEventListener('pointerdown',event=>{
+  if(event.button!==0||viewZoom<=1.001)return;
+  viewDragging=true;viewDragX=event.clientX-viewPanX;viewDragY=event.clientY-viewPanY;
+  cv.setPointerCapture(event.pointerId);stage.classList.add('view-panning');event.preventDefault();
+});
+cv.addEventListener('pointermove',event=>{if(viewDragging){viewPanX=event.clientX-viewDragX;viewPanY=event.clientY-viewDragY;applyView();}});
+function stopViewDrag(event){if(!viewDragging)return;viewDragging=false;stage.classList.remove('view-panning');if(cv.hasPointerCapture(event.pointerId))cv.releasePointerCapture(event.pointerId);}
+cv.addEventListener('pointerup',stopViewDrag);cv.addEventListener('pointercancel',stopViewDrag);
+
 // ---------- main loop ----------
 let last=performance.now(),simulationTime=last,fpsN=0,fpsT=last;
-let viewZoom=1,viewPanX=0,viewPanY=0,viewDragging=false,viewDragX=0,viewDragY=0;
-function fit(){
-  const st=document.getElementById('stage'), s=Math.min(st.clientWidth/CW, st.clientHeight/CH);
-  cv.style.width=(CW*s*viewZoom)+'px'; cv.style.height=(CH*s*viewZoom)+'px';
-  cv.style.transform=`translate(${viewPanX}px,${viewPanY}px)`;
-  st.classList.toggle('view-pannable',viewZoom>1);
-  const reset=document.getElementById('viewZoomReset');if(reset)reset.textContent=Math.round(viewZoom*100)+'%';
-}
-function setViewZoom(next){viewZoom=Math.max(.5,Math.min(5,next));if(viewZoom<=1){viewPanX=0;viewPanY=0;}fit()}
-document.getElementById('viewZoomOut').addEventListener('click',()=>setViewZoom(viewZoom-.25));
-document.getElementById('viewZoomIn').addEventListener('click',()=>setViewZoom(viewZoom+.25));
-document.getElementById('viewZoomReset').addEventListener('click',()=>{viewZoom=1;viewPanX=0;viewPanY=0;fit()});
-document.getElementById('stage').addEventListener('wheel',event=>{event.preventDefault();setViewZoom(viewZoom+(event.deltaY<0?.25:-.25))},{passive:false});
-document.getElementById('stage').addEventListener('pointerdown',event=>{if(viewZoom<=1||event.target!==cv)return;viewDragging=true;viewDragX=event.clientX-viewPanX;viewDragY=event.clientY-viewPanY;event.currentTarget.setPointerCapture(event.pointerId);event.currentTarget.classList.add('view-panning')});
-document.getElementById('stage').addEventListener('pointermove',event=>{if(!viewDragging)return;viewPanX=event.clientX-viewDragX;viewPanY=event.clientY-viewDragY;fit()});
-function endViewDrag(event){if(!viewDragging)return;viewDragging=false;if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);event.currentTarget.classList.remove('view-panning')}
-document.getElementById('stage').addEventListener('pointerup',endViewDrag);document.getElementById('stage').addEventListener('pointercancel',endViewDrag);
 window.addEventListener('resize',fit);
-if(typeof ResizeObserver!=='undefined')new ResizeObserver(fit).observe(document.getElementById('stage'));
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(fit).observe(stage);
 function animate(now,dt){
   const t=now/1000;
   let tgt=Object.assign({},T);
@@ -903,7 +930,7 @@ function animate(now,dt){
   for(const L of layers){
     if(!L.spr) continue;
     for(const sp of L.spr){
-      const wind=auto.idle?(2.35*Math.sin(t*0.8+sp.phase)+1.25*Math.sin(t*1.9+sp.phase*2.3)):0;
+      const wind=auto.idle?(1.8*Math.sin(t*0.8+sp.phase)+1.0*Math.sin(t*1.9+sp.phase*2.3)):0;
       const txv=headDX+wind*FS;
       RT.spring(sp.stiff,txv,70,9,dt);
       sp.stiff.dx=-(sp.stiff.x-txv)*2.2;

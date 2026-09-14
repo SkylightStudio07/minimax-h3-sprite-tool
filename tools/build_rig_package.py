@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 import re
 import shutil
@@ -12,7 +13,30 @@ import tempfile
 import zipfile
 
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image, ImageChops, ImageDraw, ImageFilter
+
+
+FRONT_OCCLUDER_IDS = (
+    "front_hair", "hair_front", "headwear", "headgear", "hood", "hat",
+    "glasses", "eyewear", "spectacles",
+)
+FACE_LAYER_IDS = ("face", "eyewhite", "irides", "eyelash", "eye", "brow", "nose", "mouth")
+
+
+def default_layer_order(parts: list[dict], expressions: list[dict]) -> list[str]:
+    """Place facial expressions below front hair and headwear by default."""
+    part_keys = [f"part:{item['id']}" for item in parts]
+    expression_keys = [f"expression:{item['id']}" for item in expressions]
+    facial_indices = [index for index, item in enumerate(parts)
+                      if any(token in str(item.get("id", "")).lower() for token in FACE_LAYER_IDS)]
+    after_face = max(facial_indices, default=-1) + 1
+    insert = len(part_keys)
+    for index, item in enumerate(parts[after_face:], after_face):
+        layer_id = str(item.get("id", "")).lower()
+        if any(token in layer_id for token in FRONT_OCCLUDER_IDS):
+            insert = index
+            break
+    return [*part_keys[:insert], *expression_keys, *part_keys[insert:]]
 
 
 def runtime_name(name: str) -> str:
@@ -61,11 +85,17 @@ def fit_to_canvas(image: Image.Image, width: int, height: int, resample: int) ->
     return canvas
 
 
-def load_mask(path: Path, width: int, height: int) -> Image.Image:
+def load_mask(path: Path, width: int, height: int, *, binary: bool = True) -> Image.Image:
     with Image.open(path) as opened:
-        mask = opened.convert("L")
-    mask = fit_to_canvas(mask, width, height, Image.Resampling.NEAREST)
-    return mask.point(lambda value: 255 if value >= 32 else 0)
+        rgba = opened.convert("RGBA")
+        mask = ImageChops.multiply(rgba.convert("L"), rgba.getchannel("A"))
+    mask = fit_to_canvas(
+        mask,
+        width,
+        height,
+        Image.Resampling.NEAREST if binary else Image.Resampling.LANCZOS,
+    )
+    return mask.point(lambda value: 255 if value >= 32 else 0) if binary else mask
 
 
 def feature_color(source: Image.Image, mask: Image.Image) -> tuple[int, int, int, int]:
@@ -81,9 +111,80 @@ def feature_color(source: Image.Image, mask: Image.Image) -> tuple[int, int, int
     return (int(rgb[0]), int(rgb[1]), int(rgb[2]), 255)
 
 
+def eye_angle(source: Image.Image, mask: Image.Image) -> float:
+    """Estimate the eyelid angle in radians from dark source pixels inside a user mask."""
+    box = mask.getbbox()
+    if not box:
+        return 0.0
+    x0, y0, x1, y1 = box
+    rgba = np.asarray(source.crop(box), dtype=np.float64)
+    selected = np.asarray(mask.crop(box), dtype=np.uint8) > 0
+    selected &= rgba[:, :, 3] > 16
+    if selected.sum() < 8:
+        return 0.0
+
+    luminance = rgba[:, :, 0] * 0.2126 + rgba[:, :, 1] * 0.7152 + rgba[:, :, 2] * 0.0722
+    bright_reference = float(np.percentile(luminance[selected], 85))
+    darkness = np.maximum(0.0, bright_reference - luminance)
+    darkness[~selected] = 0.0
+    xs: list[float] = []
+    ys: list[float] = []
+    weights: list[float] = []
+    for x in range(darkness.shape[1]):
+        column = darkness[:, x]
+        total = float(column.sum())
+        if total <= 0.0:
+            continue
+        xs.append(float(x))
+        ys.append(float(np.dot(np.arange(len(column)), column) / total))
+        weights.append(math.sqrt(total))
+    if len(xs) < 5 or max(xs) - min(xs) < max(4.0, (x1 - x0) * 0.35):
+        return 0.0
+    x_values = np.asarray(xs)
+    y_values = np.asarray(ys)
+    point_weights = np.asarray(weights)
+    slope = 0.0
+    for _ in range(2):
+        weight_sum = float(point_weights.sum())
+        if weight_sum <= 0:
+            return 0.0
+        mean_x = float(np.dot(x_values, point_weights) / weight_sum)
+        mean_y = float(np.dot(y_values, point_weights) / weight_sum)
+        denominator = float(np.dot(point_weights, (x_values - mean_x) ** 2))
+        if denominator <= 1e-6:
+            return 0.0
+        slope = float(np.dot(point_weights, (x_values - mean_x) * (y_values - mean_y)) / denominator)
+        residual = y_values - (mean_y + slope * (x_values - mean_x))
+        median_error = float(np.median(np.abs(residual)))
+        keep = np.abs(residual) <= max(1.5, median_error * 2.5)
+        if keep.all() or keep.sum() < 5:
+            break
+        x_values, y_values, point_weights = x_values[keep], y_values[keep], point_weights[keep]
+    return math.radians(max(-30.0, min(30.0, math.degrees(math.atan(slope)))))
+
+
+def eye_angles(source: Image.Image, masks: list[Image.Image]) -> list[float]:
+    angles = [eye_angle(source, mask) for mask in masks]
+    centers = []
+    for index, mask in enumerate(masks):
+        box = mask.getbbox()
+        if box:
+            centers.append(((box[0] + box[2]) * 0.5, (box[1] + box[3]) * 0.5, index))
+    if len(centers) >= 2:
+        centers.sort()
+        left, right = centers[0], centers[-1]
+        roll = math.atan2(right[1] - left[1], max(1.0, right[0] - left[0]))
+        roll = max(math.radians(-30.0), min(math.radians(30.0), roll))
+        if abs(roll) >= math.radians(3.0):
+            for _, _, index in centers:
+                angles[index] = roll * 0.7 + angles[index] * 0.3
+    return angles
+
+
 def closed_eye(source: Image.Image, masks: list[Image.Image]) -> tuple[Image.Image, int, int] | None:
     combined = Image.new("RGBA", source.size)
-    for mask in masks:
+    angles = eye_angles(source, masks)
+    for mask, angle in zip(masks, angles):
         box = mask.getbbox()
         if not box:
             continue
@@ -95,6 +196,7 @@ def closed_eye(source: Image.Image, masks: list[Image.Image]) -> tuple[Image.Ima
         layer = Image.new("RGBA", (crop_w * scale, crop_h * scale))
         draw = ImageDraw.Draw(layer)
         color = feature_color(source, mask)
+        cos_angle, sin_angle = math.cos(angle), math.sin(angle)
         start_x, end_x = pad + width * 0.08, pad + width * 0.92
         center_x = (start_x + end_x) * 0.5
         center_y = pad + height * 0.57
@@ -103,9 +205,11 @@ def closed_eye(source: Image.Image, masks: list[Image.Image]) -> tuple[Image.Ima
         points = []
         for index in range(33):
             t = index / 32
-            x = start_x + (end_x - start_x) * t
-            normalized = (x - center_x) / half
-            y = center_y + amplitude * (1.0 - normalized * normalized)
+            x_offset = -half + half * 2.0 * t
+            normalized = x_offset / half
+            y_offset = amplitude * (1.0 - normalized * normalized)
+            x = center_x + x_offset * cos_angle - y_offset * sin_angle
+            y = center_y + x_offset * sin_angle + y_offset * cos_angle
             points.append((round(x * scale), round(y * scale)))
         line_width = max(1, round(height * 0.09 * scale))
         draw.line(points, fill=color, width=line_width, joint="curve")
@@ -115,6 +219,57 @@ def closed_eye(source: Image.Image, masks: list[Image.Image]) -> tuple[Image.Ima
     if not box:
         return None
     return combined.crop(box), box[0], box[1]
+
+
+def authored_closed_eye(source: Image.Image, masks: list[Image.Image]) -> tuple[Image.Image, int, int] | None:
+    """Render the user's authored closed-eye strokes without inferring their curve or angle."""
+    combined = Image.new("RGBA", source.size)
+    for mask in masks:
+        box = mask.getbbox()
+        if not box:
+            continue
+        color = feature_color(source, mask)
+        stroke = Image.new("RGBA", source.size, color)
+        stroke.putalpha(mask)
+        combined.alpha_composite(stroke)
+    box = combined.getbbox()
+    if not box:
+        return None
+    return combined.crop(box), box[0], box[1]
+
+
+def original_eye(source: Image.Image, masks: list[Image.Image]) -> tuple[Image.Image, int, int] | None:
+    """Copy the neutral open eyes directly from the fitted source image."""
+    combined_mask = Image.new("L", source.size)
+    for mask in masks:
+        combined_mask = ImageChops.lighter(combined_mask, mask.convert("L"))
+    if not combined_mask.getbbox():
+        return None
+    # A one-pixel expansion and soft edge cover reconstruction seams without
+    # noticeably including the nearby eyebrow or hair.
+    soft_mask = combined_mask.filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.GaussianBlur(0.7))
+    patch = source.copy()
+    patch.putalpha(ImageChops.multiply(source.getchannel("A"), soft_mask))
+    box = patch.getbbox()
+    if not box:
+        return None
+    return patch.crop(box), box[0], box[1]
+
+
+def inferred_eye_masks(info: dict, source_dir: Path, width: int, height: int) -> list[Image.Image]:
+    """Use generated eye-layer alpha only as a locator for direct-stroke mode."""
+    masks = []
+    for record in info.get("layers", []):
+        normalized = runtime_name(str(record.get("name", "")))
+        if not normalized.startswith(("eyewhite", "irides", "eyelash")):
+            continue
+        source = source_dir / record["filename"]
+        with Image.open(source) as opened:
+            alpha = opened.convert("RGBA").getchannel("A")
+        placed = Image.new("L", (width, height))
+        placed.paste(alpha, (int(record["left"]), int(record["top"])))
+        masks.append(placed)
+    return masks
 
 
 def closed_mouth(source: Image.Image, mask: Image.Image) -> tuple[Image.Image, int, int] | None:
@@ -141,28 +296,91 @@ def closed_mouth(source: Image.Image, mask: Image.Image) -> tuple[Image.Image, i
     return feature, x0, round((y0 + y1 - target_height) * 0.5)
 
 
+def slightly_open_mouth(source: Image.Image, mask: Image.Image) -> tuple[Image.Image, int, int] | None:
+    """Turn a closed mouth line into a restrained open-mouth slit for V1 talking."""
+    box = mask.getbbox()
+    if not box:
+        return None
+    x0, y0, x1, y1 = box
+    source_crop = source.crop(box)
+    mask_crop = mask.crop(box)
+    rgba = np.asarray(source_crop, dtype=np.uint8).copy()
+    selected = np.asarray(mask_crop, dtype=np.uint8) > 0
+    luminance = rgba[:, :, 0] * 0.2126 + rgba[:, :, 1] * 0.7152 + rgba[:, :, 2] * 0.0722
+    values = luminance[selected]
+    if len(values) < 4:
+        return None
+    threshold = np.percentile(values, 62)
+    alpha = np.where(selected & (luminance <= threshold), np.asarray(mask_crop), 0).astype(np.uint8)
+    rgba[:, :, 3] = np.minimum(rgba[:, :, 3], alpha)
+    feature = Image.fromarray(rgba, "RGBA")
+    visible = feature.getbbox()
+    if not visible:
+        return None
+    feature = feature.crop((0, visible[1], feature.width, visible[3]))
+    target_height = max(3, round(max(feature.height * 1.65, (y1 - y0) * 0.42)))
+    feature = feature.resize((feature.width, target_height), Image.Resampling.LANCZOS)
+    return feature, x0, round((y0 + y1 - target_height) * 0.5)
+
+
 def manual_expressions(
     source_path: Path | None,
     eye_paths: list[Path],
+    eyebrow_paths: list[Path],
     mouth_path: Path | None,
     width: int,
     height: int,
+    eye_input_mode: str = "area",
+    preserve_original_eyes: bool = False,
+    open_eye_masks: list[Image.Image] | None = None,
+    mouth_state: str = "closed",
 ) -> list[dict]:
     if not source_path:
         return []
     with Image.open(source_path) as opened:
         source = fit_to_canvas(opened.convert("RGBA"), width, height, Image.Resampling.LANCZOS)
-    eyes = [load_mask(path, width, height) for path in eye_paths if path]
+    eyes = [
+        load_mask(path, width, height, binary=eye_input_mode != "closed-stroke")
+        for path in eye_paths
+        if path
+    ]
     result = []
-    eye = closed_eye(source, eyes)
+    if preserve_original_eyes:
+        opened = original_eye(source, eyes if eye_input_mode == "area" else (open_eye_masks or []))
+        if opened:
+            image, left, top = opened
+            result.append({"name": "eye_open_original", "image": image, "left": left, "top": top,
+                           "width": image.width, "height": image.height, "side": None, "fade": "eyeOpen"})
+    eyebrows = [load_mask(path, width, height) for path in eyebrow_paths if path]
+    eyebrow = original_eye(source, eyebrows)
+    if eyebrow:
+        image, left, top = eyebrow
+        result.append({"name": "eyebrow", "image": image, "left": left, "top": top,
+                       "width": image.width, "height": image.height, "side": None, "fade": None})
+    eye = authored_closed_eye(source, eyes) if eye_input_mode == "closed-stroke" else closed_eye(source, eyes)
     if eye:
         image, left, top = eye
         result.append({"name": "eye_close", "image": image, "left": left, "top": top, "width": image.width, "height": image.height, "side": None, "fade": "eyeClose"})
     if mouth_path:
-        mouth = closed_mouth(source, load_mask(mouth_path, width, height))
-        if mouth:
-            image, left, top = mouth
-            result.append({"name": "mouth_close", "image": image, "left": left, "top": top, "width": image.width, "height": image.height, "side": None, "fade": "mouthClose"})
+        mouth_mask = load_mask(mouth_path, width, height)
+        if mouth_state == "closed":
+            original = original_eye(source, [mouth_mask])
+            opened = slightly_open_mouth(source, mouth_mask)
+            if original:
+                image, left, top = original
+                result.append({"name": "mouth_close", "image": image, "left": left, "top": top, "width": image.width, "height": image.height, "side": None, "fade": "mouthClose"})
+            if opened:
+                image, left, top = opened
+                result.append({"name": "mouth_open", "image": image, "left": left, "top": top, "width": image.width, "height": image.height, "side": None, "fade": "mouthOpen"})
+        else:
+            original = original_eye(source, [mouth_mask])
+            mouth = closed_mouth(source, mouth_mask)
+            if original:
+                image, left, top = original
+                result.append({"name": "mouth_open", "image": image, "left": left, "top": top, "width": image.width, "height": image.height, "side": None, "fade": "mouthOpen"})
+            if mouth:
+                image, left, top = mouth
+                result.append({"name": "mouth_close", "image": image, "left": left, "top": top, "width": image.width, "height": image.height, "side": None, "fade": "mouthClose"})
     return result
 
 
@@ -174,7 +392,12 @@ def main() -> None:
     parser.add_argument("--source-image", type=Path)
     parser.add_argument("--eye-left-mask", type=Path)
     parser.add_argument("--eye-right-mask", type=Path)
+    parser.add_argument("--eyebrow-left-mask", type=Path)
+    parser.add_argument("--eyebrow-right-mask", type=Path)
     parser.add_argument("--mouth-mask", type=Path)
+    parser.add_argument("--eye-input-mode", choices=("area", "closed-stroke"), default="area")
+    parser.add_argument("--preserve-original-eyes", action="store_true")
+    parser.add_argument("--mouth-state", choices=("closed", "slightly-open"), default="closed")
     args = parser.parse_args()
 
     source_json = args.layers_json.resolve()
@@ -187,27 +410,37 @@ def main() -> None:
     authored_expressions = manual_expressions(
         args.source_image,
         [path for path in (args.eye_left_mask, args.eye_right_mask) if path],
+        [path for path in (args.eyebrow_left_mask, args.eyebrow_right_mask) if path],
         args.mouth_mask,
         width,
         height,
+        args.eye_input_mode,
+        args.preserve_original_eyes,
+        inferred_eye_masks(info, source_dir, width, height),
+        args.mouth_state,
     )
 
     with tempfile.TemporaryDirectory(prefix="rigging-v1-", dir=output_dir) as temp_name:
         temp = Path(temp_name)
         payload_layers = []
         package_layers = []
+        layer_images = {}
+        neutral_layer_keys = set()
         for index, record in enumerate(info["layers"]):
             source = source_dir / record["filename"]
+            normalized = runtime_name(record["name"])
+            if normalized == "mouth_open":
+                continue
             with Image.open(source) as opened:
                 image = opened.convert("RGBA")
             left, top = int(record["left"]), int(record["top"])
             alpha_over(composite, image, left, top)
             raw_name = f"layer_{index:02d}.rgba"
             (temp / raw_name).write_bytes(image.tobytes())
-            normalized = runtime_name(record["name"])
             part_id = file_id(normalized)
             payload_layers.append(
                 {
+                    "_key": f"part:{part_id}",
                     "name": normalized,
                     "raw": raw_name,
                     "left": left,
@@ -216,6 +449,8 @@ def main() -> None:
                     "height": image.height,
                 }
             )
+            layer_images[f"part:{part_id}"] = (image, left, top)
+            neutral_layer_keys.add(f"part:{part_id}")
             package_layers.append(
                 {
                     "id": part_id,
@@ -233,10 +468,18 @@ def main() -> None:
 
         for index, expression in enumerate(authored_expressions):
             image = expression["image"]
+            neutral_mouth = (
+                args.mouth_state == "closed" and expression["name"] == "mouth_close"
+            ) or (
+                args.mouth_state == "slightly-open" and expression["name"] == "mouth_open"
+            )
+            if expression["name"] in ("eye_open_original", "eyebrow") or neutral_mouth:
+                alpha_over(composite, image, int(expression["left"]), int(expression["top"]))
             raw_name = f"expression_{index:02d}.rgba"
             (temp / raw_name).write_bytes(image.tobytes())
             payload_layers.append(
                 {
+                    "_key": f"expression:{expression['name']}",
                     "name": expression["name"],
                     "raw": raw_name,
                     "left": expression["left"],
@@ -245,6 +488,23 @@ def main() -> None:
                     "height": image.height,
                 }
             )
+            expression_key = f"expression:{expression['name']}"
+            layer_images[expression_key] = (image, int(expression["left"]), int(expression["top"]))
+            if expression["name"] in ("eye_open_original", "eyebrow") or neutral_mouth:
+                neutral_layer_keys.add(expression_key)
+
+        authored_records = [{"id": item["name"]} for item in authored_expressions]
+        initial_order = default_layer_order(package_layers, authored_records)
+        order_index = {key: index for index, key in enumerate(initial_order)}
+        payload_layers.sort(key=lambda item: order_index.get(item["_key"], len(order_index)))
+        composite = Image.new("RGBA", (width, height))
+        for layer_key in initial_order:
+            if layer_key not in neutral_layer_keys:
+                continue
+            image, left, top = layer_images[layer_key]
+            alpha_over(composite, image, left, top)
+        for item in payload_layers:
+            item.pop("_key", None)
 
         composite_record = {
             "raw": "composite.rgba",
@@ -314,8 +574,21 @@ def main() -> None:
         "anchors": rig_summary["anchors"],
         "warnings": warnings,
         "synthetic": rig_summary["synth"],
-        "expressionSource": "user_mask_derived" if authored_expressions else "generic_fallback",
+        "expressionSource": (
+            "user_closed_eye_stroke"
+            if authored_expressions and args.eye_input_mode == "closed-stroke"
+            else "user_mask_derived"
+            if authored_expressions
+            else "generic_fallback"
+        ),
+        "originalEyePreserved": any(item["name"] == "eye_open_original" for item in authored_expressions),
+        "originalEyebrowsPreserved": any(item["name"] == "eyebrow" for item in authored_expressions),
+        "sourceMouthState": args.mouth_state,
+        "originalMouthPreserved": any(item["name"] == "mouth_open" for item in authored_expressions)
+        if args.mouth_state == "slightly-open"
+        else any(item["name"] == "mouth_close" for item in authored_expressions),
     }
+    manifest["layerOrder"] = default_layer_order(manifest["parts"], manifest["expressions"])
     manifest_path = output_dir / "manifest.json"
     manifest_path.write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"

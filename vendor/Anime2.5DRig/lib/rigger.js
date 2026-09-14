@@ -66,8 +66,12 @@
 
   var SLOTS = {
     'back hair':   { depth: 0.55, group: 'head', phys: 'hair' },
+    'objects':     { depth: 0.60, group: 'body' },
+    'legwear':     { depth: 0.84, group: 'body' },
+    'footwear':    { depth: 0.82, group: 'body' },
     'bottomwear':  { depth: 0.88, group: 'body' },
     'neck':        { depth: 0.95, group: 'body' },
+    'neckwear':    { depth: 0.97, group: 'body' },
     'topwear':     { depth: 0.90, group: 'body' },
     'handwear':    { depth: 0.86, group: 'body' },
     'earwear':     { depth: 0.97, group: 'head' },
@@ -82,6 +86,7 @@
     'eyebrow':     { depth: 1.14, group: 'head', split: true },
     'irides':      { depth: 1.08, group: 'head', split: true, fade: 'eyeOpen' },
     'eyelash':     { depth: 1.12, group: 'head', split: true, fade: 'eyeOpen' },
+    'eye_open_original': { depth: 1.13, group: 'head', split: true, fade: 'eyeOpen' },
     'eye_close':   { depth: 1.12, group: 'head', split: true, fade: 'eyeClose' },
     'eye_close2':  { depth: 1.12, group: 'head', split: true, fade: 'eyeClose2' },
     'front hair':  { depth: 1.28, group: 'head', phys: 'hair' }
@@ -426,6 +431,8 @@
     return {
       name: name, x: x0, y: y0, w: w, h: h, z: z,
       depth: slot.depth, group: slot.group, phys: slot.phys || null,
+      headFollow: slot.headFollow == null ? null : slot.headFollow,
+      visible: slot.visible == null ? true : slot.visible,
       opacity: layer.opacity == null ? 1 : Math.max(0, Math.min(1, layer.opacity)),
       fade: slot.fade || null, side: side || null, strands: strands || null,
       img: { width: w, height: h, data: data }
@@ -479,6 +486,23 @@
         var c0 = centroidOf(e.alpha, W, H);
         slot = { depth: 1.0, group: (c0 && c0.cy < FACE.y1) ? 'head' : 'body' };
         warnings.push('未知のレイヤー名 "' + e.name + '" — ' + slot.group + ' として扱います');
+      }
+      if (bn === 'headwear') {
+        var hb = bboxOf(e.alpha, W, H, 8);
+        var fw = Math.max(1, FACE.x1 - FACE.x0), fh = Math.max(1, FACE.y1 - FACE.y0);
+        var enclosesFace = hb && hb.x0 <= FACE.x0 + fw * 0.15 && hb.x1 >= FACE.x1 - fw * 0.15 &&
+          hb.y1 >= FACE.y1 - fh * 0.08;
+        if (enclosesFace) slot = Object.assign({}, slot, { headFollow: 0.68 });
+        if (hb && !enclosesFace) {
+          var headwearPixels = 0;
+          for (var hp = 0; hp < e.alpha.length; hp++) if (e.alpha[hp] > 8) headwearPixels++;
+          var headwearFill = headwearPixels / Math.max(1, (hb.x1 - hb.x0 + 1) * (hb.y1 - hb.y0 + 1));
+          var faceBoxArea = Math.max(1, (FACE.x1 - FACE.x0 + 1) * (FACE.y1 - FACE.y0 + 1));
+          if (headwearFill < 0.35 && headwearPixels / faceBoxArea < 0.30) {
+            slot = Object.assign({}, slot, { visible: false });
+            warnings.push('작은 파편형 headwear를 기본으로 숨겼습니다. 레이어 목록에서 다시 켤 수 있습니다.');
+          }
+        }
       }
       if (slot.split) {
         var masks = splitSides(e.alpha, W, H, FACE.cx);

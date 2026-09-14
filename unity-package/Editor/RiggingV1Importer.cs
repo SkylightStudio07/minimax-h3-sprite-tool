@@ -18,6 +18,7 @@ namespace SpriteLab.RiggingV1.Editor
             public CanvasInfo canvas;
             public Part[] parts;
             public Expression[] expressions;
+            public string[] layerOrder;
             public Anchors anchors;
         }
 
@@ -149,12 +150,15 @@ namespace SpriteLab.RiggingV1.Editor
             var eyesClosed = new List<SpriteRenderer>();
             var hair = new List<Transform>();
             SpriteRenderer mouthOpen = null, mouthClosed = null;
+            var layerOrder = (manifest.layerOrder ?? Array.Empty<string>())
+                .Select((key, index) => new { key, index }).ToDictionary(item => item.key, item => item.index);
 
             for (var i = 0; i < manifest.parts.Length; i++)
             {
                 var part = manifest.parts[i];
-                var renderer = CreateLayer(root.transform, assetRoot, part, i, HairPivot(part, manifest), manifest.canvas);
-                if (part.id.StartsWith("eyewhite") || part.id.StartsWith("irides") || part.id == "eyelash") eyesOpen.Add(renderer);
+                var order = layerOrder.TryGetValue("part:" + part.id, out var savedOrder) ? savedOrder : i;
+                var renderer = CreateLayer(root.transform, assetRoot, part, order, HairPivot(part, manifest), manifest.canvas);
+                if (part.id.StartsWith("eyewhite") || part.id.StartsWith("irides") || part.id.StartsWith("eyelash")) eyesOpen.Add(renderer);
                 if (part.id == "mouth_open") mouthOpen = renderer;
                 if (part.id.Contains("hair")) hair.Add(renderer.transform);
             }
@@ -163,8 +167,11 @@ namespace SpriteLab.RiggingV1.Editor
             for (var i = 0; i < expressions.Length; i++)
             {
                 var expression = expressions[i];
-                var renderer = CreateLayer(root.transform, assetRoot, expression, 1000 + i, new Vector2(0.5f, 0.5f), manifest.canvas);
+                var order = layerOrder.TryGetValue("expression:" + expression.id, out var savedOrder) ? savedOrder : 1000 + i;
+                var renderer = CreateLayer(root.transform, assetRoot, expression, order, new Vector2(0.5f, 0.5f), manifest.canvas);
+                if (expression.id == "eye_open_original") eyesOpen.Add(renderer);
                 if (expression.id.StartsWith("eye_close")) eyesClosed.Add(renderer);
+                if (expression.id == "mouth_open") mouthOpen = renderer;
                 if (expression.id == "mouth_close") mouthClosed = renderer;
             }
 
