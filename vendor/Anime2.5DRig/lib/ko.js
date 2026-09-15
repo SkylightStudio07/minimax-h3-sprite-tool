@@ -17,20 +17,26 @@
     '後髪柔らかさ':'뒷머리 부드러움','ユーティリティ':'도구','数値リセット':'수치 초기화','軽量PSDを保存':'경량 PSD 저장',
     '調整を保存':'조정 저장','保存状態に戻す':'저장 상태 복원','設定JSONを書き出す':'설정 JSON 내보내기','設定JSONを読み込む':'설정 JSON 불러오기',
     '背景':'배경','透過':'투명','ダーク':'어둡게','レイヤー':'레이어','レイヤー設定を初期化':'레이어 설정 초기화','モデル情報':'모델 정보',
-    '表示':'표시','濃さ':'불투명도','奥行き':'깊이','上へ':'위로','下へ':'아래로'
+    '表示':'표시','濃さ':'불투명도','奥行き':'깊이','上へ':'위로','下へ':'아래로',
+    '角度 X':'각도 X','角度 Y':'각도 Y','角度 Z':'각도 Z'
   }));
   const partial = [
     ['Anime2.5DRig — PSDドロップで動くアバター','Anime2.5DRig — 2.5D 리깅 미리보기'],
     ['サンプルを読み込む','샘플 불러오기'],['サンプルAを読み込む','샘플 A 불러오기'],['サンプルBを読み込む','샘플 B 불러오기'],
     ['PSDファイルを選ぶ','PSD 파일 선택'],['READMEを読む','사용법 읽기'],['読み込みを中止','불러오기 중단'],
+    ['sample2.psd を読み込む','sample2.psd 불러오기'],['sample.psd を読み込む','sample.psd 불러오기'],
+    ['アバターのプレビュー','아바타 미리보기'],['ダブルクリックで初期値に戻す','두 번 눌러 초기값으로 복원'],
     ['イラストに、動きを。','그림에 움직임을 더하세요.'],['パーツ分けしたPSDをドロップ。','분리된 PSD를 놓으세요.'],
     ['目・口・髪を読み取り、その場で動き出します。','눈·입·머리카락을 읽어 바로 움직입니다.'],
-    ['レイヤー名は','레이어 이름은'],['フォルダにも対応。','폴더도 지원합니다.'],['使い方を閉じる','사용법 닫기'],
+    ['レイヤー名は','레이어 이름은'],['フォルダにも対応。','폴더도 지원합니다.'],['使い方を閉じる','사용법 닫기'],['128MBまで','128MB 이하'],
     ['調整はこのブラウザにモデル別で保存。別の環境へはJSONで持ち出せます。','조정값은 이 브라우저에 모델별로 저장됩니다. 다른 환경으로는 JSON을 사용하세요.'],
     ['設定を検索','설정 검색'],['目、髪、口、レイヤー…','눈, 머리카락, 입, 레이어…'],['パーツ','파츠'],['髪','머리카락'],['房を自動リグ','개 묶음 자동 리깅'],
     ['を読み込みました','을(를) 불러왔습니다'],['を読み込み中…',' 불러오는 중…'],['読み込みを中止しました','불러오기를 중단했습니다'],
     ['モデル未読込','모델 미로딩'],['PSDの読み込み後に表示されます','PSD를 불러온 뒤 표시됩니다'],
     ['上が奥、下が手前。表示・濃さ・奥行きを調整できます。','위쪽은 뒤, 아래쪽은 앞입니다. 표시·불투명도·깊이를 조정할 수 있습니다.'],
+    ['目のアンカーが不完全です（eyewhite/irides を確認）','눈 앵커가 불완전합니다. eyewhite/irides를 확인하세요.'],
+    ['不足する閉じ目を自動配置しました（「目」の差分バーで調整可）','부족한 감은 눈을 자동 배치했습니다. 눈 차분 막대에서 조정할 수 있습니다.'],
+    ['mouth_close が無いため汎用閉じ口を自動配置しました（「口」のバーで調整可）','mouth_close가 없어 범용 닫힌 입을 자동 배치했습니다. 입 막대에서 조정할 수 있습니다.'],
     ['モデル情報','모델 정보'],['ノイズ除去','노이즈 제거'],['レイヤー','레이어'],['エラー','오류'],['中止','중단'],
     ['全パラメータを初期値に戻しました','모든 값을 초기값으로 되돌렸습니다'],['先にPSDを読み込んでください','먼저 PSD를 불러오세요'],
     ['書き出し中','내보내는 중'],['軽量PSDを保存しました','경량 PSD를 저장했습니다'],['書き出しエラー','내보내기 오류'],
@@ -41,12 +47,19 @@
     ['マイク準備中','마이크 준비 중'],['マイク使用中','마이크 사용 중'],['マイクが切断されました','마이크 연결이 끊겼습니다'],
     ['カメラ準備中','카메라 준비 중'],['カメラ追従中','카메라 추적 중'],['カメラが切断されました','카메라 연결이 끊겼습니다'],
     ['顔追跡','얼굴 추적'],['透過PNGを書き出しました','투명 PNG를 내보냈습니다'],['描画','렌더링'],
-    ['を表示',' 표시'],['を奥へ',' 뒤로'],['を手前へ',' 앞으로'],['の数値',' 수치'],['自動生成','자동 생성'],['濃さ','불투명도'],['奥行き','깊이']
+    ['を表示',' 표시'],['を奥へ',' 뒤로'],['を手前へ',' 앞으로'],['の濃さ',' 불투명도'],['の奥行き',' 깊이'],['の数値',' 수치'],
+    ['角度 X','각도 X'],['角度 Y','각도 Y'],['角度 Z','각도 Z'],['自動生成','자동 생성'],['濃さ','불투명도'],['奥行き','깊이']
   ];
   function translate(root=document.body){
-    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+    if(!root)return;
+    const nodes=[];
+    if(root.nodeType===Node.TEXT_NODE)nodes.push(root);
+    else{const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);while(walker.nextNode())nodes.push(walker.currentNode);}
     for(const node of nodes){const raw=node.nodeValue,trim=raw.trim();if(!trim)continue;let value=exact.get(trim);if(value!==undefined)node.nodeValue=raw.replace(trim,value);else{let next=raw;for(const [from,to] of partial)next=next.split(from).join(to);node.nodeValue=next}}
-    document.querySelectorAll('[title],[aria-label],[placeholder]').forEach(el=>{for(const name of ['title','aria-label','placeholder']){let value=el.getAttribute(name);if(!value)continue;for(const [from,to] of partial)value=value.split(from).join(to);if(exact.has(value))value=exact.get(value);el.setAttribute(name,value)}})
+    const elements=root.nodeType===Node.ELEMENT_NODE?[root,...root.querySelectorAll('[title],[aria-label],[placeholder]')]:[];
+    elements.forEach(el=>{for(const name of ['title','aria-label','placeholder']){let value=el.getAttribute(name);if(!value)continue;for(const [from,to] of partial)value=value.split(from).join(to);if(exact.has(value))value=exact.get(value);el.setAttribute(name,value)}})
   }
-  document.title='Anime2.5DRig — 2.5D 리깅 미리보기';translate();new MutationObserver(records=>{for(const record of records)for(const node of record.addedNodes)if(node.nodeType===1)translate(node);else if(node.nodeType===3)translate(node.parentNode)}).observe(document.body,{childList:true,subtree:true});
+  document.title='Anime2.5DRig — 2.5D 리깅 미리보기';translate();
+  const observeRoot=document.body||document.documentElement;
+  if(observeRoot instanceof Node)new MutationObserver(records=>{for(const record of records)for(const node of record.addedNodes)translate(node)}).observe(observeRoot,{childList:true,subtree:true});
 })();

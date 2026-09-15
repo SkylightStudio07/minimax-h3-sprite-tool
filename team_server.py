@@ -2,18 +2,20 @@
 import base64
 from contextlib import contextmanager
 import functools
+import html as html_lib
 import io
 import json
 import os
 import re
 import secrets
+import shutil
 import sqlite3
 import threading
 import time
 import zipfile
 from pathlib import Path
 
-from flask import Flask, request, session, jsonify, send_file, send_from_directory
+from flask import Flask, request, session, jsonify, send_file, send_from_directory, redirect
 from werkzeug.security import generate_password_hash, check_password_hash
 from PIL import Image, ImageChops
 import idle_tool as engine
@@ -37,6 +39,8 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
                       SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax',
                       SESSION_COOKIE_SECURE=os.environ.get('SPRITE_HTTPS') == '1')
     database = data / 'team.sqlite3'
+    public_live2d_root = data / 'public-live2d'
+    public_live2d_root.mkdir(parents=True, exist_ok=True)
 
     @contextmanager
     def db():
@@ -58,6 +62,8 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
         CREATE TABLE IF NOT EXISTS deleted_jobs(id TEXT PRIMARY KEY, record TEXT, deleted REAL, deleted_by INTEGER);
         CREATE TABLE IF NOT EXISTS rig_shares(token TEXT PRIMARY KEY, job_id TEXT, kind TEXT,
           created REAL, created_by INTEGER, revoked REAL);
+        CREATE TABLE IF NOT EXISTS public_live2d(token TEXT PRIMARY KEY, job_id TEXT UNIQUE, title TEXT,
+          created REAL, updated REAL, created_by INTEGER, revoked REAL);
         """)
         con.execute("UPDATE jobs SET state='error',result=? WHERE state NOT IN ('queued','complete','error','cancelled')",
                     (json.dumps({'message':'서버 재시작으로 중단됨. 다시 요청하세요.'}),))
@@ -253,7 +259,7 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
         result = json.loads(row['result'] or '{}')
         p = json.loads(row['payload'])
         return dict(result,id=row['id'],state=row['state'],owner=row['name'],userId=row['user_id'],
-                    jobType=p.get('jobType','video'),
+                    jobType=p.get('jobType','video'),rigMode=p.get('rigMode','illustration'),
                     created=row['created'],animationType=p.get('animationType','idle'),
                     width=p.get('width'),height=p.get('height'),
                     referencePreview=f'/api/jobs/{row["id"]}/reference' if p.get('imageData') and row['state'] not in TERMINAL else None)
@@ -267,6 +273,11 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
             versions.append(item|{'composite':base+'/composite.png','psd':base+'/character.psd',
                                   'package':base+'/character-unity-parts.zip'})
         return versions
+
+    def public_live2d_payload(row):
+        if not row: return None
+        return dict(token=row['token'],title=row['title'],url=f'/live2d/{row["token"]}',
+                    preview=f'/live2d/{row["token"]}/preview.png',updated=row['updated'])
 
     @app.get('/api/gallery')
     def public_gallery():
@@ -282,6 +293,8 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
             pages=max(1,(total+5)//6);page=min(page,pages)
             rows=con.execute(f"""SELECT j.*,u.name FROM jobs j JOIN users u ON u.id=j.user_id
                 WHERE j.{condition} ORDER BY j.updated DESC,j.id DESC LIMIT 6 OFFSET ?""",((page-1)*6,)).fetchall()
+            public_by_job={item['job_id']:item for item in con.execute(
+                'SELECT * FROM public_live2d WHERE revoked IS NULL').fetchall()} if approved else {}
         items=[]
         for row in rows:
             result=json.loads(row['result'] or '{}')
@@ -289,13 +302,15 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
             items.append(dict(id=row['id'],created=row['created'],updated=row['updated'],animationType=p.get('animationType','idle'),jobType=p.get('jobType','video'),
                 poster=f'/gallery-media/{row["id"]}/poster' if result.get('video') else None,
                 exportSheets={k:f'/gallery-media/{row["id"]}/{k}' for k in result.get('exportSheets',{})},
-                **{k:f'/gallery-media/{row["id"]}/{k}' if result.get(k) else None for k in ('video','spriteSheet','transparentSheet')}))
+                loop=bool(p.get('loop',True)),loopReport=result.get('loopReport'),
+                **{k:f'/gallery-media/{row["id"]}/{k}' if result.get(k) else None for k in ('video','spriteSheet','transparentSheet','loopVideo','loopSheet','loopTransparentSheet')}))
             if approved:
                 items[-1].update(owner=row['name'],userId=row['user_id'],rawVideo=result.get('rawVideo'))
                 if p.get('jobType')=='rigging':
                     current=int(result.get('rigRevision',0))
                     items[-1].update(composite=result.get('composite'),psd=result.get('psd'),package=result.get('package'),packageV2=result.get('packageV2'),rigRevision=current,rigV2BoneCount=result.get('rigV2BoneCount'),player=result.get('player'),
-                                     rigVersions=rig_version_payload(row['id'],current,f'/api/jobs/{row["id"]}/rig-edit/versions'))
+                                     rigVersions=rig_version_payload(row['id'],current,f'/api/jobs/{row["id"]}/rig-edit/versions'),
+                                     publicLive2d=public_live2d_payload(public_by_job.get(row['id'])))
         return jsonify(jobs=items,page=page,pages=pages,total=total)
 
     poster_lock=threading.Lock()
@@ -303,7 +318,7 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
     @app.get('/gallery-media/<jid>/<kind>')
     def public_result(jid,kind):
         # Only presentation assets are public, never rawVideo or input images.
-        if kind not in ('video','spriteSheet','transparentSheet','poster') and not re.fullmatch(r'sheet_[0-9]+_[0-9a-f]{16}',kind):
+        if kind not in ('video','spriteSheet','transparentSheet','poster','loopVideo','loopSheet','loopTransparentSheet') and not re.fullmatch(r'sheet_[0-9]+_[0-9a-f]{16}',kind):
             return jsonify(error='결과를 찾을 수 없습니다.'),404
         with db() as con:
             row=con.execute("SELECT result FROM jobs WHERE id=? AND state='complete'",(jid,)).fetchone()
@@ -404,7 +419,7 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
             p['seed']=seed
         if type(p.get('backgroundTolerance',24)) is not int or not 4 <= p.get('backgroundTolerance',24) <= 64:
             raise ValueError('배경 제거 강도는 4~64 정수여야 합니다.')
-        if any(k in p and not isinstance(p[k],bool) for k in ('loop','stabilize','removeBackground')):
+        if any(k in p and not isinstance(p[k],bool) for k in ('loop','optimizeLoop','stabilize','removeBackground')):
             raise ValueError('루프와 정규화는 체크박스로 선택하세요.')
         try:
             raw=base64.b64decode(p.get('imageData','').split(',')[-1],validate=True)
@@ -467,6 +482,10 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
         if 'preserveOriginalEyebrows' in p and not isinstance(p['preserveOriginalEyebrows'],bool):
             raise ValueError('원본 눈썹 보존 설정은 체크박스로 선택하세요.')
         p.setdefault('preserveOriginalEyebrows',True)
+        rig_mode=p.get('rigMode','illustration')
+        if rig_mode not in ('illustration','game-sprite'):
+            raise ValueError('지원하지 않는 리깅 모드입니다.')
+        p['rigMode']=rig_mode
         def check_mask(key,label,required=True):
             value=p.get(key,'')
             if not value:
@@ -529,6 +548,57 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
     extraction_lock=threading.Lock()
     rig_edit_lock=threading.Lock()
     showcase_lock=threading.Lock()
+    public_live2d_lock=threading.Lock()
+
+    @app.post('/api/jobs/<jid>/loop')
+    @auth()
+    def optimize_existing_loop(jid):
+        with db() as con:
+            row=con.execute('SELECT * FROM jobs WHERE id=?',(jid,)).fetchone()
+        if not row:return jsonify(error='결과를 찾을 수 없습니다.'),404
+        if row['user_id']!=request.team_user['id'] and request.team_user['role']!='admin':
+            return jsonify(error='본인 결과 또는 관리자만 루프를 보정할 수 있습니다.'),403
+        p=json.loads(row['payload']);result=json.loads(row['result'] or '{}')
+        if row['state']!='complete' or p.get('jobType')=='rigging' or not p.get('loop',True):
+            return jsonify(error='반복 재생으로 생성한 완료 영상만 보정할 수 있습니다.'),409
+        if result.get('loopReport') and result['loopReport'].get('reason')!='processing_failed':
+            return jsonify(error='이미 루프 검사를 마친 영상입니다.'),409
+        relative=result.get('video','')
+        if not relative.startswith(f'/outputs/results/{jid}/'):
+            return jsonify(error='저장된 영상이 없습니다.'),404
+        folder=(engine.RESULT_ROOT/jid).resolve();source=(folder/Path(relative).name).resolve()
+        if not folder.is_relative_to(engine.RESULT_ROOT.resolve()) or not source.is_relative_to(folder) or not source.is_file():
+            return jsonify(error='저장된 영상이 없습니다.'),404
+        if not extraction_lock.acquire(blocking=False):
+            return jsonify(error='다른 영상 또는 시트를 처리 중입니다. 잠시 후 다시 시도하세요.'),409
+        created=[]
+        try:
+            # Recheck under the lock: two clicks must not create competing results.
+            with db() as con: current=con.execute('SELECT result FROM jobs WHERE id=?',(jid,)).fetchone()
+            if current and json.loads(current['result'] or '{}').get('loopVideo'):
+                return jsonify(error='이미 루프 보정본이 있습니다.'),409
+            stem='loop_'+secrets.token_hex(8)
+            video=folder/(stem+'.mp4');sheet=folder/(stem+'.png')
+            transparent=folder/(stem+'_transparent.png') if p.get('removeBackground',False) else None
+            created=[video,sheet]+([transparent] if transparent else [])
+            report=engine.sprite_loop.optimize_video(source,video)
+            engine.make_sprite_sheet(video,sheet,int(p.get('frameCount',8)),True,transparent,int(p.get('backgroundTolerance',24)))
+            changes=dict(loopReport=report,loopVideo=f'/outputs/results/{jid}/{video.name}',loopSheet=f'/outputs/results/{jid}/{sheet.name}',
+                         loopTransparentSheet=f'/outputs/results/{jid}/{transparent.name}' if transparent else None)
+            with db() as con:
+                con.execute('BEGIN IMMEDIATE')
+                current=con.execute("SELECT result FROM jobs WHERE id=? AND state='complete'",(jid,)).fetchone()
+                if not current:return jsonify(error='보정 중 결과가 삭제되었습니다.'),409
+                updated=json.loads(current['result'] or '{}');updated.update(changes)
+                con.execute('UPDATE jobs SET result=?,updated=? WHERE id=?',(json.dumps(updated),time.time(),jid))
+            created=[]
+            return jsonify(ok=True,**changes)
+        except Exception:
+            app.logger.exception('Loop optimization failed')
+            return jsonify(error='루프 보정에 실패했습니다. 기존 영상은 보존됩니다.'),500
+        finally:
+            for path in created:path.unlink(missing_ok=True)
+            extraction_lock.release()
 
     @app.post('/api/jobs/<jid>/extract')
     @auth()
@@ -545,7 +615,7 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
         if row['state']!='complete':
             return jsonify(error='완료된 영상만 다시 추출할 수 있습니다.'),409
         result=json.loads(row['result'] or '{}')
-        relative=result.get('video','')
+        relative=result.get('loopVideo') or result.get('video','')
         if not relative.startswith(f'/outputs/results/{jid}/'):
             return jsonify(error='저장된 영상을 찾을 수 없습니다.'),404
         folder=(engine.RESULT_ROOT/jid).resolve()
@@ -589,6 +659,7 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
                 return jsonify(error='완료된 결과만 삭제할 수 있습니다.'),409
             con.execute('INSERT INTO deleted_jobs VALUES(?,?,?,?)',
                         (jid,json.dumps(dict(row)),time.time(),request.team_user['id']))
+            con.execute('UPDATE public_live2d SET revoked=?,updated=? WHERE job_id=?',(time.time(),time.time(),jid))
             con.execute('DELETE FROM jobs WHERE id=?',(jid,))
         return jsonify(ok=True)
 
@@ -784,12 +855,16 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
         if not folder.is_relative_to(rigging.RESULT_ROOT.resolve()):
             return jsonify(error='리깅 결과 경로를 확인할 수 없습니다.'),404
         existing=folder/rig_v2.V2_FILENAME
-        if result.get('packageV2SourceRevision')==current and existing.is_file():
+        pose=p.get('pose') if p.get('mode')=='game-sprite' else None
+        if pose is not None:
+            rig_v2.normalize_pose(pose,rig_edit.read_manifest(folder)['canvas'])
+        if pose is None and result.get('packageV2SourceRevision')==current and existing.is_file():
             return jsonify(ok=True,packageV2=result.get('packageV2'),boneCount=result.get('rigV2BoneCount'),sourceRevision=current,cached=True)
         if not rig_edit_lock.acquire(blocking=False):
             return jsonify(error='다른 리깅 패키지를 저장 중입니다. 잠시 후 다시 시도하세요.'),409
         try:
-            built=rig_v2.build_package(folder,ROOT/'unity-v2',current)
+            built=(rig_v2.build_package(folder,ROOT/'unity-v2',current,pose=pose) if pose is not None
+                   else rig_v2.build_package(folder,ROOT/'unity-v2',current))
             relative=f'/outputs/rigging/{jid}/{rig_v2.V2_FILENAME}'
             with db() as con:
                 latest=con.execute("SELECT result FROM jobs WHERE id=? AND state='complete'",(jid,)).fetchone()
@@ -831,7 +906,7 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
             row=con.execute("SELECT result FROM jobs WHERE id=? AND state='complete'",(jid,)).fetchone()
         allowed=json.loads(row['result']) if row else {}
         relative=f'/outputs/results/{jid}/{filename}'
-        if relative not in [allowed.get(k) for k in ('video','rawVideo','spriteSheet','transparentSheet')]+list(allowed.get('exportSheets',{}).values()):
+        if relative not in [allowed.get(k) for k in ('video','rawVideo','spriteSheet','transparentSheet','loopVideo','loopSheet','loopTransparentSheet')]+list(allowed.get('exportSheets',{}).values()):
             return jsonify(error='결과를 찾을 수 없습니다.'),404
         target=(engine.RESULT_ROOT/jid/filename).resolve()
         if not target.is_relative_to(engine.RESULT_ROOT.resolve()) or not target.is_file():
@@ -853,11 +928,103 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
             return jsonify(error='리깅 파일을 찾을 수 없습니다.'),404
         return send_file(target,conditional=True)
 
+    def get_public_live2d(token):
+        with db() as con:
+            return con.execute('SELECT * FROM public_live2d WHERE token=? AND revoked IS NULL',(token,)).fetchone()
+
+    @app.post('/api/jobs/<jid>/public-live2d')
+    @auth(admin=True)
+    def manage_public_live2d(jid):
+        data_in=payload();action=data_in.get('action');title=data_in.get('title','공개 Live2D')
+        if action not in ('publish','unpublish'): raise ValueError('공개 작업을 확인하세요.')
+        if not isinstance(title,str) or not title.strip() or len(title.strip())>60:
+            raise ValueError('공개 제목은 1~60자로 입력하세요.')
+        with db() as con:
+            job=con.execute('SELECT * FROM jobs WHERE id=?',(jid,)).fetchone()
+            existing=con.execute('SELECT * FROM public_live2d WHERE job_id=?',(jid,)).fetchone()
+        if not job or job['state']!='complete' or json.loads(job['payload']).get('jobType')!='rigging':
+            return jsonify(error='완료된 리깅 결과를 찾을 수 없습니다.'),404
+        if action=='unpublish':
+            if not existing or existing['revoked'] is not None:
+                return jsonify(error='공개 중인 Live2D가 없습니다.'),409
+            with db() as con: con.execute('UPDATE public_live2d SET revoked=?,updated=? WHERE job_id=?',(time.time(),time.time(),jid))
+            return jsonify(ok=True,publicLive2d=None)
+        source=(rigging.RESULT_ROOT/jid).resolve()
+        psd=(source/'character.psd').resolve();preview=(source/'composite.png').resolve()
+        valid_header=b''
+        if psd.is_file():
+            with psd.open('rb') as stream: valid_header=stream.read(4)
+        if (not source.is_relative_to(rigging.RESULT_ROOT.resolve()) or not psd.is_file() or not preview.is_file() or
+            psd.stat().st_size>128*1024*1024 or valid_header!=b'8BPS'):
+            return jsonify(error='공개할 PSD 또는 미리보기를 찾을 수 없습니다.'),404
+        token=existing['token'] if existing else secrets.token_urlsafe(24)
+        target=(public_live2d_root/token).resolve()
+        if not target.is_relative_to(public_live2d_root.resolve()):
+            return jsonify(error='공개 저장 경로를 만들 수 없습니다.'),500
+        with public_live2d_lock:
+            target.mkdir(parents=True,exist_ok=True)
+            for source_file,name in ((psd,'character.psd'),(preview,'preview.png')):
+                staged=target/(f'.{name}.{secrets.token_hex(6)}.tmp')
+                try:
+                    shutil.copyfile(source_file,staged);os.replace(staged,target/name)
+                finally: staged.unlink(missing_ok=True)
+        now=time.time();clean_title=title.strip()
+        with db() as con:
+            if existing:
+                con.execute('UPDATE public_live2d SET title=?,updated=?,created_by=?,revoked=NULL WHERE job_id=?',
+                            (clean_title,now,request.team_user['id'],jid))
+            else:
+                con.execute('INSERT INTO public_live2d VALUES(?,?,?,?,?,?,NULL)',
+                            (token,jid,clean_title,now,now,request.team_user['id']))
+            published=con.execute('SELECT * FROM public_live2d WHERE job_id=?',(jid,)).fetchone()
+        return jsonify(ok=True,publicLive2d=public_live2d_payload(published))
+
+    @app.get('/api/public-live2d')
+    def public_live2d_list_api():
+        with db() as con:
+            rows=con.execute('SELECT * FROM public_live2d WHERE revoked IS NULL ORDER BY updated DESC').fetchall()
+        return jsonify(items=[public_live2d_payload(row) for row in rows])
+
+    @app.get('/live2d')
+    def public_live2d_list_page():
+        with db() as con:
+            rows=con.execute('SELECT * FROM public_live2d WHERE revoked IS NULL ORDER BY updated DESC').fetchall()
+        cards=''.join(f'<a class="card" href="/live2d/{row["token"]}"><img src="/live2d/{row["token"]}/preview.png" alt=""><b>{html_lib.escape(row["title"])}</b><span>공개 워크스페이스 열기</span></a>' for row in rows)
+        if not cards: cards='<p class="empty">현재 공개된 Live2D가 없습니다.</p>'
+        return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>공개 Live2D</title><style>body{{margin:0;background:#0b0e15;color:#f4f6fb;font:16px system-ui}}main{{max-width:1100px;margin:auto;padding:48px 24px}}h1{{margin:0 0 8px}}.home{{display:inline-block;margin-top:8px;padding:9px 14px;border:1px solid #46536c;border-radius:9px;background:#202738;color:#fff;text-decoration:none}}.sub,.card span,.empty{{color:#aeb8cb}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:28px}}.card{{display:grid;gap:10px;padding:14px;border:1px solid #30384b;border-radius:16px;background:#171d29;color:white;text-decoration:none}}img{{width:100%;height:360px;object-fit:contain;background:#080b10;border-radius:10px}}b{{font-size:18px}}</style></head><body><main><h1>공개 Live2D</h1><p class="sub">관리자가 공개한 캐릭터를 직접 움직이고 조절할 수 있습니다.</p><a class="home" href="/">메인 홈페이지</a><div class="grid">{cards}</div></main></body></html>'''
+
+    @app.get('/live2d/<token>')
+    def public_live2d_workspace(token):
+        row=get_public_live2d(token)
+        if not row:return '공개가 종료되었거나 존재하지 않는 Live2D입니다.',404
+        title=html_lib.escape(row['title'])
+        return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>{title}</title><style>body{{margin:0;background:#0c0f16;color:#eee;font:15px system-ui}}header{{display:flex;align-items:center;gap:16px;padding:12px 20px;background:#171d29;border-bottom:1px solid #30384b}}h1{{font-size:18px;margin:0}}p{{margin:0;color:#aeb8cb}}.nav{{display:flex;gap:10px;margin-left:auto}}.nav a{{padding:8px 11px;border:1px solid #46536c;border-radius:8px;color:#e2dcff;text-decoration:none;white-space:nowrap}}iframe{{display:block;width:100%;height:calc(100vh - 68px);border:0;background:#101014}}@media(max-width:680px){{header p{{display:none}}.nav{{gap:6px}}.nav a{{padding:7px 9px}}}}</style></head><body><header><div><h1>{title}</h1><p>조절값은 이 브라우저에만 저장되며 원본 작업에는 반영되지 않습니다.</p></div><nav class="nav" aria-label="공개 워크스페이스 이동"><a href="/">메인 홈페이지</a><a href="/live2d">다른 공개 Live2D</a></nav></header><iframe src="/live2d/{token}/player" allow="fullscreen; camera; microphone" title="공개 Live2D 워크스페이스"></iframe></body></html>'''
+
+    @app.get('/live2d/<token>/player')
+    def public_live2d_player(token):
+        if not get_public_live2d(token):return '공개가 종료되었거나 존재하지 않는 Live2D입니다.',404
+        html=(ROOT/'vendor'/'Anime2.5DRig'/'index.html').read_text(encoding='utf-8')
+        html=html.replace('<head>','<head><base href="/shared-rig-player/">',1)
+        model_url=f'/live2d/{token}/character.psd'
+        return html.replace('<script src="lib/app.js"></script>',f'<script>window.SHARED_MODEL_URL={json.dumps(model_url)}</script><script src="lib/app.js"></script>',1)
+
+    @app.get('/live2d/<token>/<filename>')
+    def public_live2d_asset(token,filename):
+        if filename not in ('character.psd','preview.png') or not get_public_live2d(token):
+            return jsonify(error='공개 파일을 찾을 수 없습니다.'),404
+        target=(public_live2d_root/token/filename).resolve()
+        if not target.is_relative_to(public_live2d_root.resolve()) or not target.is_file():
+            return jsonify(error='공개 파일을 찾을 수 없습니다.'),404
+        return send_file(target,conditional=True,as_attachment=False,
+                         mimetype='image/vnd.adobe.photoshop' if filename.endswith('.psd') else 'image/png')
+
     @app.post('/api/jobs/<jid>/shares')
     @auth()
     def create_rig_share(jid):
         kind=payload().get('kind')
-        if kind not in ('internal','external'): raise ValueError('공유 종류를 확인하세요.')
+        if kind=='external':
+            return jsonify(error='외부 쇼케이스 대신 관리자가 공개 Live2D로 게시할 수 있습니다.'),410
+        if kind!='internal': raise ValueError('공유 종류를 확인하세요.')
         with db() as con:
             row=con.execute('SELECT * FROM jobs WHERE id=?',(jid,)).fetchone()
             if not row or row['state']!='complete' or json.loads(row['payload']).get('jobType')!='rigging':
@@ -877,16 +1044,19 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
         if not row:return '공유 링크가 없거나 만료되었습니다.',404
         if row['kind']=='internal':
             return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>내부 2D 리깅 결과</title><style>body{{margin:0;font:15px system-ui;background:#0c0f16;color:#eee}}header{{display:flex;align-items:center;gap:12px;padding:14px 20px;background:#171d29;border-bottom:1px solid #30384b}}h1{{font-size:18px;margin:0}}p{{margin:0;color:#aeb8cb}}.copy{{margin-right:auto}}a{{padding:9px 15px;background:#2b3549;color:white;border:1px solid #46536c;border-radius:9px;text-decoration:none}}a.primary{{background:#7661e3;border-color:#9686f4}}iframe{{display:block;width:100%;height:calc(100vh - 70px);border:0;background:#101014}}</style></head><body><header><div class="copy"><h1>2D 리깅 내부 결과</h1><p>동아리 공유 링크에서 레이어를 확인하고 함께 수정할 수 있습니다.</p></div><a href="/share/rig/{token}/inspector">레이어 편집</a><a id="download" class="primary" href="/share/rig/{token}/asset/character.psd" download>PSD 다운로드</a></header><iframe src="/share/rig/{token}/player" allow="fullscreen" title="2D 리깅 미리보기"></iframe><script>setTimeout(()=>document.getElementById('download').click(),700)</script></body></html>'''
-        return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>2D 리깅 쇼케이스</title><style>body{{margin:0;background:radial-gradient(circle,#292044,#090b11);color:white;font:16px system-ui;text-align:center}}main{{min-height:100vh;display:grid;place-items:center;padding:24px;box-sizing:border-box}}img{{display:block;max-width:82vw;max-height:76vh;margin:auto;filter:drop-shadow(0 25px 30px #0008)}}h1{{margin:14px 0 8px}}p{{margin:0 0 12px;color:#d4cfea}}a{{color:#c9beff}}</style></head><body><main><div><img src="/share/rig/{token}/asset/showcase.webp" alt="움직이는 2D 캐릭터"><h1>AI 2D 리깅 쇼케이스</h1><p>눈 깜박임과 표정, 머리카락 움직임을 적용했습니다.</p><a href="/">나도 만들어 보기</a></div></main></body></html>'''
+        with db() as con: published=con.execute('SELECT token FROM public_live2d WHERE job_id=? AND revoked IS NULL',(row['job_id'],)).fetchone()
+        if not published:return '이 쇼케이스는 종료되었습니다. 공개 Live2D는 관리자가 지정한 결과만 제공됩니다.',410
+        return redirect(f'/live2d/{published["token"]}',code=302)
 
     @app.get('/share/rig/<token>/asset/<filename>')
     def share_asset(token,filename):
         row=get_share(token); allowed=('character.psd',) if row and row['kind']=='internal' else ('composite.png','showcase.webp')
         if not row or filename not in allowed:return jsonify(error='공유할 수 없는 파일입니다.'),404
+        if row['kind']=='external':return jsonify(error='외부 쇼케이스는 공개 Live2D로 전환되었습니다.'),410
         folder=(rigging.RESULT_ROOT/row['job_id']).resolve();target=(folder/filename).resolve()
-        if row['kind']=='external' and filename=='showcase.webp' and not target.is_file():
+        if row['kind']=='external' and filename=='showcase.webp' and not rig_showcase.showcase_is_current(folder):
             with showcase_lock:
-                if not target.is_file():
+                if not rig_showcase.showcase_is_current(folder):
                     try:
                         rig_showcase.build_showcase(folder,target)
                     except Exception:

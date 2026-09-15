@@ -9,10 +9,30 @@ from pathlib import Path
 import zipfile
 
 from PIL import Image
+from rigging_motion import idle_profile, warp_idle
 
 
 SHOWCASE_FILENAME = "showcase.webp"
+SHOWCASE_VERSION = 2
+SHOWCASE_STAMP = '.showcase-version.json'
 EYE_PREFIXES = ("eyewhite", "irides", "eyelash")
+
+
+def _source_stamp(folder):
+    sources = {}
+    for name in ('manifest.json', 'character-unity-parts.zip'):
+        stat = (Path(folder) / name).stat()
+        sources[name] = [stat.st_mtime_ns, stat.st_size]
+    return dict(renderer=SHOWCASE_VERSION, sources=sources)
+
+
+def showcase_is_current(folder):
+    folder = Path(folder)
+    try:
+        return ((folder / SHOWCASE_FILENAME).is_file() and
+                json.loads((folder / SHOWCASE_STAMP).read_text(encoding='utf-8')) == _source_stamp(folder))
+    except (OSError, ValueError):
+        return False
 
 
 def _opacity(image: Image.Image, amount: float) -> Image.Image:
@@ -45,12 +65,13 @@ def _blink_amount(frame: int, frame_count: int) -> float:
 
 
 def build_showcase(folder: Path, output: Path | None = None, *, max_size: int = 640,
-                   frame_count: int = 36, duration_ms: int = 90) -> dict:
+                   frame_count: int = 48, duration_ms: int = 100) -> dict:
     """Build a compact animated WebP from the current flattened rig package."""
     folder = Path(folder).resolve()
     output = Path(output or folder / SHOWCASE_FILENAME).resolve()
     if not output.is_relative_to(folder):
         raise ValueError("쇼케이스 출력 경로가 결과 폴더를 벗어났습니다.")
+    source_stamp = _source_stamp(folder)
     manifest = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
     canvas = manifest["canvas"]
     source_width, source_height = int(canvas["width"]), int(canvas["height"])
@@ -73,21 +94,42 @@ def build_showcase(folder: Path, output: Path | None = None, *, max_size: int = 
             key: _record_image(archive, item, scale)
             for key, item in expressions.items() if key in ("eye_open_original", "eye_close", "mouth_open", "mouth_close", "eyebrow")
         }
+    motion_parts = [dict(item, left=float(item['left']) * scale,
+                         top=float(item['top']) * scale,
+                         width=part_images[item['id']].width,
+                         height=part_images[item['id']].height) for item in parts]
+    source_anchors = manifest.get('anchors', {})
+    motion_anchors = {'neckPivot': {'cx': source_anchors.get('neckPivot', {}).get('cx', source_width / 2) * scale}}
+    motion = idle_profile(motion_parts, motion_anchors, height)
 
     def paste_record(target: Image.Image, record: dict, image: Image.Image, opacity: float = 1.0,
-                     dx: float = 0.0, dy: float = 0.0) -> None:
+                     dx: float = 0.0, dy: float = 0.0, angle: float = 0.0,
+                     pivot_y: float = 0.5) -> None:
         layer = _opacity(image, opacity)
+        if abs(angle) > 0.001:
+            layer = layer.rotate(angle, Image.Resampling.BICUBIC, expand=False,
+                                 center=(layer.width * 0.5, layer.height * pivot_y))
         left = round(float(record["left"]) * scale + dx)
         top = round(float(record["top"]) * scale + dy)
-        target.alpha_composite(layer, (left, top))
+        layer, left, top = warp_idle(layer, str(record['id']), left, top, motion, phase)
+        target.alpha_composite(layer, (round(left), round(top)))
 
     frames: list[Image.Image] = []
+    back_record = next((item for item in parts if item.get("id") == "back_hair"), None)
+    headwear_record = next((item for item in parts if item.get("id") == "headwear"), None)
+    # See-through sometimes puts a beret/hood body in back_hair and only its badge
+    # in headwear. Independent hair sway would tear that composite headgear apart.
+    mixed_headgear = bool(back_record and headwear_record and
+                          float(headwear_record.get("width", 0)) < float(back_record.get("width", 0)) * 0.55)
     for frame_index in range(frame_count):
         phase = 2.0 * math.pi * frame_index / frame_count
         blink = _blink_amount(frame_index, frame_count)
         mouth_open = max(0.0, math.sin(phase - 0.35)) ** 8 * 0.72
-        back_sway = math.sin(phase) * max(2.0, width * 0.0065)
-        front_sway = math.sin(phase + 0.65) * max(1.5, width * 0.0045)
+        if mixed_headgear:
+            back_sway = front_sway = math.sin(phase) * max(0.45, width * 0.0012)
+        else:
+            back_sway = math.sin(phase) * max(2.0, width * 0.0065)
+            front_sway = math.sin(phase + 0.65) * max(1.5, width * 0.0045)
         composed = Image.new("RGBA", (width, height))
 
         for layer_key in layer_order:
@@ -105,21 +147,20 @@ def build_showcase(folder: Path, output: Path | None = None, *, max_size: int = 
                 elif part_id == "mouth_close": opacity = 1.0 - mouth_open
                 elif part_id != "eyebrow": opacity = 0.0
             dx = dy = 0.0
+            angle = 0.0
             if part_id == "back_hair":
                 dx, dy = back_sway, math.sin(phase + 0.4) * 1.2
             elif part_id == "front_hair":
                 dx, dy = front_sway, math.sin(phase + 1.0) * 0.8
+            elif part_id == "objects":
+                angle = math.sin(phase + 0.35) * 0.75
+                dx, dy = math.sin(phase + 0.35) * max(0.7, width * 0.0018), -math.sin(phase - 0.8) * 0.8
             image = expression_images.get(part_id) if layer_key.startswith("expression:") else part_images.get(part_id)
             if image is not None and opacity > 0.001:
-                paste_record(composed, part, image, opacity, dx, dy)
+                paste_record(composed, part, image, opacity, dx, dy, angle,
+                             0.08 if part_id == "bottomwear" else 0.5)
 
-        # Gentle breathing is anchored at the bottom, so the feet remain planted.
-        breath = (1.0 + math.sin(phase - math.pi / 2.0)) * 0.5
-        scale_x, scale_y = 1.0 + 0.0025 * breath, 1.0 + 0.0050 * breath
-        resized = composed.resize((round(width * scale_x), round(height * scale_y)), Image.Resampling.BICUBIC)
-        frame_image = Image.new("RGBA", (width, height))
-        frame_image.alpha_composite(resized, ((width - resized.width) // 2, height - resized.height - round(1.5 * breath)))
-        frames.append(frame_image)
+        frames.append(composed)
 
     staged = output.with_name("." + output.name + ".tmp")
     try:
@@ -129,6 +170,11 @@ def build_showcase(folder: Path, output: Path | None = None, *, max_size: int = 
             if getattr(check, "n_frames", 1) < 2:
                 raise RuntimeError("애니메이션 WebP를 만들 수 없습니다.")
         staged.replace(output)
+        if output.name == SHOWCASE_FILENAME:
+            stamp = folder / SHOWCASE_STAMP
+            staged_stamp = stamp.with_suffix('.tmp')
+            staged_stamp.write_text(json.dumps(source_stamp), encoding='utf-8')
+            staged_stamp.replace(stamp)
     finally:
         staged.unlink(missing_ok=True)
         for image in frames:

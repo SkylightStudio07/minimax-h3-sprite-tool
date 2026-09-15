@@ -23,28 +23,40 @@ namespace SpriteLab.RiggingV1
         [SerializeField] private float hairAngle = 2.5f;
         [SerializeField] private float hairSpeed = 1.4f;
 
+        [Header("Equipment and cloth idle")]
+        [SerializeField] private Transform[] equipmentParts = new Transform[0];
+        [SerializeField] private Transform[] clothParts = new Transform[0];
+        [SerializeField, Range(0f, 2f)] private float equipmentAngle = 0.75f;
+        [SerializeField, Range(0f, 2f)] private float clothAngle = 0.55f;
+
         private Quaternion[] hairRest = new Quaternion[0];
+        private Quaternion[] equipmentRest = new Quaternion[0];
+        private Quaternion[] clothRest = new Quaternion[0];
 
         public void Configure(
             SpriteRenderer[] eyesOpen,
             SpriteRenderer[] eyesClosed,
             SpriteRenderer openMouth,
             SpriteRenderer closedMouth,
-            Transform[] hair)
+            Transform[] hair,
+            Transform[] equipment = null,
+            Transform[] cloth = null)
         {
             openEyes = eyesOpen ?? new SpriteRenderer[0];
             closedEyes = eyesClosed ?? new SpriteRenderer[0];
             mouthOpen = openMouth;
             mouthClosed = closedMouth;
             hairParts = hair ?? new Transform[0];
-            CacheHairRestPose();
+            equipmentParts = equipment ?? new Transform[0];
+            clothParts = cloth ?? new Transform[0];
+            CacheRestPose();
             SetEyeOpen(1f);
             SetMouthOpen(0f);
         }
 
         private void Awake()
         {
-            CacheHairRestPose();
+            CacheRestPose();
             SetEyeOpen(1f);
             SetMouthOpen(mouthOpenAmount);
         }
@@ -66,6 +78,10 @@ namespace SpriteLab.RiggingV1
                 var sway = Mathf.Sin(Time.time * hairSpeed + i * 0.73f) * hairAngle / (1f + i * 0.12f);
                 hairParts[i].localRotation = hairRest[i] * Quaternion.Euler(0f, 0f, sway);
             }
+            for (var i = 0; i < equipmentParts.Length && i < equipmentRest.Length; i++)
+                if (equipmentParts[i]) equipmentParts[i].localRotation = equipmentRest[i] * Quaternion.Euler(0f, 0f, Mathf.Sin(Time.time * 1.15f + 0.35f + i * 0.2f) * equipmentAngle);
+            for (var i = 0; i < clothParts.Length && i < clothRest.Length; i++)
+                if (clothParts[i]) clothParts[i].localRotation = clothRest[i] * Quaternion.Euler(0f, 0f, Mathf.Sin(Time.time * 0.92f + 1.1f + i * 0.31f) * clothAngle);
         }
 
         public void SetEyeOpen(float amount)
@@ -99,11 +115,20 @@ namespace SpriteLab.RiggingV1
             }
         }
 
-        private void CacheHairRestPose()
+        private void CacheRestPose()
         {
             hairRest = new Quaternion[hairParts.Length];
             for (var i = 0; i < hairParts.Length; i++)
                 hairRest[i] = hairParts[i] ? hairParts[i].localRotation : Quaternion.identity;
+            equipmentRest = CacheRotations(equipmentParts);
+            clothRest = CacheRotations(clothParts);
+        }
+
+        private static Quaternion[] CacheRotations(Transform[] parts)
+        {
+            var result = new Quaternion[parts.Length];
+            for (var i = 0; i < parts.Length; i++) result[i] = parts[i] ? parts[i].localRotation : Quaternion.identity;
+            return result;
         }
 
         private static void SetAlpha(SpriteRenderer[] renderers, float alpha)

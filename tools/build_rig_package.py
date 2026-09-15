@@ -39,6 +39,15 @@ def default_layer_order(parts: list[dict], expressions: list[dict]) -> list[str]
     return [*part_keys[:insert], *expression_keys, *part_keys[insert:]]
 
 
+def filter_absent_eye_warnings(warnings: list[str], left_absent: bool, right_absent: bool) -> list[str]:
+    ignored = set()
+    if left_absent: ignored.add('"eyebrow_1"')
+    if right_absent: ignored.add('"eyebrow_2"')
+    return [warning for warning in warnings
+            if not ((left_absent or right_absent) and "눈 앵커가 불완전" in warning)
+            and not any(token in warning for token in ignored)]
+
+
 def runtime_name(name: str) -> str:
     if name == "mouth":
         return "mouth_open"
@@ -395,6 +404,8 @@ def main() -> None:
     parser.add_argument("--eyebrow-left-mask", type=Path)
     parser.add_argument("--eyebrow-right-mask", type=Path)
     parser.add_argument("--mouth-mask", type=Path)
+    parser.add_argument("--eye-left-absent", action="store_true")
+    parser.add_argument("--eye-right-absent", action="store_true")
     parser.add_argument("--eye-input-mode", choices=("area", "closed-stroke"), default="area")
     parser.add_argument("--preserve-original-eyes", action="store_true")
     parser.add_argument("--mouth-state", choices=("closed", "slightly-open"), default="closed")
@@ -549,7 +560,10 @@ def main() -> None:
 
     composite_path = output_dir / "composite.png"
     composite.save(composite_path)
-    warnings = [localize_warning(message) for message in rig_summary["warnings"]]
+    warnings = filter_absent_eye_warnings(
+        [localize_warning(message) for message in rig_summary["warnings"]],
+        args.eye_left_absent, args.eye_right_absent,
+    )
     manifest = {
         "schemaVersion": 1,
         "status": "needs_review" if rig_summary["warnings"] else "ready",

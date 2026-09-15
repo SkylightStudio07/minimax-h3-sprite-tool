@@ -49,7 +49,7 @@
     const out={params:{},auto:{},layers:[],background:'checker',preset:null};
     if(['neutral','smile','usume','surprise','jito','winkL','winkR'].includes(value.preset))out.preset=value.preset;
     for(const [key,range] of Object.entries(ranges)) {
-      const n=value.params[key];
+      const n=value.params[key]===undefined&&['clothMotion','legMotion','bodyMotion'].includes(key)?1:value.params[key];
       if(typeof n!=='number'||!Number.isFinite(n)) throw new Error('数値設定が不正です: '+key);
       out.params[key]=clamp(n,...range);
     }
@@ -66,5 +66,58 @@
     if(['checker','green','dark'].includes(value.background))out.background=value.background;
     return out;
   }
-  return {MAX_FILE_BYTES,validateHeader,fingerprint,meshSize,spring,tracking,settings,clamp};
+  // Coordinates are canvas pixels. Scale motion by body height, not face size:
+  // full-body illustrations often have a tiny faceScale.
+  function idleProfile(parts, anchors, canvasHeight) {
+    const grounded=parts.filter(p=>/^(legwear|footwear)(_|$)/.test(p.id));
+    const bottom=Math.max(...(grounded.length?grounded:parts).map(p=>p.top+p.height),1);
+    const top=Math.min(...parts.map(p=>p.top),bottom-1);
+    const height=Math.max(1,bottom-top);
+    const clothing=parts.find(p=>p.id==='topwear');
+    const pants=parts.find(p=>p.id==='bottomwear');
+    const legs=parts.find(p=>p.id==='legwear');
+    const waist=pants?pants.top+pants.height*0.28:(legs?legs.top:top+height*0.43);
+    const cx=pants?pants.left+pants.width/2:(anchors.neckPivot?.cx||0);
+    const coatBottom=clothing&&clothing.top+clothing.height>waist+height*0.22?clothing.top+clothing.height:0;
+    const skirt=!!(pants&&pants.height<height*0.32&&pants.width>pants.height*0.8&&
+      !(coatBottom&&pants.height<height*0.15)&&
+      (!legs||pants.top+pants.height>legs.top+height*0.05));
+    return {height,bottom,waist,cx,topTop:clothing?clothing.top:top,
+      skirtBottom:skirt?pants.top+pants.height:0,
+      coatBottom};
+  }
+  const ease=v=>{v=clamp(v,0,1);return v*v*(3-2*v);};
+  function idleOffset(id,x,y,p,phase,strength={}) {
+    const h=p.height;
+    const cloth=clamp(strength.clothMotion??1,0,2),legs=clamp(strength.legMotion??1,0,2),body=clamp(strength.bodyMotion??1,0,2);
+    let dx=0,dy=-h*0.006*body*(0.5+0.5*Math.sin(phase))*ease((p.bottom-y)/(h*0.65));
+    const hemBottom=id==='topwear'?p.coatBottom:(id==='bottomwear'?p.skirtBottom:0);
+    if(hemBottom){
+      const u=clamp((y-p.waist)/Math.max(1,hemBottom-p.waist),0,1);
+      const side=clamp((x-p.cx)/(h*0.22),-1,1);
+      const wave=Math.sin(phase-side*0.65-u*1.8)+0.24*Math.sin(phase*2-side-u*3.2);
+      dx+=h*(id==='topwear'?0.020:0.015)*cloth*u*u*wave;
+      dy+=h*0.004*cloth*u*u*Math.sin(phase-side*0.65-u*1.8+0.8);
+    }
+    // Short jackets/shirts also breathe; pin their shoulder and waist seams.
+    if(id==='topwear'||id.startsWith('handwear')){
+      const u=clamp((y-p.topTop)/Math.max(1,p.waist-p.topTop),0,1);
+      dx+=(x-p.cx)*0.009*cloth*Math.sin(phase-0.4)*Math.sin(Math.PI*u);
+    }
+    if(id==='topwear'||id.startsWith('handwear')){
+      const side=clamp((x-p.cx)/(h*0.12),-1,1);
+      const shoulderY=p.waist-h*0.22;
+      const weight=ease((Math.abs(x-p.cx)/h-0.085)/0.10)*
+        (1-ease((y-p.waist-h*0.07)/(h*0.13)));
+      const angle=Math.sin(phase-0.45)*0.020*side*body;
+      dx+=-(y-shoulderY)*angle*weight;
+      dy+=(x-(p.cx+side*h*0.14))*angle*weight;
+    }
+    if(id==='legwear'||id==='footwear'||(id==='bottomwear'&&!p.skirtBottom)){
+      const u=clamp((y-p.waist)/Math.max(1,p.bottom-p.waist),0,1);
+      dx+=h*0.006*legs*Math.sin(phase-0.35)*Math.sin(Math.PI*u);
+    }
+    return [dx,dy];
+  }
+  return {MAX_FILE_BYTES,validateHeader,fingerprint,meshSize,spring,tracking,settings,clamp,idleProfile,idleOffset};
 });

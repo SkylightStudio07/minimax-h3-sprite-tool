@@ -41,6 +41,7 @@ initGL();
 // ---------- model state (mutable, rebuilt per PSD) ----------
 let layers=[], A=null, CW=768, CH=768, FS=1, NP=null, BP=null, FC=null, CHEST=null, hasEyeClose2=false;
 const bounce={x:0,v:0,dy:0};
+let idleProfile=null;
 
 function mkTex(imgData){
   const t=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,t);
@@ -120,6 +121,7 @@ function applyRig(rig){
   disposeLayers(layers); layers=prepared; currentRig=rig;
   CW=rig.canvas.w; CH=rig.canvas.h; A=rig.anchors; FS=A.faceScale;
   NP=A.neckPivot; BP=A.bodyPivot; FC={x:A.face.cx,y:A.face.cy};
+  idleProfile=RT.idleProfile(layers.map(L=>({id:L.bn,left:L.x,top:L.y,width:L.w,height:L.h})),A,CH);
   CHEST={cx:NP.cx,cy:A.neckBottom+(A.face.y1-A.face.y0)*0.60,rx:Math.max(1,(A.face.x1-A.face.x0)*0.60),ry:Math.max(1,(A.face.y1-A.face.y0)*0.45)};
   Object.assign(bounce,{x:0,v:0,dy:0}); lastFrame=null; blinkT=-1;blinkVariant=1;irisBounceT=-1;
   hasEyeClose2=layers.some(L=>L.bn==='eye_close2');
@@ -272,7 +274,8 @@ const P = { angleX:0, angleY:0, angleZ:0, eyeOpenL:1, eyeOpenR:1, eyeX:0, eyeY:0
             mouthOpen:0, mouthForm:0, mouthCY:0, body:0, physAmp:2, soft:2,
             browAngL:0, browAngR:0, browAngSym:0, bangL:0, bangC:0, bangR:0,
             armY:0, armPos:0, bust:2.5, bustY:1, irisScale:1, mouthEase:0.72, eyeEase:0.3,
-            fhAmp:2, fhSoft:0.4, eyeCY:0, eyeCAng:0, mouthCAng:0, eyeScaleL:1, eyeScaleR:1, mouthScale:1 };
+            fhAmp:2, fhSoft:0.4, eyeCY:0, eyeCAng:0, mouthCAng:0, eyeScaleL:1, eyeScaleR:1, mouthScale:1,
+            clothMotion:1,legMotion:1,bodyMotion:1 };
 const DEFAULTS = Object.assign({}, P);
 let lastPsd=null, lastPre=null;
 const T = Object.assign({}, P);
@@ -280,6 +283,11 @@ const cur = Object.assign({}, P);
 const auto = { idle:true, blink:true, rand:true, talk:!OBS_MODE, mouse:false, mic:false, phys:true, cam:false };
 const autoDefaults={...auto};
 if(OBS_MODE) document.getElementById('tgTalk').classList.remove('on');
+const motionSection=document.createElement('div');motionSection.className='sec';
+motionSection.innerHTML='<h2>옷·전신 움직임</h2><p class="section-hint">대기 동작에서 자동 적용됩니다. 0은 끄기, 1은 기본, 2는 강하게입니다. 조정 저장으로 이 브라우저에 보관할 수 있습니다. 공개 워크스페이스에서도 같은 강도 조절을 사용할 수 있습니다.</p>'+ 
+  [['pClothMotion','옷·코트 흔들림'],['pLegMotion','하반신 움직임'],['pBodyMotion','호흡·팔 움직임']].map(([id,label])=>
+    `<div class="row"><label>${label}</label><input type="range" id="${id}" min="0" max="2" step="0.05" value="1"><span class="val"></span></div>`).join('');
+document.getElementById('pBody').closest('.sec').before(motionSection);
 
 const sliders = { pAngleX:'angleX',pAngleY:'angleY',pAngleZ:'angleZ',pEyeL:'eyeOpenL',pEyeR:'eyeOpenR',
   pEyeX:'eyeX',pEyeY:'eyeY',pBrow:'brow',pMouthOpen:'mouthOpen',pMouthForm:'mouthForm',
@@ -288,7 +296,8 @@ const sliders = { pAngleX:'angleX',pAngleY:'angleY',pAngleZ:'angleZ',pEyeL:'eyeO
   pBangL:'bangL',pBangC:'bangC',pBangR:'bangR',pArmY:'armY',pArmPos:'armPos',
   pBust:'bust',pBustY:'bustY',pIrisScale:'irisScale',pMouthEase:'mouthEase',pEyeEase:'eyeEase',
   pFhAmp:'fhAmp',pFhSoft:'fhSoft',pEyeCY:'eyeCY',pEyeCAng:'eyeCAng',pMouthCAng:'mouthCAng',
-  pEyeScaleL:'eyeScaleL',pEyeScaleR:'eyeScaleR',pMouthScale:'mouthScale' };
+  pEyeScaleL:'eyeScaleL',pEyeScaleR:'eyeScaleR',pMouthScale:'mouthScale',
+  pClothMotion:'clothMotion',pLegMotion:'legMotion',pBodyMotion:'bodyMotion' };
 const parameterRanges={};
 for(const id in sliders){
   const el=document.getElementById(id), key=sliders[id], v=el.parentNode.querySelector('.val');
@@ -765,7 +774,10 @@ function deform(L, e){
       y += hw*FS*( -e.angleY*(9+30*(dd-1)) - e.angleY*(dd-1)*(y-FC.y)*0.05 );
     }
     // --- breathing ---
-    y -= (L.group==='body'?e.breath*2.0:e.breathHead*1.6)*FS;
+    if(auto.idle&&idleProfile){
+      const offset=RT.idleOffset(bn,b[k],b[k+1],idleProfile,e.idlePhase,e);
+      x+=offset[0];y+=offset[1];
+    }
     if(bn==='topwear'&&y<CHEST.cy) y -= e.breath*2.2*FS*smooth((CHEST.cy-y)/(CHEST.ry*2));   // shoulders rise
     if(bn==='topwear') x = NP.cx + (x-NP.cx)*(1+e.breath*0.003);
     // --- bust jiggle ---
@@ -779,6 +791,13 @@ function deform(L, e){
       y -= e.armY*30*FS*w;
       y += e.armPos*40*FS;
       x += e.armY*6*FS*w*(x<NP.cx?1:-1);
+    }
+    // Rigid props follow the hands and chest with a small delayed idle motion.
+    if(bn==='objects'){
+      const th=(e.objectIdle||0)*0.012;
+      const ct=Math.cos(th), st=Math.sin(th), rx=x-bcx, ry=y-bcy;
+      x=bcx+rx*ct-ry*st+(e.objectIdle||0)*1.8*FS;
+      y=bcy+rx*st+ry*ct-(e.breath*1.4+(e.objectLift||0))*FS;
     }
     // --- bang blocks ---
     if(L.bw&&L.su){ const m=Math.pow(L.su[vi],1.4)*22*FS;
@@ -922,8 +941,11 @@ function animate(now,dt){
   }
   camPhysScale+=((camLive?0.5:1)-camPhysScale)*Math.min(1,dt*4);
   e.physAmp*=camPhysScale; e.soft*=camPhysScale; e.fhAmp*=camPhysScale; e.fhSoft*=camPhysScale;
-  e.breath=0.5+0.5*Math.sin(t*2*Math.PI/3.4);
-  e.breathHead=0.5+0.5*Math.sin(t*2*Math.PI/3.4-0.6);   // head follows chest with a lag
+  e.breath=auto.idle?(0.5+0.5*Math.sin(t*2*Math.PI/3.4))*e.bodyMotion:0;
+  e.breathHead=auto.idle?(0.5+0.5*Math.sin(t*2*Math.PI/3.4-0.6))*e.bodyMotion:0;
+  e.objectIdle=auto.idle?Math.sin(t*1.15+0.35)*0.55+e.body*0.65:0;
+  e.objectLift=auto.idle?Math.sin(t*2*Math.PI/3.4-0.95)*0.7:0;
+  e.idlePhase=t*2*Math.PI/4.8;
 
   // strand springs
   const headDX=(e.angleX*14+e.angleZ*0.07*(NP.cy-FC.y))*FS;

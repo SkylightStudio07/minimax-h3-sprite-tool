@@ -149,6 +149,8 @@ namespace SpriteLab.RiggingV1.Editor
             var eyesOpen = new List<SpriteRenderer>();
             var eyesClosed = new List<SpriteRenderer>();
             var hair = new List<Transform>();
+            var equipment = new List<Transform>();
+            var cloth = new List<Transform>();
             SpriteRenderer mouthOpen = null, mouthClosed = null;
             var layerOrder = (manifest.layerOrder ?? Array.Empty<string>())
                 .Select((key, index) => new { key, index }).ToDictionary(item => item.key, item => item.index);
@@ -161,6 +163,8 @@ namespace SpriteLab.RiggingV1.Editor
                 if (part.id.StartsWith("eyewhite") || part.id.StartsWith("irides") || part.id.StartsWith("eyelash")) eyesOpen.Add(renderer);
                 if (part.id == "mouth_open") mouthOpen = renderer;
                 if (part.id.Contains("hair")) hair.Add(renderer.transform);
+                if (part.id.Contains("object")) equipment.Add(renderer.transform);
+                if (part.id.Contains("bottom") || part.id.Contains("skirt")) cloth.Add(renderer.transform);
             }
 
             var expressions = manifest.expressions ?? Array.Empty<Expression>();
@@ -175,7 +179,7 @@ namespace SpriteLab.RiggingV1.Editor
                 if (expression.id == "mouth_close") mouthClosed = renderer;
             }
 
-            controller.Configure(eyesOpen.ToArray(), eyesClosed.ToArray(), mouthOpen, mouthClosed, hair.ToArray());
+            controller.Configure(eyesOpen.ToArray(), eyesClosed.ToArray(), mouthOpen, mouthClosed, hair.ToArray(), equipment.ToArray(), cloth.ToArray());
             var prefabPath = assetRoot + "/RiggingV1Avatar.prefab";
             PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
             UnityEngine.Object.DestroyImmediate(root);

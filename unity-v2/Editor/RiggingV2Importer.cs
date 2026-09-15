@@ -226,7 +226,7 @@ namespace SpriteLab.RiggingV2.Editor
             }
             if (id.Contains("leg") || id.Contains("foot") || id.Contains("shoe"))
                 return Names("hips", "leg_l", "knee_l", "foot_l", "leg_r", "knee_r", "foot_r");
-            if (id.Contains("bottom")) return Names("hips", "leg_l", "leg_r", "spine");
+            if (id.Contains("bottom") || id.Contains("skirt")) return Names("hips", "leg_l", "leg_r", "spine", "skirt_c", "skirt_l", "skirt_r");
             if (id.Contains("top") || id.Contains("object"))
                 return Names("hips", "spine", "chest", "neck", "shoulder_l", "shoulder_r", "hand_l", "hand_r");
             return Names("hips", "spine", "chest", "neck", "head", "leg_l", "leg_r");
@@ -245,6 +245,8 @@ namespace SpriteLab.RiggingV2.Editor
             var eyesOpen = new List<SpriteRenderer>();
             var eyesClosed = new List<SpriteRenderer>();
             var hair = new List<Transform>();
+            var equipment = new List<Transform>();
+            var cloth = new List<Transform>();
             SpriteRenderer mouthOpen = null, mouthClosed = null;
             var layerOrder = (manifest.layerOrder ?? Array.Empty<string>())
                 .Select((key, index) => new { key, index }).ToDictionary(item => item.key, item => item.index);
@@ -258,6 +260,8 @@ namespace SpriteLab.RiggingV2.Editor
                 if (part.id.StartsWith("eyewhite") || part.id.StartsWith("irides") || part.id.StartsWith("eyelash")) eyesOpen.Add(renderer);
                 if (part.id == "mouth_open") mouthOpen = renderer;
                 if (part.id.Contains("hair")) hair.Add(renderer.transform);
+                if (part.id.Contains("object")) equipment.Add(renderer.transform);
+                if (part.id.Contains("bottom") || part.id.Contains("skirt")) cloth.Add(renderer.transform);
             }
             var head = bones[Array.FindIndex(rig.bones, bone => bone.name == "head")];
             var expressions = manifest.expressions ?? Array.Empty<Expression>();
@@ -272,8 +276,10 @@ namespace SpriteLab.RiggingV2.Editor
                 if (expression.id == "mouth_open") mouthOpen = renderer;
                 if (expression.id == "mouth_close") mouthClosed = renderer;
             }
-            controller.Configure(eyesOpen.ToArray(), eyesClosed.ToArray(), mouthOpen, mouthClosed, hair.ToArray());
-            v2Controller.Configure(FindBone(rig, bones, "hips"), FindBone(rig, bones, "spine"), FindBone(rig, bones, "chest"), FindBone(rig, bones, "neck"), head);
+            controller.Configure(eyesOpen.ToArray(), eyesClosed.ToArray(), mouthOpen, mouthClosed, hair.ToArray(), equipment.ToArray(), cloth.ToArray());
+            v2Controller.Configure(FindBone(rig, bones, "hips"), FindBone(rig, bones, "spine"), FindBone(rig, bones, "chest"), FindBone(rig, bones, "neck"), head,
+                FindBoneOrNull(rig, bones, "skirt_c"), FindBoneOrNull(rig, bones, "skirt_l"), FindBoneOrNull(rig, bones, "skirt_r"),
+                FindBoneOrNull(rig, bones, "leg_l"), FindBoneOrNull(rig, bones, "leg_r"));
             var prefabPath = assetRoot + "/RiggingV2Avatar.prefab";
             PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
             UnityEngine.Object.DestroyImmediate(root);
@@ -334,6 +340,11 @@ namespace SpriteLab.RiggingV2.Editor
         }
 
         private static Transform FindBone(RigData rig, Transform[] bones, string name) => bones[Array.FindIndex(rig.bones, bone => bone.name == name)];
+        private static Transform FindBoneOrNull(RigData rig, Transform[] bones, string name)
+        {
+            var index = Array.FindIndex(rig.bones, bone => bone.name == name);
+            return index >= 0 ? bones[index] : null;
+        }
         private static string Sanitize(string name)
         {
             var invalid = Path.GetInvalidFileNameChars();

@@ -12,6 +12,11 @@ from PIL import Image
 
 
 V2_FILENAME = "character-unity-skeleton.zip"
+POSE_KEYS = (
+    "head", "neck", "shoulder_l", "arm_l", "hand_l",
+    "shoulder_r", "arm_r", "hand_r", "hips",
+    "knee_l", "foot_l", "knee_r", "foot_r",
+)
 
 
 def _number(value, fallback: float) -> float:
@@ -29,7 +34,26 @@ def _silhouette_bounds(folder: Path, manifest: dict) -> tuple[int, int, int, int
     return 0, 0, int(canvas["width"]), int(canvas["height"])
 
 
-def build_skeleton(manifest: dict, bounds: tuple[int, int, int, int]) -> dict:
+def normalize_pose(pose: object, canvas: dict) -> dict[str, tuple[float, float]]:
+    if pose in (None, {}):
+        return {}
+    if not isinstance(pose, dict) or set(pose) != set(POSE_KEYS):
+        raise ValueError("게임 스프라이트 관절점 13개를 모두 지정하세요.")
+    width, height = float(canvas["width"]), float(canvas["height"])
+    result = {}
+    for key in POSE_KEYS:
+        point = pose[key]
+        if not isinstance(point, dict) or isinstance(point.get("x"), bool) or isinstance(point.get("y"), bool):
+            raise ValueError("게임 스프라이트 관절점 형식을 확인하세요.")
+        try: x, y = float(point["x"]), float(point["y"])
+        except (TypeError, ValueError, OverflowError): raise ValueError("게임 스프라이트 관절점 형식을 확인하세요.")
+        if not 0 <= x <= width or not 0 <= y <= height:
+            raise ValueError("게임 스프라이트 관절점이 이미지 밖에 있습니다.")
+        result[key] = (x, y)
+    return result
+
+
+def build_skeleton(manifest: dict, bounds: tuple[int, int, int, int], pose: object = None) -> dict:
     """Create a conservative humanoid draft in top-left canvas coordinates."""
     x0, y0, x1, y1 = bounds
     width, height = max(1.0, x1 - x0), max(1.0, y1 - y0)
@@ -71,6 +95,16 @@ def build_skeleton(manifest: dict, bounds: tuple[int, int, int, int]) -> dict:
         "knee_r": (pelvis_x + hip_half * 1.15, knee_y),
         "foot_r": (pelvis_x + hip_half * 1.25, ankle_y),
     }
+    manual = normalize_pose(pose, manifest["canvas"])
+    if manual:
+        points.update(manual)
+        pelvis_x, pelvis_y = points["hips"]
+        neck_x, neck_y = points["neck"]
+        points["chest"] = (neck_x * .72 + pelvis_x * .28, neck_y * .72 + pelvis_y * .28)
+        points["spine"] = (neck_x * .35 + pelvis_x * .65, neck_y * .35 + pelvis_y * .65)
+        hip_spread = max(8.0, abs(points["knee_r"][0] - points["knee_l"][0]) * .18)
+        points["leg_l"] = (pelvis_x - hip_spread, pelvis_y)
+        points["leg_r"] = (pelvis_x + hip_spread, pelvis_y)
     hierarchy = [
         ("hips", None), ("spine", "hips"), ("chest", "spine"),
         ("neck", "chest"), ("head", "neck"),
@@ -79,6 +113,17 @@ def build_skeleton(manifest: dict, bounds: tuple[int, int, int, int]) -> dict:
         ("leg_l", "hips"), ("knee_l", "leg_l"), ("foot_l", "knee_l"),
         ("leg_r", "hips"), ("knee_r", "leg_r"), ("foot_r", "knee_r"),
     ]
+    skirt = next((item for item in manifest.get("parts", [])
+                  if "bottom" in str(item.get("id", "")).lower() or "skirt" in str(item.get("id", "")).lower()), None)
+    if manual and skirt:
+        left, top = float(skirt["left"]), float(skirt["top"])
+        skirt_width, skirt_height = float(skirt["width"]), float(skirt["height"])
+        points.update({
+            "skirt_c": (left + skirt_width * .5, top + skirt_height * .18),
+            "skirt_l": (left + skirt_width * .22, top + skirt_height * .82),
+            "skirt_r": (left + skirt_width * .78, top + skirt_height * .82),
+        })
+        hierarchy.extend((("skirt_c", "hips"), ("skirt_l", "skirt_c"), ("skirt_r", "skirt_c")))
     bones = []
     for index, (name, parent) in enumerate(hierarchy):
         x, y = points[name]
@@ -97,14 +142,16 @@ def build_skeleton(manifest: dict, bounds: tuple[int, int, int, int]) -> dict:
         "bounds": {"left": x0, "top": y0, "right": x1, "bottom": y1},
         "bones": bones,
         "mesh": {"columns": 5, "rows": 5, "maxInfluences": 2},
+        "poseSource": "user-points" if manual else "automatic",
+        "skirtBones": 3 if manual and skirt else 0,
         "warnings": [
-            "전신 본 위치는 레이어와 얼굴·목 앵커로 계산한 자동 초안입니다.",
+            "사용자가 찍은 관절점을 우선한 게임 스프라이트 초안입니다." if manual else "전신 본 위치는 레이어와 얼굴·목 앵커로 계산한 자동 초안입니다.",
             "측면 자세, 교차한 팔, 무기와 가려진 팔다리는 Unity Skinning Editor에서 보정하세요.",
         ],
     }
 
 
-def build_package(folder: Path, unity_root: Path, source_revision: int) -> dict:
+def build_package(folder: Path, unity_root: Path, source_revision: int, pose: object = None) -> dict:
     folder = folder.resolve()
     manifest = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
     v1_path = folder / "character-unity-parts.zip"
@@ -113,7 +160,7 @@ def build_package(folder: Path, unity_root: Path, source_revision: int) -> dict:
     if not (unity_root / "Editor" / "RiggingV2Importer.cs").is_file():
         raise FileNotFoundError("V2 Unity importer를 찾을 수 없습니다.")
 
-    rig = build_skeleton(manifest, _silhouette_bounds(folder, manifest))
+    rig = build_skeleton(manifest, _silhouette_bounds(folder, manifest), pose)
     rig["sourceRevision"] = int(source_revision)
     output = folder / V2_FILENAME
     with tempfile.TemporaryDirectory(prefix="rig-v2-", dir=folder) as raw:

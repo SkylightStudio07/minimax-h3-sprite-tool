@@ -23,6 +23,7 @@ import requests
 from PIL import Image
 from scipy import ndimage
 from subject_prompts import SUBJECT_DEFAULTS, subject_constraints
+import sprite_loop
 
 
 ROOT = Path(__file__).resolve().parent
@@ -386,9 +387,8 @@ def make_sprite_sheet(video_path: Path, output_path: Path, count: int, loop: boo
     if not frames:
         raise RuntimeError("No frames were decoded from the generated video.")
     count = max(2, min(count, len(frames)))
-    # Looping clips omit the duplicated closing pose; one-shot actions retain their ending pose.
-    final_index = len(frames) - (2 if loop and len(frames) > 2 else 1)
-    indices = [round(i * final_index / (count - 1)) for i in range(count)]
+    # Uniform samples of a half-open cycle; do not blindly discard a unique final frame.
+    indices = sprite_loop.sample_indices(len(frames), count, loop)
     selected = [frames[index] for index in indices]
     cell_w = max(image.width for image in selected)
     cell_h = max(image.height for image in selected)
@@ -595,6 +595,17 @@ def run_job(job_id: str, payload: dict) -> None:
                 shutil.copy2(raw_video_path, video_path)
         else:
             shutil.copy2(raw_video_path, video_path)
+        loop_report = None
+        if loop and payload.get('optimizeLoop', True):
+            update_job(job_id, state='packing', message='자세와 이동 방향이 이어지는 루프 구간을 찾는 중')
+            loop_path = result_dir / f'{animation_type}_loop.mp4'
+            try:
+                loop_report = sprite_loop.optimize_video(video_path, loop_path)
+                os.replace(loop_path, video_path)
+            except Exception:
+                loop_report = dict(version=sprite_loop.VERSION, method='unchanged', quality='needs_review', reason='processing_failed')
+            finally:
+                loop_path.unlink(missing_ok=True)
         update_job(job_id, state="packing", message="프레임을 골라 스프라이트 시트로 패킹 중")
         sheet_path = result_dir / f"{animation_type}_sprite_sheet.png"
         transparent_path = result_dir / f"{animation_type}_transparent.png" if payload.get("removeBackground", False) else None
@@ -611,6 +622,7 @@ def run_job(job_id: str, payload: dict) -> None:
             seed=seed,
             animationType=animation_type,
             loop=loop,
+            loopReport=loop_report,
             facing=facing,
             warning=stabilization_warning,
         )

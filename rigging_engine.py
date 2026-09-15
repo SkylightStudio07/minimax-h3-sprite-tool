@@ -273,6 +273,10 @@ def run_job(job_id: str, payload: dict) -> None:
             package_command.extend(("--eye-input-mode", "closed-stroke"))
         if payload.get("preserveOriginalEyes", True):
             package_command.append("--preserve-original-eyes")
+        if payload.get("eyeLeftAbsent"):
+            package_command.append("--eye-left-absent")
+        if payload.get("eyeRightAbsent"):
+            package_command.append("--eye-right-absent")
         package_command.extend(("--mouth-state", payload.get("mouthState", "closed")))
         for name, option in (("eye_left", "--eye-left-mask"), ("eye_right", "--eye-right-mask"),
                              ("eyebrow_left", "--eyebrow-left-mask"), ("eyebrow_right", "--eyebrow-right-mask"),
