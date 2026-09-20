@@ -499,7 +499,8 @@
           var headwearFill = headwearPixels / Math.max(1, (hb.x1 - hb.x0 + 1) * (hb.y1 - hb.y0 + 1));
           var faceBoxArea = Math.max(1, (FACE.x1 - FACE.x0 + 1) * (FACE.y1 - FACE.y0 + 1));
           if (headwearFill < 0.35 && headwearPixels / faceBoxArea < 0.30) {
-            warnings.push('작은 파편형 headwear입니다. 원본과 비교한 뒤 필요 없을 때만 직접 숨기세요.');
+            slot = Object.assign({}, slot, { visible: false });
+            warnings.push('작은 파편형 headwear를 기본으로 숨겼습니다. 레이어 목록에서 다시 켤 수 있습니다.');
           }
         }
       }

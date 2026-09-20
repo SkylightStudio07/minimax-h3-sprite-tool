@@ -265,41 +265,6 @@ def original_eye(source: Image.Image, masks: list[Image.Image]) -> tuple[Image.I
     return patch.crop(box), box[0], box[1]
 
 
-def head_preservation_warning(source: Image.Image, composite: Image.Image, anchors: dict,
-                              parts: list[dict]) -> str | None:
-    """Flag a large unexplained source/result change around the head.
-
-    This is deliberately a warning rather than an automatic copy: generated hair
-    can differ slightly everywhere and blindly restoring that difference creates
-    doubled faces and hair.
-    """
-    ids = " ".join(str(item.get("id", "")).lower() for item in parts)
-    if any(name in ids for name in ("headwear", "headgear", "hood", "hat")):
-        return None
-    face = (anchors or {}).get("face") or {}
-    try:
-        x0, x1 = float(face["x0"]), float(face["x1"])
-        y0, y1 = float(face["y0"]), float(face["y1"])
-    except (KeyError, TypeError, ValueError):
-        return None
-    fw, fh = max(1.0, x1 - x0), max(1.0, y1 - y0)
-    box = (max(0, round(x0 - fw * .8)), max(0, round(y0 - fh * .65)),
-           min(source.width, round(x1 + fw * .8)), min(source.height, round(y1 + fh * .75)))
-    if box[2] <= box[0] or box[3] <= box[1]:
-        return None
-    src = np.asarray(source.crop(box).convert("RGBA"), dtype=np.int16)
-    out = np.asarray(composite.crop(box).convert("RGBA"), dtype=np.int16)
-    foreground = src[..., 3] > 96
-    if foreground.sum() < 64:
-        return None
-    missing = float(np.mean(out[..., 3][foreground] < 32))
-    overlap = foreground & (out[..., 3] > 96)
-    color_delta = float(np.mean(np.abs(src[..., :3][overlap] - out[..., :3][overlap]))) / 255 if overlap.any() else 1.0
-    if missing > .03 or color_delta > .18:
-        return "머리 주변이 원본과 크게 다르지만 headwear/hood 레이어가 없습니다. 원본 비교와 원본 복원 브러시로 확인하세요."
-    return None
-
-
 def inferred_eye_masks(info: dict, source_dir: Path, width: int, height: int) -> list[Image.Image]:
     """Use generated eye-layer alpha only as a locator for direct-stroke mode."""
     masks = []
@@ -453,10 +418,6 @@ def main() -> None:
     info = json.loads(source_json.read_text(encoding="utf-8"))
     width, height = int(info["width"]), int(info["height"])
     composite = Image.new("RGBA", (width, height))
-    fitted_source = None
-    if args.source_image:
-        with Image.open(args.source_image) as opened:
-            fitted_source = fit_to_canvas(opened.convert("RGBA"), width, height, Image.Resampling.LANCZOS)
     authored_expressions = manual_expressions(
         args.source_image,
         [path for path in (args.eye_left_mask, args.eye_right_mask) if path],
@@ -603,15 +564,9 @@ def main() -> None:
         [localize_warning(message) for message in rig_summary["warnings"]],
         args.eye_left_absent, args.eye_right_absent,
     )
-    preservation_warning = head_preservation_warning(fitted_source, composite, rig_summary.get("anchors", {}), package_layers) if fitted_source else None
-    if preservation_warning:
-        warnings.append(preservation_warning)
-    source_reference = "source-original.png" if fitted_source else None
-    if fitted_source:
-        fitted_source.save(output_dir / source_reference)
     manifest = {
         "schemaVersion": 1,
-        "status": "needs_review" if warnings else "ready",
+        "status": "needs_review" if rig_summary["warnings"] else "ready",
         "canvas": {"width": width, "height": height, "origin": "top-left"},
         "parts": [
             {key: value for key, value in part.items() if key != "source"}
@@ -646,7 +601,6 @@ def main() -> None:
         "originalMouthPreserved": any(item["name"] == "mouth_open" for item in authored_expressions)
         if args.mouth_state == "slightly-open"
         else any(item["name"] == "mouth_close" for item in authored_expressions),
-        "sourceReference": source_reference,
     }
     manifest["layerOrder"] = default_layer_order(manifest["parts"], manifest["expressions"])
     manifest_path = output_dir / "manifest.json"

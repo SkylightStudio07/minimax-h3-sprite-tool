@@ -694,10 +694,8 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
         parts=[item for item in layers if item['kind']=='part']
         version_prefix=asset_prefix.rsplit('/layers',1)[0]+'/versions'
         versions=rig_version_payload(jid,revision,version_prefix)
-        source_url=asset_prefix.rsplit('/layers',1)[0]+'/source' if (folder/rig_edit.SOURCE_REFERENCE).is_file() else None
         return dict(jobId=jid,revision=revision,versions=versions,canvas=manifest['canvas'],parts=parts,layers=layers,
                     layerOrder=order,readonly=readonly,
-                    sourceReference=source_url,recoveryTypes=sorted(rig_edit.RECOVERY_TYPES),
                     composite=result.get('composite'),psd=result.get('psd'),package=result.get('package'),
                     packageV2=result.get('packageV2') if result.get('packageV2SourceRevision')==revision else None,
                     editedParts=manifest.get('editedParts',[]))
@@ -738,19 +736,6 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
         try:content=rig_edit.layer_bytes((rigging.RESULT_ROOT/jid).resolve(),layer_id,request.args.get('original')=='1',kind)
         except (FileNotFoundError,KeyError,zipfile.BadZipFile):return jsonify(error='레이어를 찾을 수 없습니다.'),404
         return send_file(io.BytesIO(content),mimetype='image/png',conditional=True,download_name=layer_id+'.png')
-
-    @app.route('/api/jobs/<jid>/rig-edit/source',methods=['GET','POST'])
-    @auth()
-    def rig_edit_source(jid):
-        row,error=editable_rig(jid)
-        if error:return error
-        folder=(rigging.RESULT_ROOT/jid).resolve()
-        if request.method=='POST':
-            target=rig_edit.save_source_reference(folder,payload().get('imageData'))
-            return jsonify(ok=True,sourceReference=f'/api/jobs/{jid}/rig-edit/source',bytes=target.stat().st_size)
-        try:target=rig_edit.source_reference_path(folder)
-        except FileNotFoundError:return jsonify(error='보관된 원본 이미지가 없습니다.'),404
-        return send_file(target,mimetype='image/png',conditional=True,max_age=0)
 
     def save_rig_revision(jid,p,row):
         expected=p.get('revision')
@@ -1123,18 +1108,6 @@ def create_app(data_dir=None, runner=None, rigging_runner=None):
         try:content=rig_edit.layer_bytes((rigging.RESULT_ROOT/row['job_id']).resolve(),layer_id,request.args.get('original')=='1',kind)
         except (FileNotFoundError,KeyError,zipfile.BadZipFile):return jsonify(error='레이어를 찾을 수 없습니다.'),404
         return send_file(io.BytesIO(content),mimetype='image/png',conditional=True,download_name=layer_id+'.png')
-
-    @app.route('/share/rig/<token>/source',methods=['GET','POST'])
-    def shared_rig_source(token):
-        row=get_share(token)
-        if not row or row['kind']!='internal':return jsonify(error='공유 링크가 없거나 만료되었습니다.'),404
-        folder=(rigging.RESULT_ROOT/row['job_id']).resolve()
-        if request.method=='POST':
-            target=rig_edit.save_source_reference(folder,payload().get('imageData'))
-            return jsonify(ok=True,sourceReference=f'/share/rig/{token}/source',bytes=target.stat().st_size)
-        try:target=rig_edit.source_reference_path(folder)
-        except FileNotFoundError:return jsonify(error='보관된 원본 이미지가 없습니다.'),404
-        return send_file(target,mimetype='image/png',conditional=True,max_age=0)
 
     @app.post('/share/rig/<token>/rig-edit/revisions')
     def shared_save_rig_edit(token):
