@@ -124,7 +124,7 @@ def create_app(data_dir=None, runner=None, rigging_runner=None, music_runner=Non
         p = request.get_json()
         if not isinstance(p,dict):
             raise ValueError('잘못된 요청입니다.')
-        for k in ('username','name','password','setupCode','imageData','eyeLeftMask','eyeRightMask','eyebrowLeftMask','eyebrowRightMask','mouthMask','prompt','animationType','facing','title','notes','gameDocument','promptMode','preset','cot'):
+        for k in ('username','name','password','setupCode','imageData','eyeLeftMask','eyeRightMask','eyebrowLeftMask','eyebrowRightMask','mouthMask','prompt','animationType','facing','title','notes','gameDocument','promptMode','preset','cot','vocalMode','lyrics'):
             if k in p and not isinstance(p[k],str):
                 raise ValueError('문자열 입력이 필요합니다: '+k)
         return p
@@ -278,6 +278,7 @@ def create_app(data_dir=None, runner=None, rigging_runner=None, music_runner=Non
                     created=row['created'],animationType=p.get('animationType','idle'),
                     width=p.get('width'),height=p.get('height'),
                     promptReason=p.get('promptReason'),resolvedPrompt=p.get('resolvedPrompt'),
+                    vocalMode=p.get('vocalMode','instrumental'),
                     referencePreview=f'/api/jobs/{row["id"]}/reference' if p.get('imageData') and row['state'] not in TERMINAL else None)
 
     def rig_version_payload(jid,current,prefix):
@@ -329,7 +330,8 @@ def create_app(data_dir=None, runner=None, rigging_runner=None, music_runner=Non
                                      publicLive2d=public_live2d_payload(public_by_job.get(row['id'])))
                 elif p.get('jobType')=='music':
                     items[-1].update(audio=result.get('audio'),score=result.get('score'),duration=result.get('duration'),
-                                     promptReason=p.get('promptReason'),resolvedPrompt=p.get('resolvedPrompt'))
+                                     promptReason=p.get('promptReason'),resolvedPrompt=p.get('resolvedPrompt'),
+                                     vocalMode=p.get('vocalMode','instrumental'),lyrics=p.get('lyrics',''))
         return jsonify(jobs=items,page=page,pages=pages,total=total)
 
     poster_lock=threading.Lock()
@@ -482,7 +484,8 @@ def create_app(data_dir=None, runner=None, rigging_runner=None, music_runner=Non
     @auth()
     def refine_music_prompt():
         p=payload()
-        return jsonify(prompt=music_prompts.refine_direct_prompt(p.get('prompt')),
+        return jsonify(prompt=music_prompts.refine_direct_prompt(
+                           p.get('prompt'),p.get('vocalMode','instrumental')),
                        model=music_prompts.LITE_MODEL)
 
     @app.post('/api/rigging/generate')

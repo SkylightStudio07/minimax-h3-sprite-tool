@@ -50,11 +50,12 @@ def run_job(job_id: str, payload: dict) -> None:
     request_path.write_text(json.dumps({
         "id": job_id,
         "style": payload["resolvedPrompt"],
-        "lyrics": "",
+        "lyrics": payload.get("lyrics", ""),
         "cot": payload.get("cot", "full"),
         "seed": payload["seed"],
     }, ensure_ascii=False, indent=2), encoding="utf-8")
-    update_job(job_id, state="generating", message="YuE2가 인스트루멘털 BGM을 생성하는 중")
+    kind = "인스트루멘털 BGM" if payload.get("vocalMode", "instrumental") == "instrumental" else "보컬곡"
+    update_job(job_id, state="generating", message=f"YuE2가 {kind}을 생성하는 중")
     command = [
         str(VENV_PYTHON), str(DRIVER),
         "--request", str(request_path),

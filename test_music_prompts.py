@@ -42,7 +42,19 @@ class MusicPromptTests(unittest.TestCase):
             'promptMode': 'direct', 'prompt': 'quiet snowy field, piano, 72 BPM', 'title': '설원',
         })
         self.assertIn('instrumental only', direct['resolvedPrompt'].lower())
+        self.assertEqual(direct['lyrics'], '')
+        self.assertEqual(direct['vocalMode'], 'instrumental')
         self.assertIsInstance(direct['seed'], int)
+
+    def test_vocal_song_keeps_lyrics_separate_from_style(self):
+        lyrics = '[Verse]\n붉은 달 아래 길을 걷네\n[Chorus]\n새벽까지 노래하리'
+        result = music_prompts.resolve({
+            'promptMode': 'direct', 'prompt': 'Korean dark folk rock, female lead vocal, 96 BPM',
+            'title': '붉은 달', 'vocalMode': 'lyrics', 'lyrics': lyrics,
+        })
+        self.assertEqual(result['lyrics'], lyrics)
+        self.assertEqual(result['vocalMode'], 'lyrics')
+        self.assertNotIn('instrumental only', result['resolvedPrompt'].lower())
 
     def test_gemini_document_resolution(self):
         with patch.dict(os.environ, {'GEMINI_PROVIDER': 'api-key', 'GEMINI_API_KEY': 'test'}):
@@ -105,11 +117,11 @@ class MusicPromptTests(unittest.TestCase):
             with patch.object(music_prompts, 'refine_direct_prompt',
                               return_value='instrumental rainy town, no vocals') as refine:
                 translated = client.post('/api/music/refine-prompt', json={
-                    'prompt': '비 오는 마을 음악',
+                    'prompt': '비 오는 마을 음악', 'vocalMode': 'instrumental',
                 }, headers=HEADERS)
             self.assertEqual(translated.status_code, 200)
             self.assertIn('rainy town', translated.json['prompt'])
-            refine.assert_called_once_with('비 오는 마을 음악')
+            refine.assert_called_once_with('비 오는 마을 음악', 'instrumental')
             response = client.post('/api/music/generate', json={
                 'promptMode': 'preset', 'preset': 'town', 'title': '마을', 'seed': 11, 'cot': 'full',
             }, headers=HEADERS)

@@ -93,6 +93,7 @@ drawGallery=(jobs,target='galleryList')=>{
     const player=node('audio');player.controls=true;player.preload='metadata';player.src=url(j.audio);player.style.width='100%';card.append(player);
     if(j.promptReason)card.append(node('p',j.promptReason,'muted'));
     if(j.resolvedPrompt){const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='적용 프롬프트';const prompt=node('p',j.resolvedPrompt,'muted');details.append(summary,prompt);card.append(details)}
+    if(j.vocalMode==='lyrics'&&j.lyrics){const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='가사';const lyrics=node('pre',j.lyrics,'preview');details.append(summary,lyrics);card.append(details)}
     const links=node('div',undefined,'links'),audio=node('a','FLAC 저장');audio.href=url(j.audio);audio.download='';links.append(audio);
     if(j.score){const score=node('a','ABC 악보 저장');score.href=url(j.score);score.download='';links.append(score)}
     card.append(links);
