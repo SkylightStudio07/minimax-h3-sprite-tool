@@ -41,22 +41,6 @@ PACKAGER = ROOT / "tools" / "build_rig_package.py"
 COMFY_URL = os.environ.get("RIGGING_COMFY_URL", "http://127.0.0.1:8190")
 LAYER_MODEL = "layerdifforg/seethroughv0.0.2_layerdiff3d"
 DEPTH_MODEL = "layerdifforg/seethroughv0.0.1_marigold"
-QWEN_UNET = "qwen_image_2.1_int8_convrot.safetensors"
-QWEN_CLIP = "qwen3vl_8b_int8_convrot.safetensors"
-QWEN_VAE = "qwen_image_2.1_vae_bf16.safetensors"
-QWEN_MODEL_PATHS = (
-    MODEL_ROOT / "diffusion_models" / QWEN_UNET,
-    MODEL_ROOT / "text_encoders" / QWEN_CLIP,
-    MODEL_ROOT / "vae" / QWEN_VAE,
-)
-QWEN_PRESERVE_PROMPT = (
-    "Keep <image1> as the exact same complete 2D character illustration. Preserve every visible "
-    "detail of the face, eyes, eyebrows, mouth, hair, hood, hat, headwear, glasses, weapons, "
-    "clothing, coat, skirt, legs, footwear and accessories. Preserve the silhouette, pose, "
-    "proportions, line art, colors, shading, canvas and composition. Remove only the background "
-    "and return the complete character on transparent alpha. Do not add, remove, redesign, "
-    "simplify, rotate, crop or reinterpret any character part."
-)
 
 
 def _model_path(repo_id: str) -> Path:
@@ -81,14 +65,7 @@ def status_payload() -> dict:
             (ROOT / "vendor" / "Anime2.5DRig" / "lib" / "rigger.js").is_file(),
         )
     )
-    qwen_files = [path for path in QWEN_MODEL_PATHS if path.is_file()]
-    return {
-        "comfy": comfy_ready(),
-        "modelsReady": files_ready,
-        "qwen21Ready": len(qwen_files) == len(QWEN_MODEL_PATHS),
-        "qwen21InstalledBytes": sum(path.stat().st_size for path in qwen_files),
-        "port": 8190,
-    }
+    return {"comfy": comfy_ready(), "modelsReady": files_ready, "port": 8190}
 
 
 def start_comfy() -> subprocess.Popen | None:
@@ -195,87 +172,6 @@ def workflow(image_name: str, prefix: str, resolution: int, steps: int, seed: in
     }
 
 
-def qwen21_workflow(image_name: str, prefix: str, resolution: int, steps: int, seed: int) -> dict:
-    """Official ComfyUI Qwen Image 2.1 edit path, reduced to one source image."""
-    return {
-        "1": {"class_type": "LoadImage", "inputs": {"image": image_name}},
-        "2": {
-            "class_type": "UNETLoader",
-            "inputs": {"unet_name": QWEN_UNET, "weight_dtype": "default"},
-        },
-        "3": {
-            "class_type": "CLIPLoader",
-            "inputs": {"clip_name": QWEN_CLIP, "type": "qwen_image", "device": "default"},
-        },
-        "4": {"class_type": "VAELoader", "inputs": {"vae_name": QWEN_VAE}},
-        "5": {
-            "class_type": "TextEncodeQwenImage21",
-            "inputs": {
-                "clip": ["3", 0],
-                "images.image_1": ["1", 0],
-                "vae": ["4", 0],
-                "prompt": QWEN_PRESERVE_PROMPT,
-                "negative_prompt": "",
-                "resolution": resolution,
-            },
-        },
-        "6": {
-            "class_type": "QwenImage21Cache",
-            "inputs": {"model": ["2", 0], "device": "auto", "dtype": "default"},
-        },
-        "7": {
-            "class_type": "KSampler",
-            "inputs": {
-                "model": ["6", 0],
-                "positive": ["5", 0],
-                "negative": ["5", 1],
-                "latent_image": ["5", 2],
-                "seed": seed,
-                "steps": steps,
-                "cfg": 1.0,
-                "sampler_name": "euler",
-                "scheduler": "simple",
-                "denoise": 1.0,
-            },
-        },
-        "8": {
-            "class_type": "VAEDecode",
-            "inputs": {"samples": ["7", 0], "vae": ["4", 0]},
-        },
-        "9": {
-            "class_type": "SaveImage",
-            "inputs": {"images": ["8", 0], "filename_prefix": prefix},
-        },
-    }
-
-
-def _saved_image(record: dict, node_id: str) -> Path:
-    images = record.get("outputs", {}).get(node_id, {}).get("images", [])
-    if not images:
-        raise RuntimeError("Qwen 2.1 전처리 이미지를 찾을 수 없습니다.")
-    item = images[-1]
-    folder = COMFY_OUTPUT / item.get("subfolder", "")
-    path = (folder / item["filename"]).resolve()
-    if not path.is_relative_to(COMFY_OUTPUT.resolve()) or not path.is_file():
-        raise RuntimeError("Qwen 2.1 전처리 출력 경로가 올바르지 않습니다.")
-    return path
-
-
-def _run_qwen21(source: Path, job_id: str, resolution: int, steps: int, seed: int) -> Path:
-    if not all(path.is_file() for path in QWEN_MODEL_PATHS):
-        raise RuntimeError("Qwen 2.1 실험 모델이 아직 설치되지 않았습니다.")
-    prefix = f"qwen21_rigging_{job_id}"
-    response = requests.post(
-        f"{COMFY_URL}/prompt",
-        json={"prompt": qwen21_workflow(source.name, prefix, resolution, steps, seed)},
-        timeout=60,
-    )
-    if not response.ok:
-        raise RuntimeError("Qwen 2.1 워크플로를 실행할 수 없습니다: " + response.text[:1000])
-    record = _wait_for_prompt(response.json()["prompt_id"])
-    return _saved_image(record, "9")
-
-
 def _write_input(job_id: str, image_data: str) -> Path:
     try:
         raw = base64.b64decode(image_data.split(",")[-1], validate=True)
@@ -334,7 +230,6 @@ def update_job(job_id: str, **changes) -> None:
 
 def run_job(job_id: str, payload: dict) -> None:
     source = None
-    qwen_source = None
     mask_paths = {}
     try:
         update_job(job_id, state="uploading", message="리깅 입력 이미지를 준비하는 중")
@@ -350,18 +245,10 @@ def run_job(job_id: str, payload: dict) -> None:
         steps = int(payload.get("steps", 30))
         seed = int(payload.get("seed") or secrets.randbelow(2**31))
         prefix = f"rigging_{job_id}"
-        separation_backend = payload.get("separationBackend", "standard")
-        separation_source = source
-        if separation_backend == "qwen21-experimental":
-            update_job(job_id, state="preprocessing", message="Qwen 2.1이 원본 파츠와 투명 배경을 보존하는 중")
-            qwen_output = _run_qwen21(source, job_id, resolution, min(steps, 25), seed)
-            qwen_source = INPUT_ROOT / f"rigging_{job_id}_qwen21.png"
-            shutil.copy2(qwen_output, qwen_source)
-            separation_source = qwen_source
         update_job(job_id, state="separating", message="See-through가 얼굴·눈·입·머리카락 레이어를 분리하는 중")
         response = requests.post(
             f"{COMFY_URL}/prompt",
-            json={"prompt": workflow(separation_source.name, prefix, resolution, steps, seed)},
+            json={"prompt": workflow(source.name, prefix, resolution, steps, seed)},
             timeout=60,
         )
         response.raise_for_status()
@@ -426,7 +313,6 @@ def run_job(job_id: str, payload: dict) -> None:
             "originalEyebrowsPreserved": manifest.get("originalEyebrowsPreserved", False),
             "sourceMouthState": manifest.get("sourceMouthState", "closed"),
             "originalMouthPreserved": manifest.get("originalMouthPreserved", False),
-            "separationBackend": separation_backend,
             "psd": base + "/character.psd",
             "package": base + "/character-unity-parts.zip",
             "composite": base + "/composite.png",
@@ -441,7 +327,5 @@ def run_job(job_id: str, payload: dict) -> None:
     finally:
         if source:
             source.unlink(missing_ok=True)
-        if qwen_source:
-            qwen_source.unlink(missing_ok=True)
         for mask_path in mask_paths.values():
             mask_path.unlink(missing_ok=True)

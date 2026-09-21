@@ -3,6 +3,9 @@
 .venv-amd/
 ComfyUI-amd/
 ComfyUI/
+.venv-yue2/
+vendor/YuE/
+yue2-runtime/
 __pycache__/
 *.py[cod]
 
@@ -23,6 +26,9 @@ data/
 
 # Authorization is machine/user specific and must never be distributed
 MINIMAX_H3_LICENSE_APPROVED.txt
+.env
+.env.*
+!.env.example
 
 # OS/editor noise
 .DS_Store

@@ -311,7 +311,9 @@ class TeamTests(unittest.TestCase):
             self.assertEqual(client.get(job['package'].replace('.zip','.txt')).status_code,404)
             self.assertFalse(any(item['id']==jid for item in self.guest.get('/api/gallery').json['jobs']))
             internal=self.post(client,'jobs/'+jid+'/shares',kind='internal').json['url']
-            external=self.post(client,'jobs/'+jid+'/shares',kind='external').json['url']
+            external=self.post(client,'jobs/'+jid+'/shares',kind='external')
+            self.assertEqual(external.status_code,410)
+            self.assertIn('공개 Live2D',external.json['error'])
             self.assertEqual(self.guest.get(internal).status_code,200)
             internal_page=self.guest.get(internal)
             self.assertIn('/player',internal_page.text);self.assertIn('/inspector',internal_page.text);self.assertIn('레이어 편집',internal_page.text);self.assertNotIn('/player?model=',internal_page.text);internal_page.close()
@@ -322,20 +324,6 @@ class TeamTests(unittest.TestCase):
             self.assertEqual(self.guest.get('/shared-rig-player/lib/app.js').status_code,200)
             self.assertEqual(self.guest.get('/shared-rig-player/sample.psd').status_code,404)
             inspector=self.guest.get(internal+'/inspector');self.assertEqual(inspector.status_code,200);self.assertIn('moveTool',inspector.text);inspector.close()
-            external_page=self.guest.get(external)
-            self.assertEqual(external_page.status_code,200);self.assertIn('/asset/showcase.webp',external_page.text);external_page.close()
-            with patch.object(server.rig_showcase,'build_showcase',side_effect=lambda folder,target: target.write_bytes(b'animated')) as build:
-                showcase=self.guest.get(external+'/asset/showcase.webp')
-                self.assertEqual(showcase.status_code,200);self.assertEqual(showcase.mimetype,'image/webp');showcase.close()
-                build.assert_called_once()
-            self.assertEqual(self.guest.get(external+'/asset/composite.png').status_code,200)
-            self.assertEqual(self.guest.get(external+'/asset/character.psd').status_code,404)
-            self.assertEqual(self.guest.get(external+'/inspector').status_code,404)
-            self.assertEqual(self.guest.get(external+'/rig-edit').status_code,404)
-            self.assertEqual(self.guest.get(external+'/layers/front_hair').status_code,404)
-            self.assertEqual(self.guest.get(external+'/versions/0/composite.png').status_code,404)
-            self.assertEqual(self.guest.post(external+'/rig-edit/revisions',json={'revision':0,'operations':[]},headers=HEADERS).status_code,404)
-            self.assertEqual(self.guest.post(external+'/rig-edit/restore',json={'revision':0,'targetRevision':0},headers=HEADERS).status_code,404)
             gallery=client.get('/api/gallery').json['jobs']
             self.assertTrue(any(item['id']==jid and item['jobType']=='rigging' for item in gallery))
         finally:

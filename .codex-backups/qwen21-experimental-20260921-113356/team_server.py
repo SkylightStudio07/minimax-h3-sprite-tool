@@ -277,7 +277,6 @@ def create_app(data_dir=None, runner=None, rigging_runner=None, music_runner=Non
                     jobType=p.get('jobType','video'),rigMode=p.get('rigMode','illustration'),
                     created=row['created'],animationType=p.get('animationType','idle'),
                     width=p.get('width'),height=p.get('height'),
-                    promptReason=p.get('promptReason'),resolvedPrompt=p.get('resolvedPrompt'),
                     referencePreview=f'/api/jobs/{row["id"]}/reference' if p.get('imageData') and row['state'] not in TERMINAL else None)
 
     def rig_version_payload(jid,current,prefix):
@@ -530,12 +529,6 @@ def create_app(data_dir=None, runner=None, rigging_runner=None, music_runner=Non
         if rig_mode not in ('illustration','game-sprite'):
             raise ValueError('지원하지 않는 리깅 모드입니다.')
         p['rigMode']=rig_mode
-        separation_backend=p.get('separationBackend','standard')
-        if separation_backend not in ('standard','qwen21-experimental'):
-            raise ValueError('지원하지 않는 레이어 분리 엔진입니다.')
-        if separation_backend=='qwen21-experimental' and not rigging.status_payload().get('qwen21Ready'):
-            return jsonify(error='Qwen 2.1 실험 모델이 아직 설치되지 않았습니다.'),503
-        p['separationBackend']=separation_backend
         def check_mask(key,label,required=True):
             value=p.get(key,'')
             if not value:
