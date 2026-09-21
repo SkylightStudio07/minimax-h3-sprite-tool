@@ -742,7 +742,7 @@ def create_app(data_dir=None, runner=None, rigging_runner=None, music_runner=Non
             neutral=(kind=='part' or part.get('fade')=='eyeOpen' or layer_id=='eyebrow' or
                      (manifest.get('sourceMouthState')=='closed' and layer_id=='mouth_close') or
                      (manifest.get('sourceMouthState')=='slightly-open' and layer_id=='mouth_open'))
-            layers.append({key:part.get(key) for key in ('id','runtimeName','sourceLayerName','left','top','width','height','sourceRecovered','recoveryType')}|
+            layers.append({key:part.get(key) for key in ('id','runtimeName','sourceLayerName','left','top','width','height')}|
                           {'key':layer_key,'kind':kind,'defaultVisible':neutral,'asset':asset,'originalAsset':asset+'?original=1'})
         parts=[item for item in layers if item['kind']=='part']
         version_prefix=asset_prefix.rsplit('/layers',1)[0]+'/versions'

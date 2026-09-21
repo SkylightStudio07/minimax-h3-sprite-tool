@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import secrets
 
 import requests
@@ -16,6 +17,13 @@ MAX_MARKDOWN_BYTES = int(os.environ.get("GEMINI_MUSIC_MAX_MARKDOWN_BYTES", "2000
 MAX_OUTPUT_TOKENS = int(os.environ.get("GEMINI_MUSIC_MAX_OUTPUT_TOKENS", "4096"))
 THINKING_BUDGET = int(os.environ.get("GEMINI_MUSIC_THINKING_BUDGET", "1024"))
 MAX_LYRICS_CHARS = int(os.environ.get("YUE2_MAX_LYRICS_CHARS", "12000"))
+INSTRUMENTAL_LYRICS = (
+    "[Intro]\n\n"
+    "[Instrumental]\n\n"
+    "[Bridge]\n\n"
+    "[Instrumental]\n\n"
+    "[Outro]"
+)
 PRESETS = {
     "exploration": "instrumental game soundtrack, atmospheric exploration theme, restrained percussion, evolving texture, memorable motif, 92 BPM",
     "town": "instrumental game soundtrack, warm peaceful town theme, acoustic instruments, gentle memorable melody, 86 BPM",
@@ -26,6 +34,15 @@ PRESETS = {
 INSTRUMENTAL_SUFFIX = (
     " Instrumental only, no vocals, no singing, no spoken words. "
     "Suitable for a video game soundtrack with a clean intro, coherent development, and a usable ending."
+)
+_VOCAL_TERMS = re.compile(
+    r"\b(?:female|male|choirs?|choral|vocals?|voices?|singers?|singing|sung|chants?|chanting|"
+    r"rapping|rap|spoken words?|speech|lyrics?|scat(?:ting)?|humming|hums?)\b",
+    re.IGNORECASE,
+)
+_LANGUAGE_ONLY_TAG = re.compile(
+    r"(?i)(?:^|,\s*)(?:English|Korean|Japanese|Chinese|Mandarin|Cantonese|"
+    r"Spanish|French|German|Italian|Portuguese)(?=\s*,|$)"
 )
 
 
@@ -73,9 +90,16 @@ def _clean(value: object, label: str, minimum: int, maximum: int) -> str:
 def _finish_style(prompt: str, vocal_mode: str) -> str:
     prompt = prompt.strip()
     if vocal_mode == "instrumental":
-        lowered = prompt.lower()
-        if "no vocal" not in lowered and "instrumental only" not in lowered:
-            prompt += INSTRUMENTAL_SUFFIX
+        # User and LLM text is advisory, so strip positive vocal conditioning
+        # deterministically before adding one canonical instrumental directive.
+        prompt = _LANGUAGE_ONLY_TAG.sub("", prompt)
+        prompt = _VOCAL_TERMS.sub("", prompt)
+        prompt = re.sub(r"\b(?:no|without)\s*(?=[,.;]|$)", "", prompt, flags=re.IGNORECASE)
+        prompt = re.sub(r"\s+([,.;])", r"\1", prompt)
+        prompt = re.sub(r"([,;])(?:\s*[,;])+", r"\1", prompt)
+        prompt = re.sub(r"\s{2,}", " ", prompt).strip(" ,;.")
+        prompt = prompt or "instrumental game soundtrack"
+        return prompt[:2000 - len(INSTRUMENTAL_SUFFIX)] + INSTRUMENTAL_SUFFIX
     return prompt[:2000]
 
 
@@ -211,7 +235,7 @@ def resolve(payload: dict) -> dict:
     raw_lyrics = payload.get("lyrics", "")
     if not isinstance(raw_lyrics, str):
         raise ValueError("가사는 문자열이어야 합니다.")
-    lyrics = "" if vocal_mode == "instrumental" else _clean(
+    lyrics = INSTRUMENTAL_LYRICS if vocal_mode == "instrumental" else _clean(
         raw_lyrics, "가사", 5, MAX_LYRICS_CHARS,
     )
     notes = str(payload.get("notes", "")).strip()
@@ -247,6 +271,8 @@ def resolve(payload: dict) -> dict:
     cot = payload.get("cot", "full")
     if cot not in ("full", "off"):
         raise ValueError("지원하지 않는 음악 구성 방식입니다.")
+    if vocal_mode == "instrumental":
+        cot = "full"
     return {
         "title": title,
         "promptMode": mode,

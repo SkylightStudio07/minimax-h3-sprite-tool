@@ -8,7 +8,7 @@
 
 직접 프롬프트에는 탐험·전투·마을 예제가 있으며, 한국어 초안을 Gemini Flash Lite로 YuE2용 영어 프롬프트로 다듬을 수 있습니다. 기본 Lite 모델은 gemini-3.5-flash-lite이고 GEMINI_MUSIC_LITE_MODEL로 변경할 수 있습니다.
 
-YuE2에는 분위기·장르·악기·템포를 전달하는 Style/Tags 채널과 실제 노랫말을 전달하는 Lyrics 채널이 따로 있습니다. 기본 인스트루멘털 모드는 Lyrics를 빈 문자열로 전달합니다. 보컬곡 모드를 선택하면 별도 가사 입력란의 내용을 Lyrics에 전달하며, [Verse], [Chorus], [Bridge] 같은 섹션 태그를 사용할 수 있습니다.
+YuE2에는 분위기·장르·악기·템포를 전달하는 Style/Tags 채널과 실제 노랫말을 전달하는 Lyrics 채널이 따로 있습니다. 기본 인스트루멘털 모드는 Lyrics에 본문 없는 섹션 태그를 전달하고 full 모드로 악보를 계획합니다. 계획된 네이티브 ABC에서 V: Vocal 음표를 같은 길이의 쉼표로 치환한 뒤 오디오를 생성하며, 원본 계획은 score.original.abc, 실제 합성 악보는 score.abc로 보관합니다. Style의 가수·합창·보컬·언어 태그도 서버에서 제거합니다. 보컬곡 모드를 선택하면 별도 가사 입력란의 내용을 Lyrics에 전달하며, [Verse], [Chorus], [Bridge] 같은 섹션 태그를 사용할 수 있습니다.
 
 ## 1. 전용 환경
 

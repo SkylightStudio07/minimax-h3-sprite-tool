@@ -67,38 +67,15 @@ def validate_operations(manifest: dict, operations: object) -> tuple[list[dict],
     normalized: list[dict] = []
     edited: list[str] = []
     point_count = 0
-    merged_sources: set[str] = set()
     for operation in operations:
-        if not isinstance(operation, dict) or operation.get("kind", "erase") not in ("erase", "restore", "source_restore", "merge"):
+        if not isinstance(operation, dict) or operation.get("kind", "erase") not in ("erase", "restore", "source_restore"):
             raise ValueError("지원하지 않는 편집 작업입니다.")
         kind = operation.get("kind", "erase")
-        if kind == "merge":
-            source_key = operation.get("sourceLayerKey")
-            target_key = operation.get("targetLayerKey")
-            if not isinstance(source_key, str) or not isinstance(target_key, str):
-                raise ValueError("병합할 레이어를 확인하세요.")
-            source = parts.get(source_key)
-            target = parts.get(target_key)
-            if not source or not source.get("sourceRecovered"):
-                raise ValueError("원본에서 복원한 레이어만 다른 레이어에 병합할 수 있습니다.")
-            if not target or not target_key.startswith("part:") or target.get("sourceRecovered"):
-                raise ValueError("병합 대상은 기존 파츠 레이어여야 합니다.")
-            if source_key == target_key or source_key in merged_sources:
-                raise ValueError("레이어 병합 대상을 확인하세요.")
-            normalized.append({"kind": "merge", "sourceLayerKey": source_key, "targetLayerKey": target_key})
-            merged_sources.add(source_key)
-            record_id = target["id"]
-            if record_id not in edited:
-                edited.append(record_id)
-            parts.pop(source_key)
-            continue
         if kind == "source_restore":
             recovery_type = operation.get("recoveryType")
             if recovery_type not in RECOVERY_TYPES:
                 raise ValueError("원본 복원 레이어 종류를 확인하세요.")
             layer_id = "part:" + RECOVERY_TYPES[recovery_type]["id"]
-            if layer_id not in parts:
-                parts[layer_id] = recovery_record(recovery_type, manifest)
         else:
             recovery_type = None
             layer_id = operation.get("layerKey") or operation.get("layerId")
@@ -131,38 +108,6 @@ def validate_operations(manifest: dict, operations: object) -> tuple[list[dict],
         if record_id not in edited:
             edited.append(record_id)
     return normalized, edited
-
-
-def _full_layer_image(extracted: Path, record: dict, canvas_size: tuple[int, int]) -> Image.Image:
-    full = Image.new("RGBA", canvas_size)
-    with Image.open(extracted / record["file"]) as opened:
-        full.alpha_composite(opened.convert("RGBA"), (int(record["left"]), int(record["top"])))
-    return full
-
-
-def _original_layer_crop(folder: Path, record: dict, layer_key: str,
-                         canvas_size: tuple[int, int]) -> Image.Image:
-    """Align the generated layer with a target whose crop may have grown after merging."""
-    snapshot = folder / "revisions" / "0000"
-    manifest_path = snapshot / "manifest.json"
-    archive_path = snapshot / "character-unity-parts.zip"
-    if manifest_path.is_file() and archive_path.is_file():
-        original_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        original_record = dict(layer_records(original_manifest)).get(layer_key)
-        if original_record:
-            with zipfile.ZipFile(archive_path) as archive, \
-                    Image.open(io.BytesIO(archive.read(original_record["file"]))) as opened:
-                full = Image.new("RGBA", canvas_size)
-                full.alpha_composite(opened.convert("RGBA"),
-                                     (int(original_record["left"]), int(original_record["top"])))
-                left, top = int(record["left"]), int(record["top"])
-                return full.crop((left, top, left + int(record["width"]), top + int(record["height"])))
-    kind = layer_key.split(":", 1)[0]
-    with Image.open(io.BytesIO(layer_bytes(folder, record["id"], original=True, kind=kind))) as opened:
-        original = opened.convert("RGBA")
-    if original.size != (int(record["width"]), int(record["height"])):
-        raise ValueError("생성 직후 원본 레이어의 위치를 확인할 수 없습니다.")
-    return original
 
 
 def _stamp(draw: ImageDraw.ImageDraw, x: float, y: float, radius: float) -> None:
@@ -442,7 +387,9 @@ def save_revision(folder: Path, operations: object, revision: int, writer: Path,
             existing_ids.add(RECOVERY_TYPES[recovery_type]["id"])
             new_recovery_types.append(recovery_type)
     augmented_order = current_order + ["part:" + RECOVERY_TYPES[item]["id"] for item in new_recovery_types]
-    merge_operations = [item for item in normalized if item["kind"] == "merge"]
+    requested_order = augmented_order if layer_order is None else validate_layer_order(manifest, layer_order)
+    if not normalized and requested_order == current_order:
+        raise ValueError("저장할 편집 작업이 없습니다.")
     archive_path = folder / "character-unity-parts.zip"
     if not archive_path.is_file():
         raise FileNotFoundError("Unity 패키지를 찾을 수 없습니다.")
@@ -474,8 +421,6 @@ def save_revision(folder: Path, operations: object, revision: int, writer: Path,
                 full.alpha_composite(opened.convert("RGBA"), (int(part["left"]), int(part["top"])))
             recovery_images[key] = full
         for operation in normalized:
-            if operation["kind"] == "merge":
-                continue
             part = by_id[operation["layerId"]]
             target = extracted / part["file"]
             if part.get("sourceRecovered"):
@@ -486,25 +431,24 @@ def save_revision(folder: Path, operations: object, revision: int, writer: Path,
                     with Image.open(source_reference_path(folder, manifest)) as original:
                         recovery_images[operation["layerId"]] = restore_stroke(opened, original, operation, 0, 0)
                 else:
-                    original_crop = _original_layer_crop(folder, part, operation["layerId"], canvas_size)
-                    original = Image.new("RGBA", canvas_size)
-                    original.alpha_composite(original_crop, (int(part["left"]), int(part["top"])))
-                    recovery_images[operation["layerId"]] = restore_stroke(opened, original, operation, 0, 0)
+                    kind = operation["layerId"].split(":", 1)[0]
+                    with Image.open(io.BytesIO(layer_bytes(folder, part["id"], original=True, kind=kind))) as original_crop:
+                        original = Image.new("RGBA", canvas_size)
+                        original.alpha_composite(original_crop.convert("RGBA"), (int(part["left"]), int(part["top"])))
+                        recovery_images[operation["layerId"]] = restore_stroke(opened, original, operation, 0, 0)
                 continue
             with Image.open(target) as opened:
                 if operation["kind"] == "erase":
                     changed = erase_stroke(opened, operation, int(part["left"]), int(part["top"]))
                 else:
-                    original = _original_layer_crop(folder, part, operation["layerId"], canvas_size)
-                    changed = restore_stroke(opened, original, operation, int(part["left"]), int(part["top"]))
+                    kind = operation["layerId"].split(":", 1)[0]
+                    with Image.open(io.BytesIO(layer_bytes(folder, part["id"], original=True, kind=kind))) as original:
+                        changed = restore_stroke(opened, original, operation, int(part["left"]), int(part["top"]))
             if not changed.getchannel("A").getbbox():
                 raise ValueError(f'레이어 "{part["runtimeName"]}" 전체가 지워집니다. 레이어 숨김 기능을 사용하세요.')
             changed.save(target)
 
-        merged_source_keys = {item["sourceLayerKey"] for item in merge_operations}
         for key, image in recovery_images.items():
-            if key in merged_source_keys:
-                continue
             part = by_id[key]
             box = image.getchannel("A").getbbox()
             if not box:
@@ -512,31 +456,6 @@ def save_revision(folder: Path, operations: object, revision: int, writer: Path,
             cropped = image.crop(box)
             part.update(left=box[0], top=box[1], width=cropped.width, height=cropped.height)
             cropped.save(extracted / part["file"])
-
-        for operation in merge_operations:
-            source_key, target_key = operation["sourceLayerKey"], operation["targetLayerKey"]
-            source = by_id[source_key]
-            target = by_id[target_key]
-            source_full = recovery_images.get(source_key)
-            if source_full is None:
-                source_full = _full_layer_image(extracted, source, canvas_size)
-            target_full = _full_layer_image(extracted, target, canvas_size)
-            target_full.alpha_composite(source_full)
-            box = target_full.getchannel("A").getbbox()
-            if not box:
-                raise ValueError("병합한 레이어가 비어 있습니다.")
-            cropped = target_full.crop(box)
-            target.update(left=box[0], top=box[1], width=cropped.width, height=cropped.height)
-            cropped.save(extracted / target["file"])
-            (extracted / source["file"]).unlink(missing_ok=True)
-            manifest["parts"] = [item for item in manifest.get("parts", []) if item.get("id") != source["id"]]
-            manifest["editedParts"] = [item for item in manifest.get("editedParts", []) if item != source["id"]]
-            by_id.pop(source_key, None)
-            augmented_order = [key for key in augmented_order if key != source_key]
-
-        requested_order = augmented_order if layer_order is None else validate_layer_order(manifest, layer_order)
-        if not normalized and requested_order == current_order:
-            raise ValueError("저장할 편집 작업이 없습니다.")
 
         width, height = int(manifest["canvas"]["width"]), int(manifest["canvas"]["height"])
         composite = Image.new("RGBA", (width, height))

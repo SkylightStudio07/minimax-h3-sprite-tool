@@ -1,14 +1,187 @@
 <!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sprite Lab · Team</title>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sprite Lab · Game Asset Studio</title>
 <style>
 :root{color-scheme:dark;font:15px/1.6 system-ui,sans-serif;background:#0b0e14;color:#edf0f7}*{box-sizing:border-box}body{margin:0}button,input,select{font:inherit}button,a{touch-action:manipulation}button{cursor:pointer;border:1px solid #343d53;border-radius:10px;background:#202738;color:inherit;padding:10px 16px}button:hover{background:#343454}button:disabled{opacity:.5;cursor:wait}input{display:block;width:100%;padding:12px;margin:6px 0 18px;border:1px solid #343d53;border-radius:9px;background:#10151f;color:inherit}a{color:#b5abff}h1,h2,h3,p{margin:0 0 12px}h1{letter-spacing:-.045em;font-size:34px}h2{font-size:24px}h3{font-size:17px}.muted,small{color:#9aa6bc}.eyebrow{color:#a899ff;letter-spacing:.15em;font-size:12px;font-weight:800}.primary{background:#7661e3;border-color:#8776ed}.danger{color:#ffb5bb}.panel{background:#141a26;border:1px solid #2a3347;border-radius:16px;padding:22px}.auth{max-width:460px;margin:9vh auto;padding:24px}.auth .panel{margin-top:24px}header{border-bottom:1px solid #283145;padding:22px max(24px,calc((100vw - 1250px)/2));display:flex;justify-content:space-between;align-items:center;gap:16px}header h1{font-size:25px}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}main{max-width:1250px;margin:24px auto;padding:0 24px}nav{display:flex;gap:8px;margin:0 0 24px;flex-wrap:wrap}nav button[aria-selected=true]{background:#7661e3;border-color:#9786ff}.stats{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap}.stat{flex:1;min-width:150px;padding:16px 20px;border:1px solid #2a3347;border-radius:12px}.stat strong{font-size:26px;margin-right:10px}.jobs{display:grid;gap:12px}.job{display:flex;gap:18px;align-items:center;justify-content:space-between}.badge{display:inline-block;font-size:12px;border:1px solid #4b456b;color:#c2b6ff;border-radius:6px;padding:2px 8px;margin-right:8px}.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px}.gallery video{width:100%;height:230px;object-fit:contain;background:#080b10;border-radius:10px}.sheet{overflow:auto;background:repeating-conic-gradient(#232939 0% 25%,#151b28 0% 50%) 0/20px 20px;border-radius:10px;margin:12px 0}.sheet img{display:block;height:140px;max-width:none}.links{display:flex;gap:14px;flex-wrap:wrap;font-size:13px}.version-bar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:12px 0}.version-bar select{min-width:145px;padding:8px 10px;border:1px solid #424d64;border-radius:8px;background:#111827;color:#edf0f7}.version-bar a{font-size:13px}.empty{text-align:center;padding:44px;color:#9aa6bc}.notice{white-space:pre-wrap;color:#ffcf95;margin-top:12px;min-height:24px}iframe{width:100%;height:1250px;border:0;border-radius:16px;background:#0b0d12}details{margin-top:24px}summary{cursor:pointer}#toast{position:fixed;bottom:22px;right:22px;max-width:420px;background:#403456;padding:16px 22px;border-radius:12px;z-index:10}[hidden]{display:none!important}@media(max-width:600px){header{padding:18px;align-items:flex-start}header .row{justify-content:flex-end}main{padding:0 14px}.job{align-items:flex-start}.auth{margin-top:3vh}.gallery{grid-template-columns:1fr}}
-video:fullscreen{width:100vw!important;height:100vh!important;object-fit:contain;background:#000}.reference-thumb{width:88px;height:110px;object-fit:contain;flex-shrink:0;background:#252b38;border-radius:8px}#publicGallery{max-width:1250px;margin:20px auto 70px;padding:0 24px}#auth{margin-top:32px;margin-bottom:24px}.public-live2d-link{display:inline-block;margin:4px 0 20px;padding:10px 16px;border:1px solid #8776ed;border-radius:10px;background:#7661e3;color:#fff;text-decoration:none}.public-live2d-link:hover{background:#8875ef}</style></head><body>
-<section id="auth" class="auth"><div class="eyebrow">TEAM WORKSPACE</div><h1>Sprite Lab</h1><p class="muted">이미지 한 장에서, 팀의 게임 에셋으로.</p><div class="panel"><h2 id="authTitle">로그인</h2><p id="setupNote" class="muted" hidden>최초 관리자 등록입니다. 이 PC의 data/admin-setup-code.txt에 있는 일회용 코드를 입력하세요.</p><form id="authForm"><label>아이디<input id="username" autocomplete="username" required minlength="3" maxlength="40" pattern="[a-zA-Z0-9_.-]+"></label><label>비밀번호<input id="password" type="password" autocomplete="current-password" required minlength="10" maxlength="200"></label><label id="nameField" hidden>팀에 표시할 이름<input id="displayName" maxlength="40"></label><label id="codeField" hidden>관리자 설정 코드<input id="setupCode" autocomplete="off"></label><button class="primary" id="submitAuth" type="submit">로그인</button> <button id="toggleAuth" type="button">가입 요청</button></form><p id="authMessage" class="notice" role="status"></p></div><p class="muted" style="margin-top:18px">생성·대기열은 승인된 팀원만 이용할 수 있습니다.<br>완성 영상과 시트는 아래 공개 갤러리에 게시됩니다.</p></section>
-<section id="publicGallery"><h2>공개 결과 갤러리</h2><p class="muted">로그인 없이 완성 영상과 스프라이트 시트를 볼 수 있습니다.</p><a class="public-live2d-link" href="live2d">공개 Live2D 워크스페이스</a><div id="publicGalleryList" class="gallery"></div></section>
-<div id="app" hidden><header><div><div class="eyebrow">TEAM WORKSPACE</div><h1>Sprite Lab</h1></div><div class="row"><span id="who"></span><button id="logout">로그아웃</button></div></header><main><div class="stats"><div class="stat"><strong id="runningCount">0</strong>생성 중</div><div class="stat"><strong id="waitingCount">0</strong>대기 중</div><div class="stat"><strong id="completeCount">0</strong>최근 완료</div></div><nav aria-label="작업 공간"><button data-pane="generate" aria-selected="true">새 스프라이트</button><button data-pane="rigging">2D 리깅</button><button data-pane="music">게임 BGM</button><button data-pane="queue">팀 대기열</button><button data-pane="gallery">결과 갤러리</button><button data-pane="guide">가이드</button><button data-pane="admin" id="adminTab" hidden>계정 승인</button></nav>
+video:fullscreen{width:100vw!important;height:100vh!important;object-fit:contain;background:#000}.reference-thumb{width:88px;height:110px;object-fit:contain;flex-shrink:0;background:#252b38;border-radius:8px}#publicGallery{max-width:1250px;margin:20px auto 70px;padding:0 24px}#auth{margin-top:32px;margin-bottom:24px}.public-live2d-link{display:inline-block;margin:4px 0 20px;padding:10px 16px;border:1px solid #8776ed;border-radius:10px;background:#7661e3;color:#fff;text-decoration:none}.public-live2d-link:hover{background:#8875ef}</style>
+<style id="studio-shell">
+/* Studio shell: frontend-only, no changes to API contracts. */
+:root{--bg:#101415;--surface:#181d1f;--line:#30383a;--text:#edf2ef;--muted:#a1aeaa;--accent:#b8f2d6;background:var(--bg);color:var(--text);font:14px/1.65 "Segoe UI","Malgun Gothic",system-ui,sans-serif;color-scheme:dark}
+body{background:var(--bg);overflow-wrap:anywhere}
+button,input,select,textarea{font:inherit}
+button,a,input,select,textarea,summary{-webkit-tap-highlight-color:transparent}
+button{min-height:42px;background:#242b2d;border:1px solid #394244;border-radius:9px;font-weight:600;transition:background .16s,border-color .16s}
+button:hover{background:#303b3b;border-color:#71877e}
+button:disabled{cursor:not-allowed}
+a{color:var(--accent);text-underline-offset:4px}
+:where(button,a,input,select,textarea,summary):focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+input,select{background:#121718;border-color:#3b4645;border-radius:8px;min-height:44px}
+h1,h2,h3{color:var(--text);line-height:1.3;word-break:keep-all}
+.muted,small{color:var(--muted)}
+.eyebrow{color:#a7b9b0;font-size:10px;letter-spacing:.18em;font-weight:700;margin-bottom:12px}
+.primary,.public-live2d-link{background:var(--accent);border-color:var(--accent);color:#14251e}
+.primary:hover,.public-live2d-link:hover{background:#cef9e4;border-color:#cef9e4}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:none}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--text);font-size:21px;font-weight:750;letter-spacing:-.035em;white-space:nowrap}
+.brand small{display:block;font-size:8px;letter-spacing:.18em;color:var(--muted);font-weight:600;line-height:1.7}
+.brand-mark{display:grid;place-items:center;position:relative;width:40px;height:40px;background:var(--accent);color:#152820;border-radius:11px;font-size:28px;font-weight:850;line-height:1}
+.brand-mark span{position:absolute;right:6px;bottom:1px;font-size:22px}
+.signal{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-right:8px;vertical-align:middle}
+.skip-link{position:fixed;top:-100px;left:16px;z-index:100;background:var(--accent);color:#152820;padding:12px;border-radius:8px}
+.skip-link:focus{top:12px}
+#auth.landing{max-width:1360px;margin:0 auto;padding:0 48px}
+.landing-top{height:106px;display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line)}
+.quiet-link{text-decoration:none;color:#c6d2cd;font-size:13px}
+.quiet-link span{margin-left:16px}
+.landing-grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:80px;align-items:center;padding:72px 0 64px}
+.landing-story h1{font-size:clamp(34px,3.9vw,58px);line-height:1.24;letter-spacing:-.065em;margin:22px 0}
+.landing-story h1 em{font-style:normal;color:var(--accent)}
+.hero-description{font-size:15px;line-height:1.9;color:var(--muted);margin-bottom:32px;word-break:keep-all}
+.tool-preview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.preview-tile{background:#191f20;border:1px solid #313b39;border-radius:12px;padding:15px}
+.preview-tile>span{display:block;font-size:9px;color:#92a49b;letter-spacing:.12em;margin:12px 0 5px}
+.preview-tile strong{display:block;font-size:15px}.preview-tile small{font-size:10px;display:block;margin-top:5px;word-break:keep-all}
+.tile-art{height:92px;border-radius:7px;display:flex;align-items:center;justify-content:center;background:#222e29;overflow:hidden}
+.pixel-art svg{height:76px;width:76px;image-rendering:pixelated}
+.layers-art{position:relative;background:#302c36}.layers-art i{position:absolute;width:50px;height:50px;border:1px solid #bdb1d3;background:#635771;transform:rotate(-30deg) skewX(20deg) scaleY(.65);top:32px}.layers-art i:nth-child(2){top:19px;background:#8a7b9a}.layers-art i:nth-child(3){top:6px;background:#c9bbd9}
+.waveform{gap:4px;background:#302d24}.waveform i{width:4px;height:20%;background:#d9c6a0;border-radius:4px}.waveform i:nth-child(2n){height:43%}.waveform i:nth-child(3n){height:65%}.waveform i:nth-child(5n){height:85%}
+.landing-footnote{margin:23px 0 0;font-size:9px;letter-spacing:.11em;color:#81928a}.landing-footnote span{margin:0 14px}
+.login-column .panel{padding:30px;background:#1c2223;border-color:#39423f;box-shadow:0 16px 60px #0002}
+.login-column h2{font-size:25px;margin-bottom:28px;letter-spacing:-.04em}
+.login-column label{font-size:12px;color:#bccac3;font-weight:600}.login-column input{margin:8px 0 20px;padding:12px;background:#14191a}
+#authForm{display:grid;grid-template-columns:1fr 1fr;gap:0 8px}#authForm label{grid-column:1/-1}#authForm button{font-size:13px}
+#authMessage:empty{display:none}#authMessage{font-size:12px}
+.access-note{font-size:11px;text-align:center;color:#9daaa4;line-height:1.85;margin:18px 0 0}
+#publicGallery{max-width:1360px;padding:40px 48px 64px;margin:0 auto;border-top:1px solid var(--line)}
+.section-heading{display:flex;gap:24px;align-items:center;justify-content:space-between;margin-bottom:25px}
+.section-heading h2{font-size:28px;letter-spacing:-.045em}.section-heading p{margin:0;font-size:13px}.heading-dot{color:var(--accent)}
+.public-live2d-link{white-space:nowrap;font-size:12px;font-weight:700;text-decoration:none;margin:0 0 18px;padding:11px 15px;border-radius:8px}
+.section-heading .public-live2d-link{background:transparent;color:var(--text);border-color:#46534c;margin:0}.public-live2d-link span{margin-left:20px}
+.app-header{height:81px;position:relative;z-index:5;background:#131819;border-bottom:1px solid var(--line);padding:0 30px;display:flex;align-items:center;justify-content:space-between}
+.app-header .brand{font-size:20px}.app-header .brand-mark{width:35px;height:35px;font-size:25px}.account{display:flex;gap:18px;align-items:center;min-width:0}.account #who{font-size:12px;color:#bbc9c1;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.account button{font-size:11px;min-height:34px;padding:6px 12px;background:transparent}
+.workspace-sidebar{position:absolute;top:81px;bottom:0;left:0;width:220px;padding:30px 18px;border-right:1px solid var(--line);background:#131819}
+#app{position:relative;min-height:100vh}
+.nav-label{font-size:9px;letter-spacing:.17em;color:#8b9a92;padding:0 14px;margin-bottom:18px}
+.workspace-sidebar nav{display:flex;flex-direction:column;gap:6px;flex-wrap:nowrap;position:sticky;top:22px}
+.workspace-sidebar nav button{display:flex;align-items:center;gap:13px;width:100%;text-align:left;background:transparent;border:1px solid transparent;color:#a9b8b0;padding:12px 14px;font-size:13px;white-space:nowrap;min-height:46px}
+.workspace-sidebar nav button>span:first-child{display:inline-flex;justify-content:center;align-items:center;width:18px;font-size:20px;line-height:1}
+.workspace-sidebar nav button:hover{background:#222b27;color:#e7f6eb}
+.workspace-sidebar nav button[aria-selected=true]{background:#263a31;border-color:#3e5d4e;color:var(--accent)}
+.nav-arrow{margin-left:auto;font-size:16px}.nav-divider{display:block;height:1px;background:var(--line);margin:18px 14px}
+.sidebar-note{margin:42px 14px 0;font-size:10px;color:#b2c4b8}.sidebar-note p{margin-top:9px;font-size:10px;line-height:1.9;color:#84968b}
+#workspaceMain{max-width:1600px;margin:0 0 0 220px;padding:38px clamp(22px,3.5vw,56px) 64px;outline:none}
+.workspace-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:27px}.workspace-heading .eyebrow{margin-bottom:9px}.workspace-heading h1{font-size:clamp(25px,2.8vw,36px);letter-spacing:-.055em;margin-bottom:9px}.workspace-heading p{font-size:13px;margin:0}.workspace-help{font-size:11px;white-space:nowrap;color:#b8cbbf;text-decoration:none}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;background:#181e1f;border:1px solid var(--line);border-radius:11px;margin-bottom:28px}
+.stat{min-width:0;padding:14px 20px;display:flex;align-items:center;gap:9px;font-size:12px;border:0;border-right:1px solid var(--line);border-radius:0;color:#abbcb2}.stat:last-child{border-right:0}.stat strong{font-size:21px;color:#e8f4ec;margin:0 0 0 auto;font-weight:650;font-variant-numeric:tabular-nums}.stat-dot{width:6px;height:6px;flex-shrink:0;border-radius:50%;background:#b8f2d6}.stat-dot.waiting{background:#d9c39a}.stat-dot.complete{background:#96acb5}
+#generatePane>p,#riggingPane>p,#musicPane>p{font-size:12px;border-left:2px solid #587262;padding:2px 12px;margin-bottom:20px}
+iframe{display:block;background:var(--bg);border-radius:0;min-width:0}
+#queuePane>h2,#galleryPane>h2,#adminPane>h2,#guidePane>h2{font-size:20px}#queuePane>p,#galleryPane>p,#adminPane>p,#guidePane>p{font-size:12px;max-width:900px}
+.gallery{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.gallery .panel{padding:16px;overflow:hidden}.gallery h3{font-size:14px}.gallery p{font-size:11px}.gallery video{height:280px;border:1px solid #303b35;background:#0d1110;border-radius:9px}.gallery button{font-size:12px;margin-top:10px}.gallery .links{margin:14px 0;gap:8px 14px;font-size:11px}.gallery input{margin-top:16px}.gallery audio{width:100%;max-width:100%}
+.page-numbers{gap:4px}.page-numbers button{border-radius:7px!important;margin-left:0;font-size:12px;min-width:38px;border-color:#3d4b43;background:#1d2721}.page-numbers button.current{background:var(--accent);border-color:var(--accent);color:#182c20}
+.empty{grid-column:1/-1;border:1px dashed #3d4d42;border-radius:12px;padding:54px 20px;font-size:13px;background:#161e19}
+.job{justify-content:flex-start}.job>div{min-width:0;flex:1}.job>button{flex-shrink:0}.job strong{font-size:13px}.badge{color:var(--accent);border-color:#456151;background:#213b2c}
+#guidePane .jobs{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}#guidePane .panel{font-size:13px}#guidePane h3{font-size:16px;color:var(--accent)}#guidePane ol,#guidePane ul{padding-left:20px}#guidePane li{margin:8px 0}#guidePane dd{margin:5px 0 16px;color:#aebeb4}
+#toast{background:#d5f5e0;color:#183322;border:1px solid #8cad95;box-shadow:0 10px 40px #0004;font-size:13px;max-width:min(420px,calc(100vw - 32px));right:16px;bottom:16px}
+@media(min-width:1900px){#workspaceMain{margin-right:auto}}
+@media(max-width:1150px){.landing-grid{gap:36px;grid-template-columns:minmax(0,1fr) 320px}.workspace-sidebar{width:186px;padding-left:12px;padding-right:12px}#workspaceMain{margin-left:186px;padding:28px 24px}.workspace-help{display:none}.gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.preview-tile{padding:10px}.preview-tile small{font-size:9px}}
+@media(max-width:850px){#auth.landing{padding:0 24px}.landing-top{height:83px}.landing-grid{grid-template-columns:1fr;gap:36px;padding:42px 0}.landing-story h1{font-size:44px}.login-column{max-width:480px;width:100%;justify-self:center}.tool-preview{max-width:600px}.tile-art{height:105px}#publicGallery{padding:32px 24px}.section-heading h2{font-size:24px}.app-header{padding:0 20px;height:72px}.workspace-sidebar{position:sticky;top:0;z-index:4;width:100%;padding:8px 16px;border-right:0;border-bottom:1px solid var(--line)}.workspace-sidebar nav{flex-direction:row;position:static;overflow-x:auto;margin:0;padding:2px 0;scrollbar-width:thin;gap:6px}.workspace-sidebar nav button{width:auto;flex:0 0 auto;min-height:40px;padding:8px 12px;font-size:12px}.workspace-sidebar nav button>span:first-child{font-size:16px;width:16px}.nav-label,.nav-divider,.sidebar-note,.nav-arrow{display:none}#workspaceMain{margin:0;padding:25px 20px 48px}.stats{margin-bottom:22px}.workspace-heading{margin-bottom:22px}.workspace-heading h1{font-size:29px}}
+@media(max-width:560px){#auth.landing{padding:0 20px}.brand{font-size:20px}.brand-mark{width:34px;height:34px;font-size:25px}.quiet-link{font-size:11px}.quiet-link span{margin-left:4px}.landing-story h1{font-size:36px}.landing-grid{padding:35px 0;gap:28px}.hero-description{font-size:13px}.eyebrow{font-size:9px}.tool-preview{gap:8px}.preview-tile{padding:9px}.tile-art{height:82px}.pixel-art svg{width:65px;height:65px}.preview-tile>span{font-size:7px;letter-spacing:.06em}.preview-tile strong{font-size:13px}.preview-tile small{display:none}.waveform{gap:3px}.waveform i{width:3px}.landing-footnote{font-size:8px;letter-spacing:.04em}.landing-footnote span{margin:0 6px}.login-column .panel{padding:25px}.login-column h2{font-size:23px;margin-bottom:22px}#publicGallery{padding:28px 20px}.section-heading{display:block}.section-heading .public-live2d-link{display:inline-block;margin-top:17px}.gallery{grid-template-columns:minmax(0,1fr)}.gallery video{height:320px}.app-header{padding:0 15px;height:68px}.app-header .brand{font-size:18px}.account{gap:8px}.account #who{max-width:90px;font-size:10px}.account button{padding:5px 8px;font-size:10px}.workspace-sidebar{padding:6px 12px}#workspaceMain{padding:24px 14px 40px}.workspace-heading h1{font-size:27px}.workspace-heading p{font-size:12px}.stat{padding:12px 10px;gap:6px;font-size:10px}.stat strong{font-size:18px}.stat-dot{width:5px;height:5px}#guidePane .jobs{grid-template-columns:1fr}.job{flex-wrap:wrap;gap:12px}.reference-thumb{width:60px;height:80px}.job .row{gap:7px}.job button{font-size:12px;padding:8px 12px}.panel{padding:17px}.public-live2d-link{white-space:normal}.links a{overflow-wrap:anywhere}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+.gallery pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.8}
+/* shell-append */
+</style>
+<style id="tool-theme" media="not all">
+/* Shared visual layer applied to same-origin embedded studios by the shell. */
+:root{--bg:#101415;--panel:#181e1f;--line:#35413b;--text:#edf2ef;--muted:#a1b2a7;--accent:#b8f2d6;--ok:#b8f2d6;background:var(--bg);color:var(--text);font-family:"Segoe UI","Malgun Gothic",system-ui,sans-serif}
+html.embedded-studio,html.embedded-studio body{min-height:0;height:auto;background:#101415}
+.embedded-studio body{margin:0;padding:0;font-size:14px;overflow-wrap:anywhere}
+.embedded-studio main{width:100%;max-width:none;margin:0;padding:0}
+.embedded-studio .panel{background:#181e1f;border:1px solid #303c35;border-radius:12px;padding:22px;box-shadow:none;min-width:0}
+.embedded-studio h1{font-size:23px;line-height:1.4;letter-spacing:-.045em}
+.embedded-studio h2{font-size:19px}.embedded-studio h3{font-size:16px}
+.embedded-studio .muted,.embedded-studio .sub,.embedded-studio small,.embedded-studio .notice{color:#a1b2a7}
+.embedded-studio .eyebrow{color:#b8f2d6;font-size:10px;letter-spacing:.15em}
+.embedded-studio .sub{font-size:13px;margin-bottom:22px}
+.embedded-studio button{min-height:42px;background:#26372d;border:1px solid #4c6756;color:#d6efde;border-radius:8px;box-shadow:none;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}
+.embedded-studio button:hover{background:#344e3c}
+.embedded-studio button:disabled{cursor:not-allowed}
+.embedded-studio #generate,.embedded-studio button.primary{background:#b8f2d6;border-color:#b8f2d6;color:#172c20;font-weight:750}
+.embedded-studio #generate:hover{background:#d3fae4}
+.embedded-studio input,.embedded-studio select,.embedded-studio textarea{max-width:100%;min-width:0;background:#111718;border:1px solid #3c4b41;border-radius:8px;color:#edf2ef;accent-color:#b8f2d6}
+.embedded-studio input:not([type=checkbox]):not([type=radio]):not([type=range]),.embedded-studio select{min-height:44px}
+.embedded-studio textarea{line-height:1.75;padding:14px;font-size:13px}
+.embedded-studio :where(button,a,input,select,textarea,summary):focus-visible{outline:2px solid #b8f2d6;outline-offset:3px}
+.embedded-studio label{font-size:12px;font-weight:600}
+.embedded-studio .option{font-size:12px}
+.embedded-studio .grid{gap:20px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.embedded-studio .row{grid-template-columns:repeat(3,minmax(0,1fr))}
+.embedded-studio .drop{border:1px dashed #607966;background:repeating-conic-gradient(#1d2922 0 25%,#19221d 0 50%) 0/24px 24px;min-height:340px;border-radius:10px}
+.embedded-studio .drop:hover{border-color:#b8f2d6}
+.embedded-studio .status{background:#16211b;border-color:#39483e;color:#bdcebf;border-radius:8px;font-size:12px;line-height:1.8}
+.embedded-studio .notice{font-size:11px;line-height:1.8}
+.embedded-studio a{color:#b8f2d6;overflow-wrap:anywhere}
+.embedded-studio .links{flex-wrap:wrap}
+.embedded-studio .mode{background:#121918;border-color:#3a4a40;border-radius:9px;cursor:pointer;padding:16px}
+.embedded-studio .mode:has(input:checked){background:#263b2e;border-color:#9ddbb6}
+.embedded-studio .mode:has(input:disabled){opacity:.55}
+.embedded-studio .mode .muted{display:inline-block;font-size:11px;margin-top:5px}
+.embedded-studio .mode input{margin-top:0}
+.embedded-studio .preview{background:#111918;border-color:#b8f2d6;font-size:13px}
+.embedded-studio .secondary,.embedded-studio .examples button{background:#212c25;border-color:#475d4c}
+.embedded-studio .modes{gap:12px;margin:26px 0}
+.embedded-studio #form>section{margin:22px 0}
+.embedded-studio #form>.grid{margin-bottom:20px;align-items:start}
+.embedded-studio #form>#generate{margin-top:6px;padding:14px 22px}
+.embedded-studio input[type=file]{padding:12px;font-size:12px}
+.embedded-studio input::file-selector-button{background:#2c4033;color:#d7eddf;border:1px solid #536d5a;border-radius:6px;padding:7px 10px;margin-right:12px;cursor:pointer}
+.embedded-studio details{border-top:1px solid #334337;padding-top:16px;margin-top:20px}.embedded-studio summary{color:#b6d2bc;cursor:pointer;font-size:12px}
+.embedded-studio .source-panel{align-self:start;position:sticky;top:20px}
+.embedded-studio .source-panel h2,.embedded-studio .settings-title{font-size:17px;margin:0 0 18px}
+.embedded-studio .source-note{padding:16px 0 0;color:#9caf9e;font-size:12px;line-height:1.9}
+.embedded-studio .source-note strong{display:block;color:#cadccb;margin-bottom:5px;font-weight:600}
+.embedded-studio .source-panel .drop{min-height:370px}
+.embedded-studio .source-panel .drop img{max-height:520px}
+.embedded-studio .layout{grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr)}
+.embedded-studio .layout>.span{grid-column:1/-1}
+@media(max-width:950px){.embedded-studio .layout{grid-template-columns:minmax(0,1fr)}.embedded-studio .mask-layout,.embedded-studio .result,.embedded-studio .pose-wrap{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:760px){.embedded-studio main>.grid{grid-template-columns:minmax(0,1fr)}.embedded-studio .source-panel{position:static}.embedded-studio .source-panel .drop{min-height:240px}.embedded-studio .modes{grid-template-columns:minmax(0,1fr);gap:8px}.embedded-studio .mode{padding:12px}.embedded-studio .mode br{display:none}.embedded-studio .mode .muted{margin:0 0 0 10px}.embedded-studio .panel{padding:18px}}
+@media(max-width:480px){.embedded-studio .grid,.embedded-studio .row{grid-template-columns:minmax(0,1fr)}.embedded-studio .panel{padding:16px}.embedded-studio input,.embedded-studio select,.embedded-studio textarea{font-size:16px}.embedded-studio .mode .muted{display:block;margin-left:23px;margin-top:4px}.embedded-studio .mode br{display:none}.embedded-studio #form>#generate{width:100%}.embedded-studio .drop{min-height:230px}.embedded-studio .source-note{font-size:11px}}
+@media(prefers-reduced-motion:reduce){.embedded-studio *{transition:none!important;scroll-behavior:auto!important}}
+.embedded-studio main>h1,.embedded-studio main>.sub,.embedded-studio main>section.panel:first-child:has(+form#form){display:none}
+/* theme-append */
+</style>
+</head><body>
+<section id="auth" class="landing">
+  <a class="skip-link" href="#authForm">로그인으로 바로가기</a>
+  <div class="landing-top"><a class="brand" href="./"><span class="brand-mark" aria-hidden="true">S<span>·</span></span><span>Sprite Lab<small>GAME ASSET STUDIO</small></span></a><a class="quiet-link" href="#publicGallery">갤러리 둘러보기 <span aria-hidden="true">↗</span></a></div>
+  <div class="landing-grid">
+    <div class="landing-story"><div class="eyebrow"><span class="signal"></span> YOUR NEXT GAME STARTS HERE</div><h1>상상하던 게임,<br><em>에셋이 되는 공간.</em></h1><p class="hero-description">캐릭터의 첫 움직임부터 장면을 채우는 음악까지.<br>팀의 아이디어를 하나의 제작 공간에서 완성하세요.</p>
+      <div class="tool-preview" aria-label="제작할 수 있는 에셋">
+        <div class="preview-tile"><div class="tile-art pixel-art" aria-hidden="true"><svg viewBox="0 0 80 80"><path d="M53 9h18v18H59v12H47v12H35L23 39l12-12h12V15h6Z" fill="#bbefde"/><path d="M59 15h6v6h-6v12H47v12H35v-6h6V27h12V15Z" fill="#60bda3"/><path d="m17 33 30 30-6 6-12-12-12 12-6-6 12-12-12-12Z" fill="#e6c18c"/></svg></div><span>01 / MOTION</span><strong>스프라이트</strong><small>한 장의 이미지에 움직임을</small></div>
+        <div class="preview-tile"><div class="tile-art layers-art" aria-hidden="true"><i></i><i></i><i></i></div><span>02 / CHARACTER</span><strong>2D 리깅</strong><small>레이어에서 살아나는 캐릭터</small></div>
+        <div class="preview-tile"><div class="tile-art waveform" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span>03 / SOUND</span><strong>게임 BGM</strong><small>세계관을 담은 사운드트랙</small></div>
+      </div><p class="landing-footnote">MINIMAX H3 <span>·</span> 2D RIGGING <span>·</span> YUE2 + GEMINI</p>
+    </div>
+    <div class="login-column"><div class="panel"><h2 id="authTitle">로그인</h2><p id="setupNote" class="muted" hidden>최초 관리자 등록입니다. 이 PC의 data/admin-setup-code.txt에 있는 일회용 코드를 입력하세요.</p><form id="authForm"><label>아이디<input id="username" autocomplete="username" required minlength="3" maxlength="40" pattern="[a-zA-Z0-9_.-]+"></label><label>비밀번호<input id="password" type="password" autocomplete="current-password" required minlength="10" maxlength="200"></label><label id="nameField" hidden>팀에 표시할 이름<input id="displayName" maxlength="40"></label><label id="codeField" hidden>관리자 설정 코드<input id="setupCode" autocomplete="off"></label><button class="primary" id="submitAuth" type="submit">로그인</button> <button id="toggleAuth" type="button">가입 요청</button></form><p id="authMessage" class="notice" role="status"></p></div><p class="access-note">생성과 대기열은 승인된 팀원 전용입니다.<br>완성된 스프라이트는 공개 갤러리에 모입니다.</p></div>
+  </div>
+</section>
+<section id="publicGallery"><div class="section-heading"><div><div class="eyebrow">MADE IN SPRITE LAB</div><h2>팀의 작업 모아보기<span class="heading-dot">.</span></h2><p class="muted">완성된 영상과 스프라이트 시트. 로그인 없이 둘러보세요.</p></div><a class="public-live2d-link" href="live2d">Live2D 쇼케이스 <span aria-hidden="true">↗</span></a></div><div id="publicGalleryList" class="gallery"></div></section>
+<div id="app" hidden>
+<a class="skip-link" href="#workspaceMain">작업 화면으로 바로가기</a>
+<header class="app-header"><a class="brand" href="./"><span class="brand-mark" aria-hidden="true">S<span>·</span></span><span>Sprite Lab<small>GAME ASSET STUDIO</small></span></a><div class="account"><span id="who"></span><button id="logout">로그아웃</button></div></header>
+<aside class="workspace-sidebar"><div class="nav-label">TEAM WORKSPACE</div><nav aria-label="작업 공간">
+<button data-pane="generate" aria-selected="true"><span aria-hidden="true">▦</span>스프라이트<span class="nav-arrow" aria-hidden="true">↗</span></button>
+<button data-pane="rigging" aria-selected="false"><span aria-hidden="true">◇</span>2D 리깅</button>
+<button data-pane="music" aria-selected="false"><span aria-hidden="true">♫</span>게임 BGM</button>
+<span class="nav-divider"></span><button data-pane="queue" aria-selected="false"><span aria-hidden="true">≡</span>팀 대기열</button>
+<button data-pane="gallery" aria-selected="false"><span aria-hidden="true">▧</span>결과 갤러리</button>
+<button data-pane="guide" aria-selected="false"><span aria-hidden="true">?</span>사용 가이드</button>
+<button data-pane="admin" aria-selected="false" id="adminTab" hidden><span aria-hidden="true">⊙</span>계정 승인</button></nav>
+<div class="sidebar-note"><span class="signal"></span> 함께 만드는 워크스페이스<p>등록한 작업은 창을 닫아도<br>서버에서 계속 진행됩니다.</p></div></aside>
+<main id="workspaceMain" tabindex="-1"><div class="workspace-heading"><div><div class="eyebrow" id="workspaceCategory">CREATE / MOTION</div><h1 id="workspaceTitle">이미지에 움직임을.</h1><p id="workspaceDescription" class="muted">한 장의 캐릭터를 게임 속 애니메이션으로 만들어 보세요.</p></div><a class="workspace-help" href="#guide">처음이신가요? 가이드 ↗</a></div>
+<div class="stats" aria-label="팀 작업 현황"><div class="stat"><span class="stat-dot"></span>생성 중<strong id="runningCount">0</strong></div><div class="stat"><span class="stat-dot waiting"></span>대기 중<strong id="waitingCount">0</strong></div><div class="stat"><span class="stat-dot complete"></span>최근 완료<strong id="completeCount">0</strong></div></div>
 <section id="generatePane"><p class="muted">등록한 작업은 페이지를 닫아도 계속됩니다. 팀 대기열에서 진행 상태를 확인하세요.</p><iframe id="studio" title="스프라이트 생성 설정" allow="fullscreen" allowfullscreen></iframe></section>
 <section id="riggingPane" hidden><p class="muted">레이어 분리와 눈·입·머리카락 리깅 초안을 만듭니다. 영상 생성과 같은 GPU 대기열을 사용합니다.</p><iframe id="riggingStudio" title="2D 리깅 생성 설정" allow="fullscreen" allowfullscreen></iframe></section>
-<section id="musicPane" hidden><p class="muted">Gemini 기획서 분석, 기본 프리셋 또는 직접 프롬프트로 YuE2 인스트루멘털 BGM을 만듭니다.</p><iframe id="musicStudio" title="게임 BGM 생성 설정" allow="fullscreen" allowfullscreen></iframe></section>
+<section id="musicPane" hidden><p class="muted">분위기와 악기를 정하고 생성하세요. 완성된 음악은 팀 결과 갤러리에서 다시 들을 수 있습니다.</p><iframe id="musicStudio" title="게임 BGM 생성 설정" allow="fullscreen" allowfullscreen></iframe></section>
 <section id="queuePane" hidden><h2>팀 대기열</h2><p id="engineState" class="muted">엔진 상태 확인 중…</p><p class="muted">한 번에 한 작업씩 등록 순서대로 생성합니다. 개인 최대 3개 · 전체 최대 20개.</p><div id="queueList" class="jobs"></div><details><summary>최근 실패 / 취소 작업</summary><div id="historyList" class="jobs"></div></details></section>
 <section id="galleryPane" hidden><h2>결과 갤러리</h2><p class="muted">승인된 팀원의 생성 영상과 스프라이트 시트입니다. 한 페이지에 6개씩 표시합니다. 영상은 재생 시 로딩되며 시트는 다운로드로 확인하세요.</p><a class="public-live2d-link" href="live2d" target="_blank" rel="noopener">공개 Live2D 목록 열기</a><div id="galleryList" class="gallery"></div></section>
 <section id="adminPane" hidden><h2>계정 승인</h2><p class="muted">가입 요청을 승인하면 생성·대기열·공용 결과에 접근할 수 있습니다. 이용 제한 시 대기 작업은 취소되며 진행 중인 작업은 끝까지 실행됩니다.</p><div id="userList" class="jobs"></div></section>
@@ -32,14 +205,26 @@ const url=p=>new URL(p.replace(/^\//,''),base).href;
 function node(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e}
 function toast(s){$('toast').textContent=s;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,5000)}
 async function api(path,body){const r=await fetch(url(path),body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json','X-Sprite-Request':'1'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok){if(r.status===401&&me){me=null;showAuth()}throw Error(d.error||'요청에 실패했습니다.')}return d}
-function showAuth(){ $('auth').hidden=false;$('app').hidden=true;$('studio').removeAttribute('src');$('riggingStudio').removeAttribute('src');$('musicStudio').removeAttribute('src');$('publicGallery').hidden=false;renderAuth();refreshPublicGallery() }
+function showAuth(){ for(const [id] of Object.values(studioFrames))$(id).studioObserver?.disconnect();$('auth').hidden=false;$('app').hidden=true;$('studio').removeAttribute('src');$('riggingStudio').removeAttribute('src');$('musicStudio').removeAttribute('src');$('publicGallery').hidden=false;renderAuth();refreshPublicGallery() }
 function renderAuth(){registering=setup||registering;$('authTitle').textContent=setup?'첫 관리자 등록':registering?'팀 가입 요청':'로그인';$('submitAuth').textContent=registering?'등록하기':'로그인';$('toggleAuth').textContent=registering?'로그인으로':'가입 요청';$('toggleAuth').hidden=setup;$('nameField').hidden=!registering;$('displayName').required=registering;$('codeField').hidden=!setup;$('setupCode').required=setup;$('setupNote').hidden=!setup;$('password').autocomplete=registering?'new-password':'current-password'}
 $('toggleAuth').onclick=()=>{registering=!registering;renderAuth();$('authMessage').textContent=''};
 $('authForm').onsubmit=async e=>{e.preventDefault();$('submitAuth').disabled=true;try{const body={username:$('username').value,password:$('password').value,name:$('displayName').value,setupCode:$('setupCode').value};if(registering){const d=await api('api/register',body);setup=false;registering=false;renderAuth();$('authMessage').textContent=d.message;$('password').value='';$('setupCode').value=''}else{me=(await api('api/login',body)).user;$('password').value='';showApp()}}catch(e){$('authMessage').textContent=e.message}finally{$('submitAuth').disabled=false}};
 $('logout').onclick=async()=>{try{await api('api/logout',{});me=null;showAuth()}catch(e){toast(e.message)}};
-function selectPane(p){pane=p;for(const n of ['generate','rigging','music','queue','gallery','guide','admin'])$(n+'Pane').hidden=n!==p;document.querySelectorAll('[data-pane]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.pane===p)));if(p==='gallery')loadGallery();if(p==='admin')refreshUsers()}
-document.querySelectorAll('[data-pane]').forEach(b=>b.onclick=()=>selectPane(b.dataset.pane));
-function showApp(){$('publicGallery').hidden=true;$('publicGalleryList').replaceChildren();$('auth').hidden=true;$('app').hidden=false;$('who').textContent=me.name+(me.role==='admin'?' · 관리자':'');$('adminTab').hidden=me.role!=='admin';$('studio').src=url('studio');$('riggingStudio').src=url('rigging');$('musicStudio').src=url('music');lastGallery='';selectPane('generate');refresh()}
+const workspaceCopy={
+generate:['CREATE / MOTION','이미지에 움직임을.','한 장의 캐릭터를 게임 속 애니메이션으로 만들어 보세요.'],
+rigging:['CREATE / CHARACTER','캐릭터에 생동감을.','레이어를 나누고, 눈과 입부터 움직임을 설계하세요.'],
+music:['CREATE / SOUND','장면을 완성하는 음악.','기획서, 프리셋, 직접 쓴 프롬프트로 게임의 분위기를 만드세요.'],
+queue:['WORKSPACE / QUEUE','팀의 작업 흐름.','등록한 순서대로, 한 번에 하나씩 안전하게 생성합니다.'],
+gallery:['WORKSPACE / LIBRARY','아이디어가 에셋이 된 순간.','팀이 만든 스프라이트, 캐릭터, 음악을 한곳에서 확인하세요.'],
+guide:['WORKSPACE / GUIDE','첫 에셋을 위한 가이드.','시작은 간단하게. 필요한 설정은 한 단계씩 살펴보세요.'],
+admin:['WORKSPACE / TEAM','함께할 팀원 관리.','가입 요청을 확인하고 워크스페이스 접근을 관리하세요.']};
+const studioFrames={generate:['studio','studio'],rigging:['riggingStudio','rigging'],music:['musicStudio','music']};
+function selectPane(p){if(!workspaceCopy[p]||(p==='admin'&&me?.role!=='admin'))p='generate';pane=p;for(const n of Object.keys(workspaceCopy))$(n+'Pane').hidden=n!==p;document.querySelectorAll('[data-pane]').forEach(b=>{const selected=b.dataset.pane===p;b.setAttribute('aria-selected',String(selected));if(selected)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});const [category,title,description]=workspaceCopy[p];$('workspaceCategory').textContent=category;$('workspaceTitle').textContent=title;$('workspaceDescription').textContent=description;if(studioFrames[p]){const [id,path]=studioFrames[p];if(!$(id).getAttribute('src'))$(id).src=url(path);requestAnimationFrame(()=>fitStudio($(id)))}if(p==='gallery')loadGallery();if(p==='admin')refreshUsers();if(p==='queue')refresh()}
+document.querySelector('.workspace-help').onclick=e=>{e.preventDefault();selectPane('guide');$('workspaceMain').focus({preventScroll:true});window.scrollTo({top:0,behavior:'smooth'})};
+function fitStudio(frame){if(frame.closest('[hidden]'))return;try{const doc=frame.contentDocument;if(!doc?.body)return;const height=Math.ceil(doc.body.getBoundingClientRect().height)+4;if(height>50&&Math.abs(frame.getBoundingClientRect().height-height)>2)frame.style.height=height+'px'}catch(error){/* A navigated frame keeps its fallback height. */}}
+for(const [id] of Object.values(studioFrames)){$(id).addEventListener('load',()=>{const frame=$(id);frame.studioObserver?.disconnect();try{const doc=frame.contentDocument;if(!doc?.body)return;const style=doc.createElement('style');style.textContent=$('tool-theme').textContent;doc.head.append(style);doc.documentElement.classList.add('embedded-studio');frame.studioObserver=new ResizeObserver(()=>requestAnimationFrame(()=>fitStudio(frame)));frame.studioObserver.observe(doc.body);fitStudio(frame)}catch(error){/* Keep standalone content usable if its origin changes. */}})}
+document.querySelectorAll('[data-pane]').forEach(b=>b.onclick=()=>{selectPane(b.dataset.pane);window.scrollTo({top:0,behavior:'instant'})});
+function showApp(){$('publicGallery').hidden=true;$('publicGalleryList').replaceChildren();$('auth').hidden=true;$('app').hidden=false;$('who').textContent=me.name+(me.role==='admin'?' · 관리자':'');$('adminTab').hidden=me.role!=='admin';lastGallery='';selectPane('generate');refresh()}
 const states={queued:'대기',starting:'준비 중',uploading:'이미지 준비',generating:'생성 중',stabilizing:'크기 정규화',packing:'결과 정리',complete:'완료',error:'실패',cancelled:'취소'};
 const terminal=j=>['complete','error','cancelled'].includes(j.state);
 function empty(container,text){container.replaceChildren(node('div',text,'empty'))}

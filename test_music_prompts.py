@@ -42,9 +42,23 @@ class MusicPromptTests(unittest.TestCase):
             'promptMode': 'direct', 'prompt': 'quiet snowy field, piano, 72 BPM', 'title': '설원',
         })
         self.assertIn('instrumental only', direct['resolvedPrompt'].lower())
-        self.assertEqual(direct['lyrics'], '')
+        self.assertEqual(direct['lyrics'], music_prompts.INSTRUMENTAL_LYRICS)
         self.assertEqual(direct['vocalMode'], 'instrumental')
         self.assertIsInstance(direct['seed'], int)
+
+    def test_instrumental_removes_conflicting_vocal_style_and_forces_planning(self):
+        result = music_prompts.resolve({
+            'promptMode': 'direct',
+            'prompt': 'English, solemn dark choir textures, female singer, low strings, 78 BPM',
+            'title': '성당', 'vocalMode': 'instrumental', 'cot': 'off',
+        })
+        style = result['resolvedPrompt'].lower()
+        self.assertNotIn('choir', style)
+        self.assertNotIn('singer', style)
+        self.assertNotIn('female', style)
+        self.assertIn('low strings', style)
+        self.assertIn('no vocals', style)
+        self.assertEqual(result['cot'], 'full')
 
     def test_vocal_song_keeps_lyrics_separate_from_style(self):
         lyrics = '[Verse]\n붉은 달 아래 길을 걷네\n[Chorus]\n새벽까지 노래하리'

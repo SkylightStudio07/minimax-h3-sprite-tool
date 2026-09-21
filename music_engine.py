@@ -67,6 +67,8 @@ def run_job(job_id: str, payload: dict) -> None:
         "--offload-ar",
         "--nar-query-chunk-size", str(NAR_QUERY_CHUNK_SIZE),
     ]
+    if payload.get("vocalMode", "instrumental") == "instrumental":
+        command.append("--instrumental")
     process = subprocess.Popen(
         command,
         cwd=SOURCE_ROOT,
