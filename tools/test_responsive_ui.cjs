@@ -46,8 +46,19 @@ async function noOverflow(surface, label) {
       populated = false;
       signedIn = false;
       await page.goto('http://sprite-lab.test/');
+      await page.evaluate(() => localStorage.setItem('sprite-theme', 'light'));
+      await page.reload();
       await page.locator('#publicGalleryList .empty').waitFor();
       await noOverflow(page, `${width} guest`);
+      await page.locator('#auth [data-theme-toggle]').click();
+      assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
+      await noOverflow(page, `${width} dark guest`);
+      if ([1440, 390].includes(width)) await page.screenshot({ path: path.join(out, `landing-dark-${width}.png`), fullPage: true });
+      if (width === 1440) {
+        await page.reload();
+        assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark', 'Dark preference persists');
+      }
+      await page.locator('#auth [data-theme-toggle]').click();
       await page.locator('#toggleAuth').click();
       assert(await page.locator('#displayName').isVisible());
       await page.locator('#toggleAuth').click();
@@ -70,6 +81,16 @@ async function noOverflow(surface, label) {
           const frame = await (await page.locator(`#${id}`).elementHandle()).contentFrame();
           await frame.locator('html.embedded-studio').waitFor();
           await noOverflow(frame, `${width} ${pane} frame`);
+          if (pane === 'generate') {
+            await page.locator('#app [data-theme-toggle]').click();
+            assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
+            assert.equal(await frame.locator('html').getAttribute('data-theme'), 'dark', 'Dark theme reaches embedded studio');
+            await noOverflow(page, `${width} dark generate shell`);
+            await noOverflow(frame, `${width} dark generate frame`);
+            if ([1440, 390].includes(width)) await page.screenshot({ path: path.join(out, `generate-dark-${width}.png`) });
+            await page.locator('#app [data-theme-toggle]').click();
+            assert.equal(await frame.locator('html').getAttribute('data-theme'), 'light');
+          }
           if (pane === 'music') {
             await frame.locator('[name=mode][value=direct]').check();
             await frame.locator('[data-example]').first().click();
@@ -93,7 +114,7 @@ async function noOverflow(surface, label) {
       await page.locator('#logout').click();
       await page.locator('#auth').waitFor();
       assert.equal(await page.locator('iframe[src]').count(), 0);
-      console.log(`PASS ${width}px: guest, 7 panes, embedded height, BGM modes, logout`);
+      console.log(`PASS ${width}px: themes, guest, 7 panes, embedded height, BGM modes, logout`);
     }
     assert.deepEqual(errors, [], 'Browser JavaScript errors');
     console.log(`Screenshots: ${out}`);
