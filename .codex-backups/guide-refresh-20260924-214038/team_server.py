@@ -187,12 +187,6 @@ def create_app(data_dir=None, runner=None, rigging_runner=None, music_runner=Non
         response.headers['Cache-Control']='no-store, no-cache, must-revalidate, max-age=0'
         return response
 
-    @app.get('/layer-editing-guide')
-    def layer_editing_guide_page():
-        response=send_file(ROOT / 'web' / 'layer-editing-guide.html',conditional=False,max_age=0)
-        response.headers['Cache-Control']='no-store, no-cache, must-revalidate, max-age=0'
-        return response
-
     @app.get('/rigging-player/<path:filename>')
     @auth()
     def rigging_player(filename):
@@ -1132,7 +1126,7 @@ def create_app(data_dir=None, runner=None, rigging_runner=None, music_runner=Non
         row=get_share(token)
         if not row:return '공유 링크가 없거나 만료되었습니다.',404
         if row['kind']=='internal':
-            return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>내부 2D 리깅 결과</title><style>body{{margin:0;font:15px system-ui;background:#0c0f16;color:#eee}}header{{display:flex;align-items:center;gap:12px;padding:14px 20px;background:#171d29;border-bottom:1px solid #30384b}}h1{{font-size:18px;margin:0}}p{{margin:0;color:#aeb8cb}}.copy{{margin-right:auto}}a{{padding:9px 15px;background:#2b3549;color:white;border:1px solid #46536c;border-radius:9px;text-decoration:none}}a.primary{{background:#7661e3;border-color:#9686f4}}iframe{{display:block;width:100%;height:calc(100vh - 70px);border:0;background:#101014}}</style></head><body><header><div class="copy"><h1>2D 리깅 내부 결과</h1><p>동아리 공유 링크에서 레이어를 확인하고 함께 수정할 수 있습니다.</p></div><a href="/layer-editing-guide" target="_blank" rel="noopener">편집 안내</a><a href="/share/rig/{token}/inspector">레이어 편집</a><a id="download" class="primary" href="/share/rig/{token}/asset/character.psd" download>PSD 다운로드</a></header><iframe src="/share/rig/{token}/player" allow="fullscreen" title="2D 리깅 미리보기"></iframe><script>setTimeout(()=>document.getElementById('download').click(),700)</script></body></html>'''
+            return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>내부 2D 리깅 결과</title><style>body{{margin:0;font:15px system-ui;background:#0c0f16;color:#eee}}header{{display:flex;align-items:center;gap:12px;padding:14px 20px;background:#171d29;border-bottom:1px solid #30384b}}h1{{font-size:18px;margin:0}}p{{margin:0;color:#aeb8cb}}.copy{{margin-right:auto}}a{{padding:9px 15px;background:#2b3549;color:white;border:1px solid #46536c;border-radius:9px;text-decoration:none}}a.primary{{background:#7661e3;border-color:#9686f4}}iframe{{display:block;width:100%;height:calc(100vh - 70px);border:0;background:#101014}}</style></head><body><header><div class="copy"><h1>2D 리깅 내부 결과</h1><p>동아리 공유 링크에서 레이어를 확인하고 함께 수정할 수 있습니다.</p></div><a href="/share/rig/{token}/inspector">레이어 편집</a><a id="download" class="primary" href="/share/rig/{token}/asset/character.psd" download>PSD 다운로드</a></header><iframe src="/share/rig/{token}/player" allow="fullscreen" title="2D 리깅 미리보기"></iframe><script>setTimeout(()=>document.getElementById('download').click(),700)</script></body></html>'''
         with db() as con: published=con.execute('SELECT token FROM public_live2d WHERE job_id=? AND revoked IS NULL',(row['job_id'],)).fetchone()
         if not published:return '이 쇼케이스는 종료되었습니다. 공개 Live2D는 관리자가 지정한 결과만 제공됩니다.',410
         return redirect(f'/live2d/{published["token"]}',code=302)

@@ -27,7 +27,7 @@ MiniMax H3와 ComfyUI를 이용해 기준 이미지 한 장에서 캐릭터 동�
 
 이 기능은 Live2D Cubism `.moc3` 모델을 생성하지 않습니다. 분리된 파츠와 Anime2.5DRig/Unity 런타임으로 Live2D와 비슷한 효과를 만듭니다.
 
-개발·운영 구조, 공유 정책, API, 테스트와 배포 절차는 `G:\111\docs\LIVE2D_TOOL_HANDOFF.md`를 참고하세요.
+개발·운영 구조, 공유 정책, API, 테스트와 배포 절차는 `G:\111\docs\LIVE2D_TOOL_HANDOFF.md`를 참고하세요. 레이어 편집 단축키와 원본 복원·병합 방법은 `G:\111\docs\LAYER_EDITING_GUIDE.md` 또는 웹의 **가이드** 탭에서 확인할 수 있습니다.
 
 ## YuE2 게임 BGM 도구
 
