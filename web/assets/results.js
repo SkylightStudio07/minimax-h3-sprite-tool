@@ -504,7 +504,7 @@ function renderRigDetail(j,main,side){
       const glyph=node('span',undefined,'feature-icon feature-icon--sm feature-icon--rig');glyph.append(icon(iconName));
       card.append(glyph,node('b',name),node('span',desc));modes.append(card);
     }
-    studio.append(modes,linkButton('편집 가이드 · 단축키','layer-editing-guide',{newTab:true,cls:'ui-btn ui-btn--ghost ui-btn--sm',iconName:'guide'}));
+    studio.append(modes,linkButton('편집 가이드 · 단축키','guide#rig-studio',{newTab:true,cls:'ui-btn ui-btn--ghost ui-btn--sm',iconName:'guide'}));
     side.append(studio);
   }else{
     const note=node('div',undefined,'ui-alert ui-alert--neutral');note.append(icon('info'),node('span','리깅 스튜디오 편집은 작성자와 관리자만 할 수 있어요. 내부 공유 링크로 열면 팀원도 함께 편집할 수 있습니다.'));side.append(note);

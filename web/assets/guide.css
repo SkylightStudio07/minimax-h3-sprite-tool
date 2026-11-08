@@ -1,0 +1,52 @@
+/* Unified guide page. Layout only; colours and type come from ui.css tokens. */
+html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); line-height: 1.7; }
+.g-head { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.g-brand { color: var(--primary-text); font-weight: 700; text-decoration: none; }
+.g-head input { margin-left: auto; width: min(260px, 40vw); }
+.g-layout { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 28px; max-width: 1240px; margin: 0 auto; padding: 24px 20px 80px; }
+.g-toc { position: sticky; top: 76px; align-self: start; max-height: calc(100vh - 96px); overflow: auto; font-size: 14px; }
+.g-toc summary { display: none; }
+.g-toc ol, .g-toc ul { list-style: none; margin: 0; padding: 0; }
+.g-toc ul { display: none; padding-left: 12px; margin-bottom: 8px; }
+.g-toc li.is-open ul { display: block; }
+.g-toc a { display: block; padding: 4px 8px; border-radius: 6px; color: var(--text-2); text-decoration: none; }
+.g-toc a:hover { background: var(--surface-2); }
+.g-toc a.g-toc__top { color: var(--text); font-weight: 600; }
+.g-toc a.is-current { background: var(--primary-soft); color: var(--primary-text); }
+.g-main { min-width: 0; }
+.g-sec h2 { margin: 28px 0 12px; font-size: 22px; }
+.g-sec:first-of-type h2 { margin-top: 0; }
+.g-card { margin-bottom: 14px; padding: 20px 22px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow-wrap: anywhere; }
+.g-card h3 { margin: 0 0 8px; font-size: 17px; }
+.g-card h3:not(:first-child) { margin-top: 16px; }
+.g-card dt { margin-top: 8px; font-weight: 600; }
+.g-card dd { margin: 2px 0 0; color: var(--text-2); }
+.g-card ol, .g-card ul { padding-left: 22px; }
+.g-card a { color: var(--primary-text); }
+.g-card table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.g-card th, .g-card td { padding: 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.g-card kbd, .g-card code { padding: 1px 6px; border-radius: 5px; background: var(--surface-2); font-family: var(--font-mono); font-size: .9em; }
+.g-card .muted { color: var(--text-2); }
+.callout { margin: 12px 0; padding: 12px 14px; border-left: 3px solid var(--primary); border-radius: 6px; background: var(--primary-soft); }
+.callout.warning { border-left-color: #d98a1f; }
+.flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.flow div { padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+.flow b { display: block; }
+.guide-check p { margin: 4px 0; }
+.good::marker { color: #1d9a55; } .bad::marker { color: #d33; }
+.g-empty { color: var(--text-2); }
+[data-g-hidden] { display: none; }
+.g-top { position: fixed; right: 16px; bottom: 16px; width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--text); text-decoration: none; }
+html.g-embed .g-head .g-brand, html.g-embed .g-head [data-theme-toggle], html.g-embed .g-head strong { display: none; }
+@media (max-width: 860px) {
+  .g-layout { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 14px 12px 70px; }
+  .g-toc { position: static; max-height: none; }
+  .g-toc summary { display: block; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; font-weight: 600; }
+  .g-toc ol { padding-top: 8px; }
+  .g-toc ul { display: block; }
+  .g-card { padding: 16px; }
+  .g-head { padding: 10px 12px; }
+  .flow { grid-template-columns: 1fr; }
+  .g-card table { display: block; overflow-x: auto; }
+}

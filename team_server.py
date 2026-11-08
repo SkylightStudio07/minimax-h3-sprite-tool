@@ -403,11 +403,13 @@ def create_app(data_dir=None, runner=None, rigging_runner=None, music_runner=Non
     def rigging_animation_script():
         return send_file(ROOT/'web'/request.path.rsplit('/',1)[1],conditional=False,max_age=0)
 
+    @app.get('/guide')
+    def guide_page():
+        return send_file(ROOT / 'web' / 'guide.html',conditional=False,max_age=0)
+
     @app.get('/layer-editing-guide')
     def layer_editing_guide_page():
-        response=send_file(ROOT / 'web' / 'layer-editing-guide.html',conditional=False,max_age=0)
-        response.headers['Cache-Control']='no-store, no-cache, must-revalidate, max-age=0'
-        return response
+        return redirect('guide#rig-studio',code=301)
 
     @app.get('/assets/<path:filename>')
     def ui_assets(filename):

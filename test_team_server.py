@@ -275,6 +275,15 @@ class TeamTests(unittest.TestCase):
         self.app.stop_worker()
         self.tmp.cleanup()
 
+    def test_unified_guide_is_public_and_old_address_redirects(self):
+        page=self.guest.get('/guide')
+        self.assertEqual(page.status_code,200)
+        for anchor in ('getting-started','rig-studio-expressions','export-unity','sharing-who','troubleshooting'):
+            self.assertIn(f'id="{anchor}"',page.text)
+        old=self.guest.get('/layer-editing-guide')
+        self.assertEqual(old.status_code,301)
+        self.assertTrue(old.headers['Location'].endswith('guide#rig-studio'))
+
     def test_login_limit_is_scoped_to_failures_per_account(self):
         for _ in range(10):
             self.assertEqual(self.post(self.guest,'login',username='admin',password='wrong-password').status_code,401)
