@@ -59,15 +59,15 @@ def resource_sample():
                 "gpuStatsUnavailable": str(exc)}
 
 
-def tqdm_seconds(start_offset, end_offset=None):
-    """Read a completed 8-step tqdm duration from this job's log segment."""
+def tqdm_seconds(start_offset, steps, end_offset=None):
+    """Read a completed tqdm duration from this job's own log segment."""
     if not STDERR.exists():
         return None, None
     with STDERR.open("rb") as f:
         f.seek(start_offset)
         raw = f.read() if end_offset is None else f.read(max(0, end_offset - start_offset))
     segment = raw.decode("utf-8", errors="replace").replace("\r", "\n")
-    matches = re.findall(r"(?:100%\|[^\n]*?\|\s*)?8/8\s*\[([^\]]+)\]", segment)
+    matches = re.findall(rf"(?:100%\|[^\n]*?\|\s*)?{steps}/{steps}\s*\[([^\]]+)\]", segment)
     if not matches:
         return None, None
     m = re.match(r"\s*(?:(\d+):)?(\d+):(\d+(?:\.\d+)?)\s*<", matches[-1])
@@ -198,7 +198,7 @@ def main():
         shutil.copy2(source, target)
         validate_video(target)
         now = time.time()
-        sampling_seconds, sampling_source = tqdm_seconds(state["stderrOffsets"].get(folder.name, 0))
+        sampling_seconds, sampling_source = tqdm_seconds(state["stderrOffsets"].get(folder.name, 0), record["steps"])
         result = {"status": "complete", "id": record["id"], "promptId": pid,
                   "submittedEpoch": record["submittedEpoch"], "completedEpoch": now,
                   "elapsedSeconds": now - record["submittedEpoch"],

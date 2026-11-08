@@ -275,6 +275,24 @@ class TeamTests(unittest.TestCase):
         self.app.stop_worker()
         self.tmp.cleanup()
 
+    def test_login_limit_is_scoped_to_failures_per_account(self):
+        for _ in range(10):
+            self.assertEqual(self.post(self.guest,'login',username='admin',password='wrong-password').status_code,401)
+        self.assertEqual(self.post(self.guest,'login',username='admin',password='long-password').status_code,429)
+        self.approve()
+        for _ in range(35):
+            self.assertEqual(self.post(self.member,'login',username='member',password='member-password').status_code,200,'successes are not counted')
+
+    def test_login_limit_only_trusts_forwarded_address_when_enabled(self):
+        def fail(client,address):
+            return client.post('/api/login',json=dict(username='admin',password='wrong-password'),
+                               headers={'X-Sprite-Request':'1','X-Forwarded-For':'6.6.6.6, '+address},environ_base={'REMOTE_ADDR':'127.0.0.1'}).status_code
+        with patch.dict('os.environ',{'SPRITE_TRUST_PROXY':'1'}):
+            self.assertEqual([fail(self.guest,'203.0.113.9') for _ in range(11)][-1],429)
+            self.assertEqual(fail(self.guest,'203.0.113.10'),401,'another client is not locked out')
+        with patch.dict('os.environ',{'SPRITE_TRUST_PROXY':'0'}):
+            self.assertEqual([fail(self.guest,str(n)) for n in range(11)][-1],429,'header is ignored unless enabled')
+
     def test_gallery_filters_search_and_detail(self):
         self.approve()
         admin_id=self.admin.get('/api/me').json['user']['id']

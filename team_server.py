@@ -5,6 +5,7 @@ import functools
 import hashlib
 import html as html_lib
 import io
+import ipaddress
 import json
 import os
 import re
@@ -186,14 +187,39 @@ def create_app(data_dir=None, runner=None, rigging_runner=None, music_runner=Non
                 raise ValueError('문자열 입력이 필요합니다: '+k)
         return p
 
-    def rate_limit():
+    def client_address():
+        remote=request.remote_addr or ''
+        if os.environ.get('SPRITE_TRUST_PROXY')=='1' and remote in ('127.0.0.1','::1'):
+            # Only the last hop is written by our own proxy; earlier entries are client-supplied.
+            forwarded=request.headers.get('X-Forwarded-For','').rsplit(',',1)[-1].strip()
+            try:
+                return str(ipaddress.ip_address(forwarded))
+            except ValueError:
+                pass
+        return remote
+
+    def attempts_over(key,limit):
         with db() as con:
             con.execute('DELETE FROM attempts WHERE created < ?',(time.time()-600,))
-            n = con.execute('SELECT count(*) FROM attempts WHERE ip=?',(request.remote_addr,)).fetchone()[0]
-            if n >= 30:
-                return False
-            con.execute('INSERT INTO attempts VALUES(?,?)',(request.remote_addr,time.time()))
+            return con.execute('SELECT count(*) FROM attempts WHERE ip=?',(key,)).fetchone()[0]>=limit
+
+    def record_attempt(*keys):
+        with db() as con:
+            con.executemany('INSERT INTO attempts VALUES(?,?)',[(key,time.time()) for key in keys])
+
+    def rate_limit(scope):
+        key=f'{scope}|{client_address()}'
+        if attempts_over(key,30):
+            return False
+        record_attempt(key)
         return True
+
+    def login_keys(username):
+        client=client_address()
+        keys=[f'login|{client}|{username}']
+        if client not in ('127.0.0.1','::1',''):
+            keys.append(f'login-client|{client}')  # behind an untrusted proxy every user shares loopback
+        return keys
 
     @app.get('/')
     def home():
@@ -413,7 +439,7 @@ def create_app(data_dir=None, runner=None, rigging_runner=None, music_runner=Non
 
     @app.post('/api/register')
     def register():
-        if not rate_limit():
+        if not rate_limit('register'):
             return jsonify(error='요청이 많습니다. 10분 뒤 다시 시도하세요.'),429
         p = payload()
         username,name,password = p.get('username','').strip().lower(),p.get('name','').strip(),p.get('password','')
@@ -436,12 +462,15 @@ def create_app(data_dir=None, runner=None, rigging_runner=None, music_runner=Non
 
     @app.post('/api/login')
     def login():
-        if not rate_limit():
-            return jsonify(error='로그인 시도가 많습니다. 10분 뒤 다시 시도하세요.'),429
         p = payload()
+        username=p.get('username','').lower().strip()
+        keys=login_keys(username)
+        if attempts_over(keys[0],10) or (len(keys)>1 and attempts_over(keys[1],30)):
+            return jsonify(error='로그인 시도가 많습니다. 10분 뒤 다시 시도하세요.'),429
         with db() as con:
-            u = con.execute('SELECT * FROM users WHERE username=?',(p.get('username','').lower().strip(),)).fetchone()
+            u = con.execute('SELECT * FROM users WHERE username=?',(username,)).fetchone()
         if not u or not check_password_hash(u['password'],p.get('password','')):
+            record_attempt(*keys)
             return jsonify(error='아이디 또는 비밀번호가 맞지 않습니다.'),401
         if u['state'] != 'approved':
             return jsonify(error='관리자 승인 대기 중이거나 이용이 제한된 계정입니다.'),403
@@ -469,7 +498,7 @@ def create_app(data_dir=None, runner=None, rigging_runner=None, music_runner=Non
     @app.post('/api/me/password')
     @auth()
     def change_password():
-        if not rate_limit():
+        if not rate_limit(f'password|{request.team_user["id"]}'):
             return jsonify(error='요청이 많습니다. 10분 뒤 다시 시도하세요.'),429
         p=payload()
         current,new=p.get('currentPassword',''),p.get('newPassword','')
