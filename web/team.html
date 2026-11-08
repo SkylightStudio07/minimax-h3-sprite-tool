@@ -371,6 +371,7 @@
       <div id="adminNav" hidden>
         <div class="ui-nav__label">관리</div>
         <a class="ui-nav__item" href="#/admin/users" data-route="admin/users" data-pane="admin" id="adminTab"><span class="ui-nav__icon"><svg class="ui-icon"><use href="#i-users"/></svg></span>계정 승인<span class="ui-nav__count" id="adminCount"></span></a>
+        <a class="ui-nav__item" href="#/admin/public" data-route="admin/public" data-pane="adminPublic" id="adminPublicTab"><span class="ui-nav__icon"><svg class="ui-icon"><use href="#i-guide"/></svg></span>공개 Live2D</a>
       </div>
     </nav>
     <div class="side-foot">
@@ -547,6 +548,11 @@
           </table>
         </div>
       </section>
+      <section class="pane" id="adminPublicPane" hidden>
+        <div class="ui-alert ui-alert--neutral"><svg class="ui-icon"><use href="#i-info"/></svg><span>공개본은 게시 시점의 복제본입니다. 원본을 고친 뒤에는 '공개본 갱신'을 눌러야 바뀝니다.</span></div>
+        <p id="publicAdminEmpty" hidden>공개 중인 Live2D가 없습니다.</p>
+        <div class="ui-table-wrap"><table class="ui-table"><thead><tr><th>제목</th><th>원본</th><th>만든 사람</th><th>갱신</th><th>상태</th><th class="cell-actions">관리</th></tr></thead><tbody id="publicAdminRows"></tbody></table></div>
+      </section>
     </main>
   </div>
 
@@ -573,7 +579,7 @@
 <div class="ui-toast-region" id="toastRegion" aria-live="polite"></div>
 
 <script src="assets/image-next-actions.js"></script><script src="assets/image-face-refine.js"></script><script src="assets/results.js"></script>
-<script src="assets/account.js"></script>
+<script src="assets/account.js"></script><script src="assets/admin-public.js"></script>
 <script src="assets/landing.js"></script>
 <script>
 const $=id=>document.getElementById(id),base=new URL('./',location.href);let me=null,registering=false,setup=false,pane='home',route='home',backRoute='gallery',jobsSnapshot=[];
@@ -624,11 +630,12 @@ const ROUTES={
   'gallery':{pane:'gallery',group:'작업',icon:'gallery',title:'팀 갤러리',desc:'팀이 만든 스프라이트, 2D 리깅, BGM 결과를 모아 봅니다.'},
   'queue':{pane:'queue',group:'작업',icon:'queue',title:'팀 대기열',desc:'등록한 순서대로 한 번에 하나씩 생성합니다. 대기 작업은 개인 최대 3개, 전체 최대 20개입니다.'},
   'guide':{pane:'guide',group:'도움',icon:'guide',title:'사용 가이드',desc:'처음 만드는 순서와 각 설정의 의미를 확인하세요.'},
-  'admin/users':{pane:'admin',group:'관리',icon:'users',title:'계정 승인',desc:'가입 요청을 확인하고 워크스페이스 접근을 관리합니다.',admin:true}
+  'admin/users':{pane:'admin',group:'관리',icon:'users',title:'계정 승인',desc:'가입 요청을 확인하고 워크스페이스 접근을 관리합니다.',admin:true},
+  'admin/public':{pane:'adminPublic',group:'관리',icon:'guide',title:'공개 Live2D 관리',desc:'공개 중인 캐릭터의 최신 여부를 확인하고 갱신하거나 내립니다.',admin:true}
 };
 const JOB_ROUTE={pane:'job',group:'작업',icon:'gallery',title:'결과 상세',desc:'',customHead:true};
 const ROUTE_ALIASES={generate:'create/sprite',rigging:'create/rig',music:'create/music',admin:'admin/users'};
-const PANES=['characters','home','image','generate','rigging','music','my','settings','queue','gallery','job','guide','admin'];
+const PANES=['characters','home','image','generate','rigging','music','my','settings','queue','gallery','job','guide','admin','adminPublic'];
 const routeInfo=name=>ROUTES[name]||JOB_ROUTE;
 /* #/path?query — the query only carries one-shot parameters such as ?from=<job> for "다시 만들기". */
 function parseHash(){const [path,query='']=decodeURIComponent(location.hash.replace(/^#\/?/,'')).split('?');return {path,params:new URLSearchParams(query)}}
@@ -664,7 +671,7 @@ function selectPane(p){
   }
   if(p==='characters'){const cid=parseHash().params.get('character');const target=url('character-studio'+(cid?'?character='+encodeURIComponent(cid):''));if($('characterFrame').src!==target)$('characterFrame').src=target;}
   if(p==='home')loadHome();if(p==='gallery')loadGallery();if(p==='my')openMyWork();if(p==='settings')openSettings();if(p==='job')openJob(route.slice(5));
-  if(p==='admin')refreshUsers();if(p==='queue')refresh();
+  if(p==='admin')refreshUsers();if(p==='adminPublic')loadAdminPublic();if(p==='queue')refresh();
 }
 /* "이 설정으로 다시 만들기": load the finished job's settings into the embedded create form. */
 async function applyRecreate(frameId,jid){

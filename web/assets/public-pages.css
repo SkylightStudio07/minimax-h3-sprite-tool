@@ -1,0 +1,18 @@
+/* Public and shared shells rendered from web/pages. Colours come from ui.css tokens (dark theme). */
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); }
+h1 { margin: 0; font-size: 18px; }
+.pub-sub { margin: 0; color: var(--text-2); }
+.pub-btn { display: inline-block; padding: 8px 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface-2); color: var(--text); text-decoration: none; white-space: nowrap; }
+.pub-btn--primary { border-color: var(--primary); background: var(--primary); color: var(--on-primary); }
+.pub-frame header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.pub-frame nav { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.pub-frame iframe { display: block; width: 100%; height: calc(100vh - 70px); border: 0; background: #101014; color-scheme: normal; }
+.pub-list main { max-width: 1100px; margin: auto; padding: 48px 24px; }
+.pub-list h1 { font-size: 28px; margin-bottom: 8px; }
+.pub-list .pub-btn { margin-top: 12px; }
+.pub-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; margin-top: 28px; }
+.pub-card { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--text); text-decoration: none; }
+.pub-card img { width: 100%; height: 360px; object-fit: contain; background: #080b10; border-radius: 10px; }
+.pub-card b { font-size: 18px; }
+.pub-card span, .pub-empty { color: var(--text-2); }
+@media (max-width: 680px) { .pub-hide-sm { display: none; } .pub-frame header { padding: 10px 12px; } .pub-list main { padding: 24px 14px; } }

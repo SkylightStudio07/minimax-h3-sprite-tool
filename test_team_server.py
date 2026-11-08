@@ -275,6 +275,31 @@ class TeamTests(unittest.TestCase):
         self.app.stop_worker()
         self.tmp.cleanup()
 
+    def test_public_shells_render_from_templates_with_escaped_titles(self):
+        with closing(sqlite3.connect(self.data/'team.sqlite3')) as con:
+            con.execute("INSERT INTO jobs VALUES('r9',1,'complete',1,1,?,'{}')",(json.dumps(dict(jobType='rigging')),))
+            con.execute("INSERT INTO public_live2d VALUES('tok','r9','<b>x</b>',1,1,1,NULL)")
+            con.execute("INSERT INTO rig_shares VALUES('share1','r9','internal',1,1,NULL)")
+            con.commit()
+        listing=self.guest.get('/live2d');self.assertIn('&lt;b&gt;x&lt;/b&gt;',listing.text);self.assertNotIn('{{',listing.text)
+        work=self.guest.get('/live2d/tok');self.assertIn('/live2d/tok/player',work.text);self.assertNotIn('<b>x</b>',work.text)
+        share=self.guest.get('/share/rig/share1');self.assertIn('/share/rig/share1/inspector',share.text);self.assertIn('/guide#rig-studio',share.text)
+
+    def test_admin_public_list_reports_stale_snapshots(self):
+        self.assertEqual(self.member.get('/api/admin/public-live2d').status_code,401)
+        with closing(sqlite3.connect(self.data/'team.sqlite3')) as con:
+            con.execute("INSERT INTO jobs VALUES('r9',1,'complete',1,1,?,'{}')",(json.dumps(dict(jobType='rigging')),))
+            con.execute("INSERT INTO public_live2d VALUES('tok','r9','캐릭터',1,1,1,NULL)")
+            con.commit()
+        snapshot=self.data/'public-live2d'/'tok';snapshot.mkdir(parents=True);(snapshot/'character.psd').write_bytes(b'8BPSold')
+        with tempfile.TemporaryDirectory() as results:
+            source=Path(results)/'r9';source.mkdir();(source/'character.psd').write_bytes(b'8BPSnew')
+            with patch.object(server.rigging,'RESULT_ROOT',Path(results)):
+                item=self.admin.get('/api/admin/public-live2d').json['items'][0]
+                self.assertEqual((item['jobId'],item['stale'],item['title']),('r9',True,'캐릭터'))
+                (snapshot/'character.psd').write_bytes(b'8BPSnew')
+                self.assertFalse(self.admin.get('/api/admin/public-live2d').json['items'][0]['stale'])
+
     def test_unified_guide_is_public_and_old_address_redirects(self):
         page=self.guest.get('/guide')
         self.assertEqual(page.status_code,200)

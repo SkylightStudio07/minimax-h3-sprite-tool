@@ -77,6 +77,13 @@ def unity_importer_archive():
     return output
 
 
+def render_page(name, **values):
+    page=(ROOT/'web'/'pages'/name).read_text(encoding='utf-8')
+    for key,value in values.items():
+        page=page.replace('{{'+key+'}}',value)
+    return page
+
+
 def create_app(data_dir=None, runner=None, rigging_runner=None, music_runner=None, image_runner=None):
     data = Path(data_dir or ROOT / 'data')
     data.mkdir(parents=True, exist_ok=True)
@@ -1613,6 +1620,19 @@ def create_app(data_dir=None, runner=None, rigging_runner=None, music_runner=Non
             published=con.execute('SELECT * FROM public_live2d WHERE job_id=?',(jid,)).fetchone()
         return jsonify(ok=True,publicLive2d=public_live2d_payload(published))
 
+    @app.get('/api/admin/public-live2d')
+    @auth(admin=True)
+    def admin_public_live2d():
+        with db() as con:
+            rows=con.execute('''SELECT p.*,u.name AS owner FROM public_live2d p JOIN jobs j ON j.id=p.job_id
+                                LEFT JOIN users u ON u.id=j.user_id WHERE p.revoked IS NULL ORDER BY p.updated DESC''').fetchall()
+        def same(a,b):
+            if not a.is_file() or not b.is_file() or a.stat().st_size!=b.stat().st_size: return False
+            return hashlib.sha256(a.read_bytes()).digest()==hashlib.sha256(b.read_bytes()).digest()
+        return jsonify(items=[dict(public_live2d_payload(row),jobId=row['job_id'],owner=row['owner'],
+                                   stale=not same(rigging.RESULT_ROOT/row['job_id']/'character.psd',public_live2d_root/row['token']/'character.psd'))
+                              for row in rows])
+
     @app.get('/api/public-live2d')
     def public_live2d_list_api():
         with db() as con:
@@ -1623,16 +1643,16 @@ def create_app(data_dir=None, runner=None, rigging_runner=None, music_runner=Non
     def public_live2d_list_page():
         with db() as con:
             rows=con.execute('SELECT * FROM public_live2d WHERE revoked IS NULL ORDER BY updated DESC').fetchall()
-        cards=''.join(f'<a class="card" href="/live2d/{row["token"]}"><img src="/live2d/{row["token"]}/preview.png" alt=""><b>{html_lib.escape(row["title"])}</b><span>공개 워크스페이스 열기</span></a>' for row in rows)
-        if not cards: cards='<p class="empty">현재 공개된 Live2D가 없습니다.</p>'
-        return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>공개 Live2D</title><style>body{{margin:0;background:#0b0e15;color:#f4f6fb;font:16px system-ui}}main{{max-width:1100px;margin:auto;padding:48px 24px}}h1{{margin:0 0 8px}}.home{{display:inline-block;margin-top:8px;padding:9px 14px;border:1px solid #46536c;border-radius:9px;background:#202738;color:#fff;text-decoration:none}}.sub,.card span,.empty{{color:#aeb8cb}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:28px}}.card{{display:grid;gap:10px;padding:14px;border:1px solid #30384b;border-radius:16px;background:#171d29;color:white;text-decoration:none}}img{{width:100%;height:360px;object-fit:contain;background:#080b10;border-radius:10px}}b{{font-size:18px}}</style></head><body><main><h1>공개 Live2D</h1><p class="sub">관리자가 공개한 캐릭터를 직접 움직이고 조절할 수 있습니다.</p><a class="home" href="/">메인 홈페이지</a><div class="grid">{cards}</div></main></body></html>'''
+        cards=''.join(f'<a class="pub-card" href="/live2d/{row["token"]}"><img src="/live2d/{row["token"]}/preview.png" alt=""><b>{html_lib.escape(row["title"])}</b><span>공개 워크스페이스 열기</span></a>' for row in rows)
+        if not cards: cards='<p class="pub-empty">현재 공개된 Live2D가 없습니다.</p>'
+        return render_page('live2d-list.html',cards=cards)
 
     @app.get('/live2d/<token>')
     def public_live2d_workspace(token):
         row=get_public_live2d(token)
         if not row:return '공개가 종료되었거나 존재하지 않는 Live2D입니다.',404
         title=html_lib.escape(row['title'])
-        return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>{title}</title><style>body{{margin:0;background:#0c0f16;color:#eee;font:15px system-ui}}header{{display:flex;align-items:center;gap:16px;padding:12px 20px;background:#171d29;border-bottom:1px solid #30384b}}h1{{font-size:18px;margin:0}}p{{margin:0;color:#aeb8cb}}.nav{{display:flex;gap:10px;margin-left:auto}}.nav a{{padding:8px 11px;border:1px solid #46536c;border-radius:8px;color:#e2dcff;text-decoration:none;white-space:nowrap}}iframe{{display:block;width:100%;height:calc(100vh - 68px);border:0;background:#101014}}@media(max-width:680px){{header p{{display:none}}.nav{{gap:6px}}.nav a{{padding:7px 9px}}}}</style></head><body><header><div><h1>{title}</h1><p>조절값은 이 브라우저에만 저장되며 원본 작업에는 반영되지 않습니다.</p></div><nav class="nav" aria-label="공개 워크스페이스 이동"><a href="/">메인 홈페이지</a><a href="/live2d">다른 공개 Live2D</a></nav></header><iframe src="/live2d/{token}/player" allow="fullscreen; camera; microphone" title="공개 Live2D 워크스페이스"></iframe></body></html>'''
+        return render_page('live2d-workspace.html',title=title,token=token)
 
     @app.get('/live2d/<token>/player')
     def public_live2d_player(token):
@@ -1677,7 +1697,7 @@ def create_app(data_dir=None, runner=None, rigging_runner=None, music_runner=Non
         row=get_share(token)
         if not row:return '공유 링크가 없거나 만료되었습니다.',404
         if row['kind']=='internal':
-            return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>내부 2D 리깅 결과</title><style>body{{margin:0;font:15px system-ui;background:#0c0f16;color:#eee}}header{{display:flex;align-items:center;gap:12px;padding:14px 20px;background:#171d29;border-bottom:1px solid #30384b}}h1{{font-size:18px;margin:0}}p{{margin:0;color:#aeb8cb}}.copy{{margin-right:auto}}a{{padding:9px 15px;background:#2b3549;color:white;border:1px solid #46536c;border-radius:9px;text-decoration:none}}a.primary{{background:#7661e3;border-color:#9686f4}}iframe{{display:block;width:100%;height:calc(100vh - 70px);border:0;background:#101014}}</style></head><body><header><div class="copy"><h1>2D 리깅 내부 결과</h1><p>동아리 공유 링크에서 레이어를 확인하고 함께 수정할 수 있습니다.</p></div><a href="/layer-editing-guide" target="_blank" rel="noopener">편집 안내</a><a href="/share/rig/{token}/inspector">레이어 편집</a><a id="download" class="primary" href="/share/rig/{token}/asset/character.psd" download>PSD 다운로드</a></header><iframe src="/share/rig/{token}/player" allow="fullscreen" title="2D 리깅 미리보기"></iframe><script>setTimeout(()=>document.getElementById('download').click(),700)</script></body></html>'''
+            return render_page('share-rig.html',token=token)
         with db() as con: published=con.execute('SELECT token FROM public_live2d WHERE job_id=? AND revoked IS NULL',(row['job_id'],)).fetchone()
         if not published:return '이 쇼케이스는 종료되었습니다. 공개 Live2D는 관리자가 지정한 결과만 제공됩니다.',410
         return redirect(f'/live2d/{published["token"]}',code=302)
