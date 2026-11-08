@@ -153,4 +153,19 @@ class PromptTests(unittest.TestCase):
         self.assertEqual(w['11']['class_type'],'BasicGuider')
 
 
+class TurboV4WorkflowTest(unittest.TestCase):
+    def build(self,**extra):
+        return engine.build_workflow('a.png','move',3,768,768,1,**extra)
+    def test_turbo_v4_uses_its_own_lora_sampler_and_eight_steps(self):
+        w=self.build(sampling_mode='turbo-v4')
+        self.assertEqual(w['7']['class_type'],'MiniMaxH3TurboLoRA');self.assertEqual(w['7']['inputs']['lora_name'],engine.TURBO_V4_LORA)
+        self.assertEqual(w['9'],{'class_type':'MiniMaxH3TurboSampler','inputs':{}});self.assertEqual(w['10']['inputs']['steps'],8)
+        self.assertEqual(w['10']['inputs']['model'],['7',0]);self.assertEqual(w['11']['inputs']['model'],['7',0])
+    def test_older_modes_are_unchanged(self):
+        self.assertEqual(self.build(sampling_mode='quality')['10']['inputs']['steps'],20)
+        turbo=self.build(sampling_mode='turbo');self.assertEqual(turbo['7']['class_type'],'LoraLoaderModelOnly');self.assertEqual(turbo['9']['class_type'],'KSamplerSelect')
+    def test_unknown_mode_is_rejected(self):
+        with self.assertRaises(ValueError):self.build(sampling_mode='nope')
+
+
 if __name__=='__main__':unittest.main()

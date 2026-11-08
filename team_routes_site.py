@@ -165,7 +165,7 @@ def register(app, *, GALLERY_PRIVATE_KEYS, ROOT, auth, database, db, link_charac
         s = engine.status_payload()
         rs = rigging.status_payload()
         ms = music.status_payload() | {'gemini': music_prompts.status_payload()}
-        return jsonify(**{k:s[k] for k in ('comfy','modelsReady','licenseConfirmed')}, spriteWorkflows=s.get('spriteWorkflows',[]), spriteBackground=engine.image_background.status(), rigging=rs, music=ms)
+        return jsonify(**{k:s[k] for k in ('comfy','modelsReady','licenseConfirmed','turboV4')}, spriteWorkflows=s.get('spriteWorkflows',[]), spriteBackground=engine.image_background.status(), rigging=rs, music=ms)
 
     def gallery_viewer_approved(con):
         viewer=con.execute("SELECT state FROM users WHERE id=?",(session.get('uid'),)).fetchone()
@@ -290,9 +290,9 @@ def register(app, *, GALLERY_PRIVATE_KEYS, ROOT, auth, database, db, link_charac
         p.update(engine.sprite_combat.options(p))
         engine.background_options(p)
         engine.motion_timing.options(p)
-        if p.get('samplingMode','quality') not in ('quality','turbo'):
+        p['samplingMode']=p.get('samplingMode') or engine.default_sampling_mode()
+        if p['samplingMode'] not in engine.SAMPLING_MODES:
             raise ValueError('잘못된 생성 모드입니다.')
-        p.setdefault('samplingMode','quality')
         if type(p.get('motionPadding',10)) is not int or p.get('motionPadding',10) not in (0,10,20,30,40,50,58):
             raise ValueError('동작 여백은 0, 10, 20, 30, 40, 50, 58% 중 선택하세요.')
         if p.get('subjectType','human') not in ('human', *engine.SUBJECT_DEFAULTS):

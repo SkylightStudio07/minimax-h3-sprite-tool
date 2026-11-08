@@ -53,8 +53,19 @@ MODEL_FILES = {
     "turbo_lora": COMFY_ROOT / "models" / "loras" / "minimax_h3_fl2v_turbo_4step_v1.0_768p_comfyui_bf16.safetensors",
 }
 
+TURBO_V4_LORA = "minimax_h3_turbo_v4_step600_ema.safetensors"
+SAMPLING_MODES = ("turbo-v4", "turbo", "quality")
+
 JOBS: dict[str, dict] = {}
 JOBS_LOCK = threading.Lock()
+
+
+def turbo_v4_ready() -> bool:
+    return (COMFY_ROOT / "models" / "loras" / TURBO_V4_LORA).is_file() and (COMFY_ROOT / "custom_nodes" / "ComfyUI-MiniMax-H3-Turbo").is_dir()
+
+
+def default_sampling_mode() -> str:
+    return "turbo-v4" if turbo_v4_ready() else "quality"
 
 
 def comfy_online() -> bool:
@@ -109,6 +120,7 @@ def status_payload() -> dict:
         "comfy": comfy_online(),
         "licenseConfirmed": LICENSE_MARKER.exists(),
         "modelsReady": all(item["ready"] for item in model_status.values()),
+        "turboV4": turbo_v4_ready(),
         "models": model_status,
         "spriteWorkflows": sprite_workflows.status(COMFY_ROOT),
     }
@@ -326,7 +338,7 @@ def build_workflow(image_name: str, prompt: str, seconds: float, width: int, hei
                    subject_type: str = 'human', workflow_id: str = 'standard', combat_settings: dict | None = None,
                    image_guided: bool = False) -> dict:
     sprite_workflows.validate(dict(workflowId=workflow_id,width=width,height=height,negativeEnabled=negative_enabled),COMFY_ROOT,require_ready=False)
-    if sampling_mode not in ('quality','turbo'):
+    if sampling_mode not in SAMPLING_MODES:
         raise ValueError('잘못된 생성 모드입니다.')
     negative_enabled, negative_prompt, cfg_scale = guidance_options({
         'negativeEnabled': negative_enabled, 'negativePrompt': negative_prompt, 'cfgScale': cfg_scale})
@@ -387,6 +399,11 @@ def build_workflow(image_name: str, prompt: str, seconds: float, width: int, hei
         workflow['10']['inputs']['model'] = ['2',0]
         workflow['10']['inputs']['steps'] = 20
         workflow['11']['inputs']['model'] = ['2',0]
+    if sampling_mode == 'turbo-v4' and workflow_id != 'fasth3-sprite':
+        workflow['7'] = {'class_type': 'MiniMaxH3TurboLoRA', 'inputs': {
+            'model': ['2',0], 'lora_name': TURBO_V4_LORA, 'strength': 1.0, 'low_vram': False}}
+        workflow['9'] = {'class_type': 'MiniMaxH3TurboSampler', 'inputs': {}}
+        workflow['10']['inputs']['steps'] = 8
     if workflow_id=='fasth3-sprite':
         workflow.pop('7',None)
         workflow['2']['inputs']['unet_name']=sprite_workflows.FAST_FILENAME
@@ -614,6 +631,9 @@ def update_job(job_id: str, **changes) -> None:
 def run_job(job_id: str, payload: dict) -> None:
     try:
         sprite_workflows.validate(payload,COMFY_ROOT)
+        sampling_mode = payload.get('samplingMode') or default_sampling_mode()
+        if sampling_mode == 'turbo-v4' and not turbo_v4_ready():
+            raise ValueError('Turbo v4 모델이 설치되지 않았습니다. 고화질 모드를 선택하세요.')
         combat = sprite_combat.options(payload)
         timing_settings = motion_timing.options(payload)
         update_job(job_id, state="uploading", message="기준 이미지를 ComfyUI로 전송 중")
@@ -668,7 +688,7 @@ def run_job(job_id: str, payload: dict) -> None:
             negative_enabled=payload.get('negativeEnabled',False),
             negative_prompt=payload.get('negativePrompt',DEFAULT_NEGATIVE),
             cfg_scale=payload.get('cfgScale',1.5),
-            sampling_mode=payload.get('samplingMode','quality'),
+            sampling_mode=sampling_mode,
             workflow_id=payload.get('workflowId','standard'),
             combat_settings=combat,
             image_guided=payload.get('motionPromptMode')=='image-guided',
@@ -685,7 +705,7 @@ def run_job(job_id: str, payload: dict) -> None:
             'motionStrength': payload.get('motionStrength','normal'),
             'subjectType': payload.get('subjectType','human'),
             'negativeEnabled': '17' in workflow,
-            'samplingMode': 'fasth3-8step' if payload.get('workflowId')=='fasth3-sprite' else payload.get('samplingMode','quality'),
+            'samplingMode': 'fasth3-8step' if payload.get('workflowId')=='fasth3-sprite' else sampling_mode,
             'workflowId': payload.get('workflowId','standard'),
             'diffusionModel': workflow['2']['inputs']['unet_name'],
             'steps': workflow['10']['inputs']['steps'],
