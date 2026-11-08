@@ -1,4 +1,4 @@
-"""Allowlisted sprite workflow profiles. FastH3 remains gated until real validation."""
+"""Allowlisted sprite workflow profiles. FastH3 is selectable once data/fasth3-validated.txt holds its hash."""
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parent
