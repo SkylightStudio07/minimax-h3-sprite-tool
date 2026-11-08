@@ -56,6 +56,31 @@ class TemporalMatteTest(unittest.TestCase):
         out = matte.stabilize(raws, cuts)
         self.assertGreater(np.mean(out[4][10:14, 72:88, 3]), 200)
 
+    def test_refine_closes_notches_without_touching_separate_effects(self):
+        raws, cuts = scene(count=1)
+        raw, cut = raws[0], cuts[0].copy()
+        cut[40, 30:32, 3] = 0
+        raw[5:8, 80:90] = (250, 240, 120)
+        cut[5:8, 80:90] = (250, 240, 120, 90)
+        out = matte.refine_contour(raw, cut)
+        self.assertGreater(int(out[40, 31, 3]), 127)
+        np.testing.assert_array_equal(out[5:8, 80:90], cut[5:8, 80:90])
+
+    def test_smooth_selected_cuts_each_needed_frame_once(self):
+        from PIL import Image
+        raws, cuts = scene(count=8, jitter=1)
+        frames = [Image.fromarray(r) for r in raws]
+        calls = []
+        lookup = {id(f): c for f, c in zip(frames, cuts)}
+
+        def cut(frame):
+            calls.append(id(frame))
+            return Image.fromarray(lookup[id(frame)])
+        out = matte.smooth_selected(frames, [2, 3], cut, loop=False)
+        self.assertEqual(len(out), 2)
+        self.assertEqual(len(calls), len(set(calls)))
+        self.assertEqual(out[0].mode, 'RGBA')
+
     def test_length_mismatch_is_rejected(self):
         raws, cuts = scene(count=3)
         with self.assertRaises(ValueError):

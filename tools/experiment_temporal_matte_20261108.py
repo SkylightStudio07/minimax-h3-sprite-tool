@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT))
 import sprite_temporal_matte as matte
 
 cv2.setNumThreads(2)
-OUT = ROOT / 'outputs/temporal-matte-experiment-20261108'
+OUT = ROOT / 'outputs/temporal-matte-experiment-20261108/v2-contour-plus-temporal'
 V2 = ROOT / 'outputs/character-variations-cutout-v2-20261102'
 BLONDE = ROOT / 'outputs/blonde-from-raw-20261102'
 CASES = [
@@ -57,12 +57,13 @@ def save_webp(frames, path):
 
 
 def main():
-    OUT.mkdir(exist_ok=True)
+    OUT.mkdir(parents=True, exist_ok=True)
     report = []
     for name, folder, loop in CASES:
         raws, cuts = load(folder)
         started = time.time()
-        fixed = matte.stabilize(raws, cuts, loop=loop)
+        refined = [matte.refine_contour(r, c) for r, c in zip(raws, cuts)]
+        fixed = matte.stabilize(raws, refined, loop=loop)
         seconds = round(time.time() - started, 1)
         changed = [float(np.mean(np.abs(a[:, :, 3].astype(int) - b[:, :, 3].astype(int)))) for a, b in zip(cuts, fixed)]
         interior = 0
@@ -72,6 +73,10 @@ def main():
         row = dict(name=name, frames=len(cuts), seconds=seconds, flickerBefore=round(matte.static_flicker(raws, cuts), 3),
                    flickerAfter=round(matte.static_flicker(raws, fixed), 3), meanAlphaChange=round(float(np.mean(changed)), 3), interiorPixelsChanged=interior)
         row['reductionPercent'] = round(100 * (1 - row['flickerAfter'] / max(row['flickerBefore'], 1e-6)), 1)
+        row['roughnessBefore'] = round(matte.roughness(cuts), 4)
+        row['roughnessAfter'] = round(matte.roughness(fixed), 4)
+        area = lambda frames: float(np.mean([np.mean(f[:, :, 3] > 127) for f in frames]))
+        row['solidAreaChangePercent'] = round(100 * (area(fixed) / area(cuts) - 1), 2)
         report.append(row)
         print(json.dumps(row), flush=True)
         alpha = np.max(np.stack([c[:, :, 3] for c in cuts]), axis=0)

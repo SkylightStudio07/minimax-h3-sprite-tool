@@ -97,6 +97,46 @@ def stabilize(raw_frames, cutouts, radius=2, band=4, sigma=12.0, loop=False):
     return output
 
 
+def refine_contour(raw, cutout, close=1, sigma=1.1, band=3):
+    """Close dotted gaps in the silhouette and replace its stair-steps with a smooth ramp.
+
+    Only pixels within `band` of the largest solid region's edge change. Separate
+    regions such as muzzle flashes and smoke keep their own alpha. Pixels that gain
+    opacity take the source video's colour, which restores broken ink outlines.
+    """
+    out = cutout.copy()
+    alpha = cutout[:, :, 3]
+    labels, total = ndimage.label(alpha > 127)
+    if not total:
+        return out
+    sizes = np.bincount(labels.ravel())
+    sizes[0] = 0
+    body = labels == int(np.argmax(sizes))
+    closed = cv2.morphologyEx(body.astype(np.uint8), cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * close + 1, 2 * close + 1))) > 0
+    distance = ndimage.distance_transform_edt(closed) - ndimage.distance_transform_edt(~closed)
+    smooth = cv2.GaussianBlur(distance.astype(np.float32), (0, 0), sigma)
+    target = np.clip(.5 + smooth / 1.5, 0, 1) * 255
+    near = np.abs(distance) <= band
+    other = (labels > 0) & ~body
+    near &= ~ndimage.binary_dilation(other, iterations=2)
+    gained = near & (alpha < 10) & (target >= 10)
+    out[gained, :3] = raw[gained]
+    out[near, 3] = np.rint(target[near]).astype(np.uint8)
+    out[out[:, :, 3] == 0] = 0
+    return out
+
+
+def roughness(cutouts):
+    """Silhouette perimeter relative to a smoothed version of itself; 1.0 is perfectly smooth."""
+    values = []
+    for cutout in cutouts:
+        solid = (cutout[:, :, 3] > 127).astype(np.uint8)
+        soft = (cv2.GaussianBlur(solid.astype(np.float32), (0, 0), 3) > .5).astype(np.uint8)
+        perimeter = lambda mask: sum(cv2.arcLength(c, True) for c in cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)[0])
+        values.append(perimeter(solid) / max(perimeter(soft), 1))
+    return float(np.mean(values))
+
+
 def static_flicker(raw_frames, cutouts, band=4, threshold=6.0):
     """Mean alpha change (0-255) on contour pixels whose source colour did not change."""
     total, pixels = 0.0, 0
@@ -108,3 +148,27 @@ def static_flicker(raw_frames, cutouts, band=4, threshold=6.0):
         total += float(np.abs(alpha_a - alpha_b)[mask].sum())
         pixels += int(mask.sum())
     return total / max(pixels, 1)
+
+
+def smooth_selected(frames, indices, cut, loop, radius=2):
+    """Cut out `indices` of PIL `frames`, refining contours and stabilising against nearby frames."""
+    from PIL import Image
+
+    count = len(frames)
+    raw_cache, cut_cache = {}, {}
+
+    def load(position):
+        if position not in cut_cache:
+            raw = np.array(frames[position].convert('RGB'))
+            raw_cache[position] = raw
+            cut_cache[position] = refine_contour(raw, np.array(cut(frames[position]).convert('RGBA')))
+        return raw_cache[position], cut_cache[position]
+
+    results = []
+    for index in indices:
+        positions = [(index + offset) % count if loop else index + offset for offset in range(-radius, radius + 1)]
+        positions = [p for p in positions if 0 <= p < count]
+        loaded = [load(p) for p in positions]
+        stable = stabilize([r for r, _ in loaded], [c for _, c in loaded], radius=radius)
+        results.append(Image.fromarray(stable[positions.index(index)]))
+    return results
