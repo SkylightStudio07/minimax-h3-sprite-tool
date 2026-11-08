@@ -460,7 +460,7 @@ function renderSpriteDetail(j,main,side){
       tools.append(detailRow('루프 보정본 만들기','시작과 끝이 매끄럽게 이어지는 구간을 찾아 별도 영상과 시트를 만듭니다.',fix));
     }
     const count=node('input',undefined,'ui-input extract-count');count.type='number';count.min='2';count.max='64';count.step='1';count.value='64';count.setAttribute('aria-label','재추출 프레임 수');
-    const matte=node('select',undefined,'ui-input');matte.setAttribute('aria-label','재추출 배경 제거');for(const [value,label] of [['none','배경 유지'],['ai','AI 배경 제거'],['flat','단색 배경 제거']])matte.add(new Option(label,value));
+    const matte=node('select',undefined,'ui-input');matte.setAttribute('aria-label','재추출 배경 제거');for(const [value,label] of [['none','배경 유지'],['ai','AI 배경 제거'],['ai-smooth','AI · 윤곽 다듬기 (실험적)'],['flat','단색 배경 제거']])matte.add(new Option(label,value));
     const extract=actionButton('추출','ui-btn ui-btn--sm');
     extract.onclick=()=>{if(!count.reportValidity())return;withBusy(extract,async()=>{await ResultActions.extract(j,Number(count.value),matte.value);openJob(j.id)})};
     tools.append(detailRow('시트 다시 추출','2~64프레임 · 원본 보존 · AI 제거는 프레임 수에 따라 시간이 걸려요.',count,matte,extract));

@@ -428,9 +428,9 @@ def background_options(payload):
     enabled=payload.get('removeBackground',False)
     if type(enabled) is not bool:raise ValueError('배경 제거 옵션을 확인하세요.')
     method=payload.get('backgroundRemoval','flat')
-    if method not in ('ai','ai-sparks','flat'):raise ValueError('배경 제거 방식을 확인하세요.')
+    if method not in ('ai','ai-sparks','ai-smooth','flat'):raise ValueError('배경 제거 방식을 확인하세요.')
     needs_character_mask=payload.get('combatEffect')=='subtle' and not payload.get('pixelOutput',False)
-    if enabled and (method in ('ai','ai-sparks') or needs_character_mask) and not image_background.status()['ready']:
+    if enabled and (method in ('ai','ai-sparks','ai-smooth') or needs_character_mask) and not image_background.status()['ready']:
         if needs_character_mask:raise ValueError('작은 검기용 배경 정리가 아직 준비되지 않았습니다. 잠시 후 다시 시도하세요.')
         raise ValueError('AI 배경 제거 모델이 준비되지 않았습니다. 단색 배경 제거를 선택하거나 잠시 후 다시 시도하세요.')
     return method
@@ -469,8 +469,8 @@ def video_thumbnail(video_path: Path) -> bytes:
 
 def make_sprite_sheet(video_path: Path, output_path: Path, count: int, loop: bool = True,
                       transparent_path: Path | None = None, tolerance: int = 24, background_mode: str = 'flat') -> None:
-    if background_mode not in ('ai','ai-sparks','flat','subtle'):raise ValueError('배경 제거 방식을 확인하세요.')
-    if transparent_path is not None and background_mode in ('ai','ai-sparks','subtle') and not image_background.status()['ready']:
+    if background_mode not in ('ai','ai-sparks','ai-smooth','flat','subtle'):raise ValueError('배경 제거 방식을 확인하세요.')
+    if transparent_path is not None and background_mode in ('ai','ai-sparks','ai-smooth','subtle') and not image_background.status()['ready']:
         raise ValueError('AI 배경 제거 모델이 준비되지 않았습니다.')
     container = av.open(str(video_path))
     frames = [frame.to_image().convert("RGBA") for frame in container.decode(video=0)]
@@ -494,8 +494,14 @@ def make_sprite_sheet(video_path: Path, output_path: Path, count: int, loop: boo
     sheet.save(output_path, optimize=True)
     if transparent_path is not None:
         transparent = Image.new("RGBA", sheet.size, (0, 0, 0, 0))
+        smoothed = None
+        if background_mode == 'ai-smooth':
+            import sprite_temporal_matte
+            smoothed = sprite_temporal_matte.smooth_selected(frames, indices, image_background.remove_sprite, loop)
         for index, image in enumerate(selected):
-            if background_mode=='subtle':
+            if smoothed is not None:
+                cutout=smoothed[index]
+            elif background_mode=='subtle':
                 import sprite_vfx_matte
                 cutout,_=sprite_vfx_matte.remove(image)
             elif background_mode=='ai-sparks':
@@ -749,7 +755,7 @@ def run_job(job_id: str, payload: dict) -> None:
             effective_count=min(effective_count,timing_report['outputFrames'])
             sheet_timing=motion_timing.sheet_durations(video_path,effective_count,loop)
         try:
-            if transparent_path and background_mode in ('ai','ai-sparks'):update_job(job_id,state='packing',message='AI로 프레임별 배경 제거 중 · 원본 영상과 시트 보존')
+            if transparent_path and background_mode in ('ai','ai-sparks','ai-smooth'):update_job(job_id,state='packing',message='AI로 프레임별 배경 제거 중 · 원본 영상과 시트 보존')
             if combat['pixelOutput']:
                 import sprite_pixel_export
                 update_job(job_id,state='packing',message='배경 윤곽·공통 팔레트·시간축을 정리해 도트 시트로 만드는 중')
