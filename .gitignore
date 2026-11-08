@@ -4,6 +4,8 @@
 ComfyUI-amd/
 ComfyUI/
 .venv-yue2/
+.venv-workflows/
+ComfyUI-workflows/
 vendor/YuE/
 yue2-runtime/
 __pycache__/
@@ -16,6 +18,9 @@ __pycache__/
 *.pt
 *.pth
 *.part
+*.download
+*.segment-*
+models/background/
 
 # Generated/user data
 outputs/
@@ -35,3 +40,16 @@ MINIMAX_H3_LICENSE_APPROVED.txt
 Thumbs.db
 .idea/
 .vscode/
+
+# Third-party Sprute source checkout (downloaded separately)
+workflows/sprute-source/
+
+# Local reference-image vision weights
+models/reference-caption/
+
+# Local Live2D detail-upscale weights
+models/live2d-upscale/
+
+# Local safety copies made by agent sessions (not source)
+.codex-backups/
+.codex-remote-attachments/

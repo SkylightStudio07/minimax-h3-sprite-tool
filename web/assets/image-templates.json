@@ -1,0 +1,466 @@
+{
+  "categories": [
+    {
+      "id": "style",
+      "label": "그림체",
+      "items": [
+        {
+          "id": "cel",
+          "label": "셀 채색",
+          "sdxl": "anime style, clean lineart, cel shading",
+          "anima": "Anime illustration with clean outlines and crisp, flat cel shading."
+        },
+        {
+          "id": "soft",
+          "label": "부드러운 애니 채색",
+          "sdxl": "anime style, soft shading, delicate lineart",
+          "anima": "Anime illustration with delicate lines and gently blended shading."
+        },
+        {
+          "id": "watercolor",
+          "label": "수채화",
+          "sdxl": "watercolor, paper texture, soft edges",
+          "anima": "A watercolor illustration with translucent washes and visible paper grain."
+        },
+        {
+          "id": "ink",
+          "label": "거친 펜 선화",
+          "sdxl": "ink drawing, sketch, hatching",
+          "anima": "Expressive pen-and-ink drawing with rough strokes and crosshatching."
+        },
+        {
+          "id": "chibi",
+          "label": "SD 캐릭터",
+          "sdxl": "chibi, big head, small body",
+          "anima": "A chibi character with an oversized head and a compact, simplified body."
+        },
+        {
+          "id": "pixel",
+          "label": "픽셀아트풍",
+          "sdxl": "pixel art, limited palette, hard edges",
+          "anima": "Pixel-art style with clearly defined pixel blocks and a limited palette."
+        },
+        {
+          "id": "painterly",
+          "label": "페인터리",
+          "sdxl": "digital painting, visible brush strokes",
+          "anima": "A digital painting with visible brush strokes and layered colors."
+        },
+        {
+          "id": "flat",
+          "label": "플랫 그래픽",
+          "sdxl": "flat colors, vector illustration, simple shapes",
+          "anima": "A flat graphic illustration with bold, simple shapes and solid colors."
+        },
+        {
+          "id": "retro",
+          "label": "레트로 애니",
+          "sdxl": "1990s anime style, cel shading, muted colors",
+          "anima": "Retro anime illustration with muted colors and traditional cel shading."
+        },
+        {
+          "id": "storybook",
+          "label": "동화책",
+          "sdxl": "storybook illustration, warm colors, textured shading",
+          "anima": "A storybook illustration with warm colors and gently textured shading."
+        }
+      ]
+    },
+    {
+      "id": "composition",
+      "label": "구도",
+      "items": [
+        {
+          "id": "front",
+          "label": "정면 전신",
+          "sdxl": "solo, full body, front view, centered",
+          "anima": "One character shown once, full body, facing forward and centered."
+        },
+        {
+          "id": "threequarter",
+          "label": "¾ 전신",
+          "sdxl": "solo, full body, three-quarter view",
+          "anima": "One full-body character with their body turned slightly to the side."
+        },
+        {
+          "id": "side",
+          "label": "측면 전신",
+          "sdxl": "solo, full body, profile",
+          "anima": "One full-body character seen directly from the side."
+        },
+        {
+          "id": "back",
+          "label": "뒷모습 전신",
+          "sdxl": "solo, full body, from behind",
+          "anima": "One full-body character viewed from behind."
+        },
+        {
+          "id": "upper",
+          "label": "상반신",
+          "sdxl": "solo, upper body, portrait",
+          "anima": "A portrait showing one character from the waist up."
+        },
+        {
+          "id": "face",
+          "label": "얼굴 클로즈업",
+          "sdxl": "solo, close-up, face portrait",
+          "anima": "A close-up portrait focused on the face."
+        },
+        {
+          "id": "low",
+          "label": "로우 앵글",
+          "sdxl": "solo, full body, from below",
+          "anima": "One character viewed from a low camera angle."
+        },
+        {
+          "id": "high",
+          "label": "하이 앵글",
+          "sdxl": "solo, from above",
+          "anima": "One character viewed from a high camera angle."
+        },
+        {
+          "id": "wide",
+          "label": "가로 여백",
+          "sdxl": "solo, full body, wide shot, negative space",
+          "anima": "One full-body character in a wide composition with ample empty space."
+        },
+        {
+          "id": "icon",
+          "label": "정사각 초상",
+          "sdxl": "solo, bust, centered, simple background",
+          "anima": "A centered head-and-shoulders portrait composed for a square icon."
+        }
+      ]
+    },
+    {
+      "id": "pose",
+      "label": "자세",
+      "items": [
+        {
+          "id": "neutral",
+          "label": "편안한 대기",
+          "sdxl": "standing, relaxed pose, arms at sides",
+          "anima": "Standing relaxed with both arms resting at the sides."
+        },
+        {
+          "id": "rig",
+          "label": "리깅용 팔 벌림",
+          "sdxl": "standing, arms slightly spread, open hands",
+          "anima": "Standing with a small visible gap between each arm and the torso, hands open."
+        },
+        {
+          "id": "guard",
+          "label": "검 경계",
+          "sdxl": "standing, holding sword, guard stance",
+          "anima": "Standing in a guarded stance while holding a sword."
+        },
+        {
+          "id": "aim",
+          "label": "소총 조준",
+          "sdxl": "holding rifle, aiming, both hands",
+          "anima": "Aiming a rifle with both hands, keeping the weapon in frame."
+        },
+        {
+          "id": "staff",
+          "label": "지팡이 들기",
+          "sdxl": "standing, holding staff",
+          "anima": "Standing and holding a long staff upright."
+        },
+        {
+          "id": "sit",
+          "label": "앉기",
+          "sdxl": "sitting on chair, relaxed",
+          "anima": "Sitting naturally on a chair with a relaxed posture."
+        },
+        {
+          "id": "run",
+          "label": "달리기",
+          "sdxl": "running, dynamic pose",
+          "anima": "Running with one leg lifted and the arms swinging naturally."
+        },
+        {
+          "id": "jump",
+          "label": "점프",
+          "sdxl": "jumping, dynamic pose",
+          "anima": "Jumping in midair with an energetic, readable silhouette."
+        },
+        {
+          "id": "wave",
+          "label": "손 흔들기",
+          "sdxl": "standing, waving, open hand",
+          "anima": "Standing and greeting the viewer with one hand raised in a wave."
+        },
+        {
+          "id": "cross",
+          "label": "팔짱",
+          "sdxl": "standing, crossed arms",
+          "anima": "Standing with the arms folded across the chest."
+        }
+      ]
+    },
+    {
+      "id": "outfit",
+      "label": "의상·장르",
+      "items": [
+        {
+          "id": "knight",
+          "label": "판타지 기사",
+          "sdxl": "armor, knight, gauntlets, boots",
+          "anima": "Wearing a fantasy knight outfit with armor, gauntlets and sturdy boots."
+        },
+        {
+          "id": "mage",
+          "label": "마법사",
+          "sdxl": "mage, robes, cape",
+          "anima": "Wearing layered mage robes and a short cape."
+        },
+        {
+          "id": "ranger",
+          "label": "모험가",
+          "sdxl": "adventurer, leather jacket, belt pouch, boots",
+          "anima": "Wearing a practical adventurer outfit with a leather jacket and belt pouches."
+        },
+        {
+          "id": "tactical",
+          "label": "현대 전술복",
+          "sdxl": "tactical clothes, utility vest, combat boots",
+          "anima": "Wearing modern tactical clothing with a utility vest and combat boots."
+        },
+        {
+          "id": "uniform",
+          "label": "학원풍 제복",
+          "sdxl": "school uniform, blazer, necktie",
+          "anima": "Wearing an academy-style blazer and a neatly tied necktie."
+        },
+        {
+          "id": "coat",
+          "label": "롱코트",
+          "sdxl": "long coat, layered clothes, boots",
+          "anima": "Wearing a long coat over layered clothing and boots."
+        },
+        {
+          "id": "scifi",
+          "label": "SF 파일럿",
+          "sdxl": "science fiction, pilot suit, gloves",
+          "anima": "Wearing a science-fiction pilot suit with fitted gloves."
+        },
+        {
+          "id": "casual",
+          "label": "캐주얼",
+          "sdxl": "casual clothes, hoodie, sneakers",
+          "anima": "Wearing a casual hoodie and sneakers."
+        },
+        {
+          "id": "formal",
+          "label": "정장",
+          "sdxl": "formal suit, collared shirt",
+          "anima": "Wearing a tailored formal suit and a collared shirt."
+        },
+        {
+          "id": "fantasy",
+          "label": "동양 판타지",
+          "sdxl": "eastern fantasy, flowing robes, sash",
+          "anima": "Wearing flowing eastern-fantasy robes tied with a fabric sash."
+        }
+      ]
+    },
+    {
+      "id": "lighting",
+      "label": "배경·조명",
+      "items": [
+        {
+          "id": "white",
+          "label": "흰 배경·균일광",
+          "sdxl": "white background, simple background, even lighting",
+          "anima": "A plain white background with even, readable lighting."
+        },
+        {
+          "id": "gray",
+          "label": "회색 배경",
+          "sdxl": "gray background, simple background, soft lighting",
+          "anima": "A plain neutral-gray background under soft light."
+        },
+        {
+          "id": "pastel",
+          "label": "파스텔 배경",
+          "sdxl": "pastel background, soft lighting",
+          "anima": "A simple pastel-colored background with soft lighting."
+        },
+        {
+          "id": "frontlight",
+          "label": "부드러운 정면광",
+          "sdxl": "simple background, soft frontal lighting",
+          "anima": "A simple background, illuminated by soft light from the front."
+        },
+        {
+          "id": "rim",
+          "label": "림 라이트",
+          "sdxl": "dark background, rim lighting",
+          "anima": "A dark background with a narrow rim of light outlining the character."
+        },
+        {
+          "id": "sunset",
+          "label": "노을",
+          "sdxl": "sunset, warm lighting",
+          "anima": "Warm sunset lighting with a softly suggested evening background."
+        },
+        {
+          "id": "moon",
+          "label": "달빛",
+          "sdxl": "night, moonlight, cool lighting",
+          "anima": "Cool moonlight in a quiet nighttime scene."
+        },
+        {
+          "id": "studio",
+          "label": "스튜디오",
+          "sdxl": "studio background, studio lighting",
+          "anima": "A restrained studio backdrop and balanced studio lighting."
+        },
+        {
+          "id": "forest",
+          "label": "숲",
+          "sdxl": "forest background, dappled sunlight",
+          "anima": "A forest background with patches of sunlight filtering through leaves."
+        },
+        {
+          "id": "city",
+          "label": "네온 도시",
+          "sdxl": "city at night, neon lights",
+          "anima": "A nighttime city scene lit by colorful neon signs."
+        }
+      ]
+    }
+  ],
+  "combinations": [
+    {
+      "id": "rig-basic",
+      "label": "Live2D 기본 원화",
+      "choices": {
+        "style": "cel",
+        "composition": "front",
+        "pose": "rig",
+        "outfit": "casual",
+        "lighting": "white"
+      },
+      "preset": "live2d",
+      "size": "832x1216"
+    },
+    {
+      "id": "rig-mage",
+      "label": "Live2D 마법사",
+      "choices": {
+        "style": "soft",
+        "composition": "front",
+        "pose": "rig",
+        "outfit": "mage",
+        "lighting": "frontlight"
+      },
+      "preset": "live2d",
+      "size": "832x1216"
+    },
+    {
+      "id": "game-knight",
+      "label": "게임 기사 대기",
+      "choices": {
+        "style": "cel",
+        "composition": "threequarter",
+        "pose": "guard",
+        "outfit": "knight",
+        "lighting": "white"
+      },
+      "preset": "illustration",
+      "size": "832x1216"
+    },
+    {
+      "id": "game-ranger",
+      "label": "게임 모험가 대기",
+      "choices": {
+        "style": "cel",
+        "composition": "threequarter",
+        "pose": "neutral",
+        "outfit": "ranger",
+        "lighting": "white"
+      },
+      "preset": "illustration",
+      "size": "832x1216"
+    },
+    {
+      "id": "gunner",
+      "label": "전술 캐릭터 조준",
+      "choices": {
+        "style": "cel",
+        "composition": "side",
+        "pose": "aim",
+        "outfit": "tactical",
+        "lighting": "gray"
+      },
+      "preset": "illustration",
+      "size": "1216x832"
+    },
+    {
+      "id": "chibi",
+      "label": "SD 캐릭터 인사",
+      "choices": {
+        "style": "chibi",
+        "composition": "front",
+        "pose": "wave",
+        "outfit": "casual",
+        "lighting": "white"
+      },
+      "preset": "illustration",
+      "size": "1024x1024"
+    },
+    {
+      "id": "portrait",
+      "label": "캐릭터 초상",
+      "choices": {
+        "style": "soft",
+        "composition": "icon",
+        "pose": "neutral",
+        "outfit": "formal",
+        "lighting": "pastel"
+      },
+      "preset": "illustration",
+      "size": "1024x1024"
+    },
+    {
+      "id": "retro",
+      "label": "레트로 애니 주인공",
+      "choices": {
+        "style": "retro",
+        "composition": "upper",
+        "pose": "cross",
+        "outfit": "uniform",
+        "lighting": "studio"
+      },
+      "preset": "illustration",
+      "size": "1024x1024"
+    },
+    {
+      "id": "fantasy",
+      "label": "동화풍 마법사",
+      "choices": {
+        "style": "storybook",
+        "composition": "threequarter",
+        "pose": "staff",
+        "outfit": "mage",
+        "lighting": "forest"
+      },
+      "preset": "illustration",
+      "size": "832x1216"
+    },
+    {
+      "id": "scifi",
+      "label": "SF 파일럿",
+      "choices": {
+        "style": "painterly",
+        "composition": "threequarter",
+        "pose": "neutral",
+        "outfit": "scifi",
+        "lighting": "city"
+      },
+      "preset": "illustration",
+      "size": "832x1216"
+    }
+  ]
+}

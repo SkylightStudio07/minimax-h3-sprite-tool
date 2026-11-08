@@ -1,0 +1,5 @@
+#pixelControls{border-color:var(--primary-soft-2);background:var(--primary-soft)}
+#pixelControls #pixelReady{margin:8px 0 14px}
+.pixel-recipe .image-viewer img,.pixel-art-image{image-rendering:pixelated}
+body.pixel-recipe #chooseLook,body.pixel-recipe #browseStyles{display:none}
+@media(min-width:701px){.creation-settings .task-tabs [data-task=pixel]{grid-column:1/-1}}

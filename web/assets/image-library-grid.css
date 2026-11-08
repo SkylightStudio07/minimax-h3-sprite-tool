@@ -1,0 +1,16 @@
+/* Shared 3x3 library cards and pagination. Workspace layout: image-workspace.css. */
+#imageLibraryWide #styleCards,#imageLibraryWide #lookCards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;max-height:none;overflow:visible}
+#imageLibraryWide #styleCards>[hidden],#imageLibraryWide #lookCards>[hidden]{display:none!important}
+.library-pagination{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:16px 0}
+.library-pagination [aria-current=page]{outline:2px solid var(--accent,#68b9d8);outline-offset:1px}
+.library-pagination span{flex-basis:100%}
+#imageLibraryWide .style-card{border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0;overflow-wrap:anywhere;display:flex;flex-direction:column}
+#imageLibraryWide .style-card h4{margin:0 0 8px}
+#imageLibraryWide .style-examples{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+#imageLibraryWide .style-examples a:first-child{grid-column:1/-1}
+#imageLibraryWide .style-examples img{aspect-ratio:3/4;object-fit:contain}
+#imageLibraryWide .look-card[data-model="soya-anima-flanime"] img{aspect-ratio:1}
+#imageLibraryWide .style-card button{margin-top:auto;width:100%}
+@container(max-width:1050px){#imageLibraryWide #styleCards,#imageLibraryWide #lookCards{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@container(max-width:620px){#imageLibraryWide #styleCards,#imageLibraryWide #lookCards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@container(max-width:420px){#imageLibraryWide #styleCards,#imageLibraryWide #lookCards{grid-template-columns:1fr}}

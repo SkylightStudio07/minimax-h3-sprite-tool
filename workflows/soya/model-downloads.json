@@ -1,0 +1,30 @@
+{
+  "models": [
+    {
+      "id": "soya-anima-preview-original",
+      "url": "https://huggingface.co/circlestone-labs/Anima/resolve/f973fc41ec7545364ac9776c2440285f43ff2a30/split_files/diffusion_models/anima-preview.safetensors",
+      "relative_path": "models/diffusion_models/anima-preview.safetensors",
+      "size": 4182218360,
+      "sha256": "41fa7b78613dfe0d888b3647f70c7fb8cdfda2ff177e78d2e16e06dc810d9dcc",
+      "source": "https://huggingface.co/circlestone-labs/Anima",
+      "role": "Official Anima Preview"
+    },
+    {
+      "id": "anime-sharp-v4-upscaler",
+      "url": "https://huggingface.co/Kim2091/2x-AnimeSharpV4/resolve/1a9339b5c308ab3990f6233be2c1169a75772878/2x-AnimeSharpV4_Fast_RCAN_PU.safetensors",
+      "relative_path": "models/upscale_models/2x-AnimeSharpV4_Fast_RCAN_PU.safetensors",
+      "size": 31359158,
+      "sha256": "b641c9eb10b43f26538177aa8f0fef8b9fc2a153afd1431d0a062a84c49ce6d0"
+    },
+    {
+      "id": "detailed-anime-style-il-candidate",
+      "url": "https://civitai.com/api/download/models/1750914?fileId=1651647",
+      "relative_path": "models/loras/soya-candidates/Detailed_anime_style_Illustrious_v0.7.safetensors",
+      "size": 405031516,
+      "sha256": "59d5706a66379263f4756c28e8ebf5573ee03e50e9a317b827c9b99236e0c901",
+      "source": "https://civitai.com/models/1547435?modelVersionId=1750914",
+      "baseModel": "Illustrious",
+      "role": "Candidate only; equivalence to Soya original unverified"
+    }
+  ]
+}

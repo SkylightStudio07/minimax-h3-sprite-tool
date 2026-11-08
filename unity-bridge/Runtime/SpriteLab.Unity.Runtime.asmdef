@@ -1,0 +1,8 @@
+{
+  "name": "SpriteLab.Unity.Runtime",
+  "rootNamespace": "SpriteLab",
+  "references": [
+    "UnityEngine.UI"
+  ],
+  "autoReferenced": true
+}

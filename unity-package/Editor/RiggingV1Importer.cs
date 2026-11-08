@@ -11,7 +11,7 @@ namespace SpriteLab.RiggingV1.Editor
 {
     public static class RiggingV1Importer
     {
-        private const float PixelsPerUnit = 100f;
+        private static float PixelsPerUnit = 100f;
 
         [Serializable] private sealed class Manifest
         {
@@ -20,6 +20,7 @@ namespace SpriteLab.RiggingV1.Editor
             public Expression[] expressions;
             public string[] layerOrder;
             public Anchors anchors;
+            public float unityPixelsPerUnit;
         }
 
         [Serializable] private sealed class CanvasInfo { public int width; public int height; }
@@ -44,6 +45,7 @@ namespace SpriteLab.RiggingV1.Editor
 
         [Serializable] private sealed class Expression : LayerRecord
         {
+            public string variantOf;
             public string side;
             public string fade;
         }
@@ -82,6 +84,7 @@ namespace SpriteLab.RiggingV1.Editor
             if (manifest == null || manifest.canvas == null || manifest.parts == null)
                 throw new InvalidDataException("manifest.json 형식이 올바르지 않습니다.");
 
+            PixelsPerUnit = manifest.unityPixelsPerUnit > 0f ? manifest.unityPixelsPerUnit : 100f;
             ConfigureTextures(assetRoot, manifest);
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             var prefabPath = BuildPrefab(assetRoot, manifest);
@@ -125,6 +128,7 @@ namespace SpriteLab.RiggingV1.Editor
             importer.spritePixelsPerUnit = PixelsPerUnit;
             importer.alphaIsTransparency = true;
             importer.mipmapEnabled = false;
+            importer.maxTextureSize = 8192;
             var settings = new TextureImporterSettings();
             importer.ReadTextureSettings(settings);
             settings.spriteAlignment = (int)SpriteAlignment.Custom;
@@ -171,6 +175,7 @@ namespace SpriteLab.RiggingV1.Editor
             for (var i = 0; i < expressions.Length; i++)
             {
                 var expression = expressions[i];
+                if (!string.IsNullOrEmpty(expression.variantOf)) continue;
                 var order = layerOrder.TryGetValue("expression:" + expression.id, out var savedOrder) ? savedOrder : 1000 + i;
                 var renderer = CreateLayer(root.transform, assetRoot, expression, order, new Vector2(0.5f, 0.5f), manifest.canvas);
                 if (expression.id == "eye_open_original") eyesOpen.Add(renderer);

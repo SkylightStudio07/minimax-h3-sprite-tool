@@ -1,0 +1,17 @@
+.image-next-actions{margin:14px 0;padding:15px;border:1px solid var(--primary-soft-2);border-radius:13px;background:var(--surface-2);container-type:inline-size;container-name:image-next}
+.image-next-actions>h3{font-size:13px;line-height:1.5;font-weight:750;margin:0 0 11px;color:var(--text)}.image-next-grid{display:grid;grid-template-columns:1fr;gap:9px}
+.image-next-action{--next-color:var(--sprite-text);--next-soft:var(--sprite-soft);display:flex;align-items:center;gap:11px;width:100%;min-height:76px;padding:13px 12px;text-align:left;border:1px solid var(--next-color);border-radius:10px;background:var(--next-soft);color:var(--text);font:inherit;cursor:pointer;transition:box-shadow .15s,transform .15s}
+.image-next-action[data-next-action=rig]{--next-color:var(--rig-text);--next-soft:var(--rig-soft)}.image-next-action[data-next-action=face]{--next-color:var(--warning-text);--next-soft:var(--warning-soft)}
+.image-next-action>svg{width:26px;height:26px;flex:none;fill:none;stroke:var(--next-color);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.image-next-action>span:not(.image-next-arrow){display:block;min-width:0;flex:1}.image-next-action strong{display:block;font-size:13px;line-height:1.5;font-weight:750;color:var(--next-color)}.image-next-action small{display:block;font-size:11px;line-height:1.55;font-weight:400;color:var(--text-2);margin-top:3px}.image-next-arrow{color:var(--next-color);font-size:18px;flex:none}.image-next-action:hover:not(:disabled){box-shadow:0 3px 12px #0001;transform:translateY(-1px)}.image-next-action:focus-visible{outline:3px solid var(--next-color);outline-offset:3px}.image-next-action:disabled{opacity:.5;cursor:wait}
+@container image-next (min-width:500px){.image-next-grid{grid-template-columns:repeat(var(--next-count),minmax(0,1fr))}.image-next-action{min-height:100px;align-items:flex-start}.image-next-action>svg{width:22px;height:22px}.image-next-arrow{display:none}}
+/* The selected image and its next steps are both visible in a wide workspace. */
+body[data-asset-studio=image] .creation-output{container-type:inline-size;container-name:image-result}
+html.creation-layout body[data-asset-studio=image] .creation-output .creation-page[data-display=gallery] #results>article>img{max-height:380px}
+@container image-result (min-width:720px){
+ html.creation-layout .creation-page[data-display=stage] #results>article:has(>.image-next-actions){display:grid;grid-template-columns:minmax(0,1fr) 270px;grid-template-rows:max-content max-content 1fr;column-gap:20px;align-content:start;align-items:start}
+ html.creation-layout .creation-page[data-display=stage] #results>article:has(>.image-next-actions)>img{grid-column:1;grid-row:1/4;height:calc(100dvh - 300px);max-height:none;min-height:300px}
+ html.creation-layout .creation-page[data-display=stage] #results>article>.image-next-actions{grid-column:2;grid-row:1;margin:0 0 12px}
+ html.creation-layout .creation-page[data-display=stage] #results>article>p{grid-column:2;grid-row:2;margin:0 0 12px}
+ html.creation-layout .creation-page[data-display=stage] #results>article>.actions{grid-column:2;grid-row:3;align-content:start;align-self:start}
+}
+@media(prefers-reduced-motion:reduce){.image-next-action{transition:none}.image-next-action:hover:not(:disabled){transform:none}}

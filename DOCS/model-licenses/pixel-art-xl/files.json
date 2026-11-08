@@ -1,0 +1,18 @@
+[
+  {
+    "repo": "stabilityai/stable-diffusion-xl-base-1.0",
+    "revision": "462165984030d82259a11f4367a4eed129e94a7b",
+    "filename": "sd_xl_base_1.0_0.9vae.safetensors",
+    "size": 6938078334,
+    "sha256": "e6bb9ea85bbf7bf6478a7c6d18b71246f22e95d41bcdd80ed40aa212c33cfeff",
+    "target": "checkpoints/sd_xl_base_1.0_0.9vae.safetensors"
+  },
+  {
+    "repo": "nerijs/pixel-art-xl",
+    "revision": "8bf4a4d9ea283e00a51fafda8e0539f8248ea037",
+    "filename": "pixel-art-xl.safetensors",
+    "size": 170543052,
+    "sha256": "4234637cb80c998f41e348e6a6cb6bc20d8d038b2b0f256b6129b3b5e353eef7",
+    "target": "loras/pixel/pixel-art-xl.safetensors"
+  }
+]

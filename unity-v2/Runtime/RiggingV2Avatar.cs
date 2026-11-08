@@ -10,6 +10,8 @@ namespace SpriteLab.RiggingV2
         [SerializeField, Range(0f, 3f)] private float headFollowDegrees = 0.45f;
         [SerializeField, Range(0f, 0.03f)] private float breathingScale = 0.008f;
         [SerializeField, Range(0.1f, 3f)] private float idleSpeed = 0.8f;
+        [Tooltip("상체(spine 아래)가 위아래로 오르내리는 폭 (월드 단위, 100px = 1)")]
+        [SerializeField, Range(0f, 0.2f)] private float bodyBob;
 
         [SerializeField] private Transform hips;
         [SerializeField] private Transform spine;
@@ -23,6 +25,7 @@ namespace SpriteLab.RiggingV2
         [SerializeField] private Transform legRight;
 
         private Quaternion spineRest;
+        private Vector3 spinePosition;
         private Quaternion chestRest;
         private Quaternion neckRest;
         private Quaternion headRest;
@@ -50,11 +53,22 @@ namespace SpriteLab.RiggingV2
             CachePose();
         }
 
+        public void ApplyIdleSettings(bool enabled, float bodySway, float headFollow, float breathing, float speed, float bob = 0f)
+        {
+            bodyBob = Mathf.Max(0f, bob);
+            automaticIdle = enabled;
+            bodySwayDegrees = Mathf.Max(0f, bodySway);
+            headFollowDegrees = Mathf.Max(0f, headFollow);
+            breathingScale = Mathf.Max(0f, breathing);
+            idleSpeed = Mathf.Max(0.01f, speed);
+        }
+
         private void Awake() => CachePose();
 
         private void CachePose()
         {
             spineRest = spine ? spine.localRotation : Quaternion.identity;
+            spinePosition = spine ? spine.localPosition : Vector3.zero;
             chestRest = chest ? chest.localRotation : Quaternion.identity;
             neckRest = neck ? neck.localRotation : Quaternion.identity;
             headRest = head ? head.localRotation : Quaternion.identity;
@@ -72,7 +86,12 @@ namespace SpriteLab.RiggingV2
             var phase = Time.time * idleSpeed;
             var sway = Mathf.Sin(phase) * bodySwayDegrees;
             var breath = (Mathf.Sin(phase * 1.7f - 0.8f) + 1f) * 0.5f;
-            if (spine) spine.localRotation = spineRest * Quaternion.Euler(0f, 0f, sway * 0.45f);
+            if (spine)
+            {
+                spine.localRotation = spineRest * Quaternion.Euler(0f, 0f, sway * 0.45f);
+                // 숨쉬기 리듬에 맞춰 상체가 살짝 오르내린다
+                spine.localPosition = spinePosition + new Vector3(0f, (breath - 0.5f) * 2f * bodyBob, 0f);
+            }
             if (chest)
             {
                 chest.localRotation = chestRest * Quaternion.Euler(0f, 0f, sway);

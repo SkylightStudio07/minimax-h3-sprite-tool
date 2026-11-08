@@ -7,12 +7,15 @@ import io
 import base64
 import binascii
 import math
+import re
 import os
 from pathlib import Path
 import shutil
 import subprocess
 import tempfile
 import zipfile
+import rigging_bones
+import rigging_animation
 
 from PIL import Image, ImageChops, ImageDraw
 
@@ -56,6 +59,30 @@ def validate_layer_order(manifest: dict, order: object) -> list[str]:
     return list(order)
 
 
+def validate_layer_visibility(manifest: dict, visibility: object) -> dict[str, bool]:
+    """Validate the editor's persisted layer visibility overrides.
+
+    Visibility is optional for backwards compatibility.  The editor sends a
+    complete snapshot, but accepting a partial mapping lets older clients keep
+    working while retaining the existing values for omitted layers.
+    """
+    records = dict(layer_records(manifest))
+    current = manifest.get("layerVisibility")
+    result = {}
+    if isinstance(current, dict):
+        result = {key: value for key, value in current.items()
+                  if key in records and isinstance(value, bool)}
+    if visibility is None:
+        return result
+    if not isinstance(visibility, dict):
+        raise ValueError("레이어 표시 상태 형식을 확인하세요.")
+    for key, value in visibility.items():
+        if not isinstance(key, str) or key not in records or not isinstance(value, bool):
+            raise ValueError("레이어 표시 상태를 확인하세요.")
+        result[key] = value
+    return result
+
+
 def validate_operations(manifest: dict, operations: object) -> tuple[list[dict], list[str]]:
     if not isinstance(operations, list):
         raise ValueError("편집 작업 형식을 확인하세요.")
@@ -68,10 +95,68 @@ def validate_operations(manifest: dict, operations: object) -> tuple[list[dict],
     edited: list[str] = []
     point_count = 0
     merged_sources: set[str] = set()
+    pending_rig = next((item.get('config') for item in reversed(operations) if isinstance(item, dict) and item.get('kind') == 'rig_config'), None)
     for operation in operations:
-        if not isinstance(operation, dict) or operation.get("kind", "erase") not in ("erase", "restore", "source_restore", "merge"):
+        if not isinstance(operation, dict) or operation.get("kind", "erase") not in ("erase", "restore", "source_restore", "merge", "variant_create", "variant_apply", "variant_png", "layer_png", "paint", "rig_config", "rig_animation"):
             raise ValueError("지원하지 않는 편집 작업입니다.")
         kind = operation.get("kind", "erase")
+        if kind == 'layer_png':
+            key = operation.get('layerKey')
+            record = parts.get(key) if isinstance(key, str) else None
+            import rigging_regenerate
+            if not record or not rigging_regenerate.eligible(record):
+                raise ValueError('감긴 눈·입 차분 또는 object 장비 레이어를 선택하세요.')
+            geometry = {k: operation.get(k) for k in ('left','top','width','height')}
+            if (any(type(v) is not int for v in geometry.values()) or
+                min(geometry['left'],geometry['top']) < 0 or min(geometry['width'],geometry['height']) < 1 or
+                geometry['left']+geometry['width'] > width or geometry['top']+geometry['height'] > height):
+                raise ValueError('재생성 레이어 위치와 크기를 확인하세요.')
+            image = variant_png(operation.get('imageData'), geometry, manifest)
+            if not image.getchannel('A').getbbox():
+                raise ValueError('빈 레이어는 적용할 수 없습니다.')
+            image.close()
+            record = dict(record, **geometry)
+            parts[key] = record
+            normalized.append(dict(kind=kind,layerId=key,imageData=operation['imageData'],**geometry))
+            edited.append(record['id'])
+            continue
+        if kind == 'rig_animation':
+            authored = pending_rig if pending_rig is not None else operation.get('rig')
+            rig = rigging_bones.validate(authored, manifest) if authored is not None else rigging_bones.get_rig(manifest)
+            normalized.append({'kind':kind, 'rig':rigging_bones.validate(rig, manifest), 'config':rigging_animation.validate(operation.get('config'), rig, manifest['canvas'])})
+            continue
+        if kind == "rig_config":
+            normalized.append({"kind": kind, "config": rigging_bones.validate(operation.get("config"), manifest)})
+            continue
+        if kind == "variant_create":
+            target_key, variant_id, name = operation.get("targetKey"), operation.get("id"), operation.get("name")
+            target = parts.get(target_key) if isinstance(target_key, str) else None
+            if not target or target.get("variantOf") or not (target_key.startswith("expression:") or any(word in target["id"] for word in ("eye", "mouth", "brow"))):
+                raise ValueError("눈·입·눈썹 레이어를 선택하세요.")
+            if not isinstance(variant_id, str) or not re.fullmatch(r"variant_[a-z0-9_]{1,60}", variant_id) or "expression:" + variant_id in parts:
+                raise ValueError("차분 ID를 확인하세요.")
+            if not isinstance(name, str) or not name.strip() or len(name) > 60:
+                raise ValueError("차분 이름은 1~60자로 입력하세요.")
+            record = variant_record(target, target_key, variant_id, name.strip(), manifest)
+            parts["expression:" + variant_id] = record
+            normalized.append({"kind": kind, "record": record, "copy": operation.get("copy") is True})
+            edited.append(variant_id)
+            continue
+        if kind in ("variant_apply", "variant_png"):
+            key = operation.get("layerKey")
+            record = parts.get(key) if isinstance(key, str) else None
+            if not record or not record.get("variantOf"):
+                raise ValueError("표정 차분을 선택하세요.")
+            clean = {"kind": kind, "layerId": key}
+            if kind == "variant_png":
+                data = operation.get("imageData")
+                image = variant_png(data, record, manifest)
+                clean["imageData"] = data
+                image.close()
+            normalized.append(clean)
+            if record["id"] not in edited:
+                edited.append(record["id"])
+            continue
         if kind == "merge":
             source_key = operation.get("sourceLayerKey")
             target_key = operation.get("targetLayerKey")
@@ -127,10 +212,50 @@ def validate_operations(manifest: dict, operations: object) -> tuple[list[dict],
             clean_points.append({"x": float(x), "y": float(y), "p": float(pressure)})
         normalized.append({"kind": kind, "layerId": layer_id, "recoveryType": recovery_type,
                            "size": float(size), "points": clean_points})
+        if kind == "paint":
+            color = operation.get("color")
+            if not parts[layer_id].get("variantOf") or not isinstance(color, str) or not re.fullmatch(r"#[0-9a-fA-F]{6}", color):
+                raise ValueError("색상 브러시는 표정 차분에서 사용하세요.")
+            normalized[-1]["color"] = color
         record_id = RECOVERY_TYPES[recovery_type]["id"] if recovery_type else parts[layer_id]["id"]
         if record_id not in edited:
             edited.append(record_id)
     return normalized, edited
+
+
+def variant_record(target: dict, target_key: str, variant_id: str, name: str, manifest: dict) -> dict:
+    width, height = int(manifest["canvas"]["width"]), int(manifest["canvas"]["height"])
+    left, top = max(0, int(target["left"]) - 24), max(0, int(target["top"]) - 24)
+    right, bottom = min(width, int(target["left"]) + int(target["width"]) + 24), min(height, int(target["top"]) + int(target["height"]) + 24)
+    return {"id": variant_id, "file": f"expressions/{variant_id}.png", "runtimeName": "차분 · " + name,
+            "sourceLayerName": "차분 · " + name, "variantOf": target_key,
+            "left": left, "top": top, "width": right-left, "height": bottom-top}
+
+
+def variant_png(data: object, record: dict, manifest: dict) -> Image.Image:
+    if not isinstance(data, str) or not data.startswith("data:image/png;base64,") or len(data) > 28_000_000:
+        raise ValueError("차분은 20MB 이하 PNG로 가져오세요.")
+    try:
+        raw = base64.b64decode(data.split(",", 1)[1], validate=True)
+        with Image.open(io.BytesIO(raw)) as opened:
+            if opened.format != "PNG" or opened.width * opened.height > 40_000_000:
+                raise ValueError("차분 PNG 크기를 확인하세요.")
+            crop_size = (record["width"], record["height"])
+            if opened.size == crop_size:
+                return opened.convert("RGBA")
+            if opened.size == (manifest["canvas"]["width"], manifest["canvas"]["height"]):
+                return opened.convert("RGBA").crop((record["left"], record["top"], record["left"]+crop_size[0], record["top"]+crop_size[1]))
+    except (OSError, binascii.Error, Image.DecompressionBombError):
+        raise ValueError("차분 PNG 파일을 읽을 수 없습니다.")
+    raise ValueError("PNG 크기는 전체 캔버스 또는 선택 차분 크기와 같아야 합니다.")
+
+
+def paint_stroke(image: Image.Image, operation: dict, left: int, top: int) -> Image.Image:
+    mask = erase_stroke(Image.new("RGBA", image.size, (0, 0, 0, 255)), operation, left, top).getchannel("A")
+    mask = ImageChops.invert(mask)
+    ink = Image.new("RGBA", image.size, operation["color"])
+    ink.putalpha(mask)
+    return Image.alpha_composite(image.convert("RGBA"), ink)
 
 
 def _full_layer_image(extracted: Path, record: dict, canvas_size: tuple[int, int]) -> Image.Image:
@@ -152,9 +277,13 @@ def _original_layer_crop(folder: Path, record: dict, layer_key: str,
         if original_record:
             with zipfile.ZipFile(archive_path) as archive, \
                     Image.open(io.BytesIO(archive.read(original_record["file"]))) as opened:
+                original_size = (int(original_manifest['canvas']['width']), int(original_manifest['canvas']['height']))
                 full = Image.new("RGBA", canvas_size)
-                full.alpha_composite(opened.convert("RGBA"),
-                                     (int(original_record["left"]), int(original_record["top"])))
+                ratio_x, ratio_y = canvas_size[0] / original_size[0], canvas_size[1] / original_size[1]
+                image = opened.convert('RGBA')
+                if original_size != canvas_size:
+                    image = image.convert('RGBa').resize((round(image.width * ratio_x), round(image.height * ratio_y)), Image.Resampling.LANCZOS).convert('RGBA')
+                full.alpha_composite(image, (round(original_record['left'] * ratio_x), round(original_record['top'] * ratio_y)))
                 left, top = int(record["left"]), int(record["top"])
                 return full.crop((left, top, left + int(record["width"]), top + int(record["height"])))
     kind = layer_key.split(":", 1)[0]
@@ -293,6 +422,15 @@ def layer_bytes(folder: Path, layer_id: str, original: bool = False, kind: str =
     archive_path = folder / "character-unity-parts.zip"
     original_path = folder / "revisions" / "0000" / "character-unity-parts.zip"
     if original and original_path.is_file():
+        original_manifest_path = folder / 'revisions' / '0000' / 'manifest.json'
+        if original_manifest_path.is_file():
+            old_manifest = json.loads(original_manifest_path.read_text(encoding='utf-8'))
+            if f'{kind}:{layer_id}' in dict(layer_records(old_manifest)):
+                size = (int(manifest['canvas']['width']), int(manifest['canvas']['height']))
+                image = _original_layer_crop(folder, part, f'{kind}:{layer_id}', size)
+                output = io.BytesIO()
+                image.save(output, 'PNG')
+                return output.getvalue()
         archive_path = original_path
     with zipfile.ZipFile(archive_path) as archive:
         try:
@@ -394,6 +532,7 @@ def restore_version(folder: Path, target_revision: int, current_revision: int) -
 
 def _write_psd(extracted: Path, manifest: dict, composite: Image.Image, writer: Path, node: str) -> None:
     payload_layers = []
+    visibility = manifest.get("layerVisibility") if isinstance(manifest.get("layerVisibility"), dict) else {}
     with tempfile.TemporaryDirectory(prefix="rig-edit-psd-", dir=extracted) as raw_name:
         raw = Path(raw_name)
         records = dict(layer_records(manifest))
@@ -409,6 +548,12 @@ def _write_psd(extracted: Path, manifest: dict, composite: Image.Image, writer: 
                 "raw": filename,
                 "left": int(record["left"]), "top": int(record["top"]),
                 "width": image.width, "height": image.height,
+                # Alternate animation slots are hidden in the neutral editor preview,
+                # but must remain available to the PSD-based web rigger.
+                "hidden": bool(record.get("variantOf")) or (
+                    visibility.get(key) is False and not (key.startswith("expression:") and
+                    (record.get("fade") in ("eyeClose", "eyeClose2", "mouthOpen", "mouthClose") or
+                     record["id"].startswith("eye_close") or record["id"] in ("mouth_open", "mouth_close")))),
             })
         (raw / "composite.rgba").write_bytes(composite.tobytes())
         payload = {
@@ -428,11 +573,14 @@ def _write_psd(extracted: Path, manifest: dict, composite: Image.Image, writer: 
 
 
 def save_revision(folder: Path, operations: object, revision: int, writer: Path, node: str | None = None,
-                  layer_order: object = None) -> dict:
+                  layer_order: object = None, layer_visibility: object = None) -> dict:
     folder = folder.resolve()
     manifest = read_manifest(folder)
     normalized, edited = validate_operations(manifest, operations or [])
     current_order = effective_layer_order(manifest)
+    new_variants = [item for item in normalized if item["kind"] == "variant_create"]
+    for item in new_variants:
+        manifest.setdefault("expressions", []).append(item["record"])
     new_recovery_types = []
     existing_ids = {item.get("id") for item in manifest.get("parts", [])}
     for operation in normalized:
@@ -441,7 +589,9 @@ def save_revision(folder: Path, operations: object, revision: int, writer: Path,
             manifest.setdefault("parts", []).append(recovery_record(recovery_type, manifest))
             existing_ids.add(RECOVERY_TYPES[recovery_type]["id"])
             new_recovery_types.append(recovery_type)
-    augmented_order = current_order + ["part:" + RECOVERY_TYPES[item]["id"] for item in new_recovery_types]
+    augmented_order = current_order + ["part:" + RECOVERY_TYPES[item]["id"] for item in new_recovery_types] + ["expression:" + item["record"]["id"] for item in new_variants]
+    current_visibility = validate_layer_visibility(manifest, None)
+    requested_visibility = validate_layer_visibility(manifest, layer_visibility)
     merge_operations = [item for item in normalized if item["kind"] == "merge"]
     archive_path = folder / "character-unity-parts.zip"
     if not archive_path.is_file():
@@ -466,6 +616,7 @@ def save_revision(folder: Path, operations: object, revision: int, writer: Path,
         by_id = dict(layer_records(manifest))
         canvas_size = (int(manifest["canvas"]["width"]), int(manifest["canvas"]["height"]))
         recovery_images = {}
+        variant_originals = {}
         for key, part in by_id.items():
             if not part.get("sourceRecovered"):
                 continue
@@ -474,6 +625,46 @@ def save_revision(folder: Path, operations: object, revision: int, writer: Path,
                 full.alpha_composite(opened.convert("RGBA"), (int(part["left"]), int(part["top"])))
             recovery_images[key] = full
         for operation in normalized:
+            if operation['kind'] == 'layer_png':
+                record = by_id[operation['layerId']]
+                record.update({k:operation[k] for k in ('left','top','width','height')})
+                variant_png(operation['imageData'],record,manifest).save(extracted / record['file'])
+                record.pop('activeVariant',None)
+                if record.get('sourceRecovered'):
+                    recovery_images[operation['layerId']] = _full_layer_image(extracted,record,canvas_size)
+                continue
+            if operation['kind'] == 'rig_animation':
+                manifest['rigAnimations'] = operation['config']
+                manifest['rigEditor'] = operation['rig']
+                continue
+            if operation["kind"] == "rig_config":
+                manifest['rigEditor'] = operation['config']
+                continue
+            if operation["kind"] == "variant_create":
+                record = operation["record"]
+                image = Image.new("RGBA", (record["width"], record["height"]))
+                if operation["copy"]:
+                    original = _full_layer_image(extracted, by_id[record["variantOf"]], canvas_size)
+                    image = original.crop((record["left"], record["top"], record["left"]+record["width"], record["top"]+record["height"]))
+                (extracted / record["file"]).parent.mkdir(parents=True, exist_ok=True)
+                image.save(extracted / record["file"])
+                variant_originals[record["id"]] = image.copy()
+                continue
+            if operation["kind"] == "variant_apply":
+                variant = by_id[operation["layerId"]]
+                slot = by_id[variant["variantOf"]]
+                with Image.open(extracted / variant["file"]) as image:
+                    if not image.getchannel("A").getbbox():
+                        raise ValueError("비어 있는 차분은 적용할 수 없습니다.")
+                    image.save(extracted / slot["file"])
+                slot.update({key: variant[key] for key in ("left", "top", "width", "height")})
+                slot["activeVariant"] = variant["id"]
+                edited.append(slot["id"])
+                continue
+            if operation["kind"] == "variant_png":
+                record = by_id[operation["layerId"]]
+                variant_png(operation["imageData"], record, manifest).save(extracted / record["file"])
+                continue
             if operation["kind"] == "merge":
                 continue
             part = by_id[operation["layerId"]]
@@ -484,7 +675,10 @@ def save_revision(folder: Path, operations: object, revision: int, writer: Path,
                     recovery_images[operation["layerId"]] = erase_stroke(opened, operation, 0, 0)
                 elif operation["kind"] == "source_restore":
                     with Image.open(source_reference_path(folder, manifest)) as original:
-                        recovery_images[operation["layerId"]] = restore_stroke(opened, original, operation, 0, 0)
+                        fitted = original.convert('RGBA')
+                        if fitted.size != canvas_size:
+                            fitted = fitted.convert('RGBa').resize(canvas_size, Image.Resampling.LANCZOS).convert('RGBA')
+                        recovery_images[operation["layerId"]] = restore_stroke(opened, fitted, operation, 0, 0)
                 else:
                     original_crop = _original_layer_crop(folder, part, operation["layerId"], canvas_size)
                     original = Image.new("RGBA", canvas_size)
@@ -494,10 +688,14 @@ def save_revision(folder: Path, operations: object, revision: int, writer: Path,
             with Image.open(target) as opened:
                 if operation["kind"] == "erase":
                     changed = erase_stroke(opened, operation, int(part["left"]), int(part["top"]))
+                elif operation["kind"] == "paint":
+                    changed = paint_stroke(opened, operation, int(part["left"]), int(part["top"]))
                 else:
-                    original = _original_layer_crop(folder, part, operation["layerId"], canvas_size)
+                    original = variant_originals.get(part["id"])
+                    if original is None:
+                        original = _original_layer_crop(folder, part, operation["layerId"], canvas_size)
                     changed = restore_stroke(opened, original, operation, int(part["left"]), int(part["top"]))
-            if not changed.getchannel("A").getbbox():
+            if not part.get("variantOf") and not changed.getchannel("A").getbbox():
                 raise ValueError(f'레이어 "{part["runtimeName"]}" 전체가 지워집니다. 레이어 숨김 기능을 사용하세요.')
             changed.save(target)
 
@@ -533,9 +731,11 @@ def save_revision(folder: Path, operations: object, revision: int, writer: Path,
             manifest["editedParts"] = [item for item in manifest.get("editedParts", []) if item != source["id"]]
             by_id.pop(source_key, None)
             augmented_order = [key for key in augmented_order if key != source_key]
+            requested_visibility.pop(source_key, None)
 
         requested_order = augmented_order if layer_order is None else validate_layer_order(manifest, layer_order)
-        if not normalized and requested_order == current_order:
+        visibility_changed = requested_visibility != current_visibility
+        if not normalized and requested_order == current_order and not visibility_changed:
             raise ValueError("저장할 편집 작업이 없습니다.")
 
         width, height = int(manifest["canvas"]["width"]), int(manifest["canvas"]["height"])
@@ -543,6 +743,8 @@ def save_revision(folder: Path, operations: object, revision: int, writer: Path,
         records = dict(layer_records(manifest))
         for key in requested_order:
             expression = records[key]
+            if expression.get("variantOf"):
+                continue
             if key.startswith("part:"):
                 visible = True
             else:
@@ -551,6 +753,8 @@ def save_revision(folder: Path, operations: object, revision: int, writer: Path,
                     (manifest.get("sourceMouthState") == "closed" and expression.get("id") == "mouth_close") or
                     (manifest.get("sourceMouthState") == "slightly-open" and expression.get("id") == "mouth_open")
                 )
+            if key in requested_visibility:
+                visible = requested_visibility[key]
             if not visible:
                 continue
             with Image.open(extracted / expression["file"]) as opened:
@@ -558,10 +762,22 @@ def save_revision(folder: Path, operations: object, revision: int, writer: Path,
         next_revision = revision + 1
         manifest["editRevision"] = next_revision
         manifest["layerOrder"] = requested_order
+        manifest["layerVisibility"] = requested_visibility
         manifest["editedParts"] = sorted(set(manifest.get("editedParts", [])) | set(edited))
+        if manifest.get('rigEditor'):
+            manifest['rigEditor'] = rigging_bones.reconcile(manifest['rigEditor'], manifest)
+        if manifest.get('rigAnimations'):
+            rig = rigging_bones.get_rig(manifest)
+            manifest['rigAnimations'] = rigging_animation.reconcile(manifest['rigAnimations'], rig)
         (extracted / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
         composite.save(extracted / "composite.png")
         _write_psd(extracted, manifest, composite, writer, executable)
+        # Refresh packaged importer sources so older results understand stored variants.
+        unity_root = Path(__file__).parent / "unity-package"
+        for source in unity_root.rglob("*.cs"):
+            target = extracted / "Unity" / source.relative_to(unity_root)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, target)
 
         rebuilt = Path(temp_name) / "character-unity-parts.zip"
         with zipfile.ZipFile(rebuilt, "w", compression=zipfile.ZIP_DEFLATED) as archive:

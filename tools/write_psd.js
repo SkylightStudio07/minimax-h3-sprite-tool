@@ -46,6 +46,7 @@ const psd = {
     bottom: layer.top + layer.height,
     blendMode: "normal",
     opacity: 1,
+    hidden: Boolean(layer.hidden),
     imageData: imageData(layer),
   })),
 };

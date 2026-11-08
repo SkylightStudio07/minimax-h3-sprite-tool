@@ -110,6 +110,13 @@ class RiggingEditorTests(unittest.TestCase):
             self.assertEqual(reordered["manifest"]["layerOrder"], ["part:headwear", "part:face"])
             self.assertEqual(Image.open(folder / "composite.png").convert("RGBA").getpixel((25, 25))[:3], (240, 170, 160))
 
+            visibility = editor.save_revision(
+                folder, [], 4, Path(__file__).parent / "tools" / "write_psd.js",
+                layer_visibility={"part:headwear": False},
+            )
+            self.assertEqual(visibility["manifest"]["layerVisibility"], {"part:headwear": False})
+            self.assertEqual(Image.open(folder / "composite.png").convert("RGBA").getpixel((7, 7))[3], 0)
+
     def test_layer_order_rejects_missing_and_duplicate_layers(self):
         manifest = {"parts": [{"id": "face"}], "expressions": [{"id": "eyebrow"}]}
         self.assertEqual(editor.effective_layer_order(manifest), ["part:face", "expression:eyebrow"])

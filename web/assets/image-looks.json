@@ -1,0 +1,1873 @@
+{
+  "version": 4,
+  "groups": [
+    {
+      "id": "soya",
+      "name": "Soya 전체 · 기본 워크플로"
+    },
+    {
+      "id": "soya-cel",
+      "name": "Soya · 셀 채색"
+    },
+    {
+      "id": "soya-line",
+      "name": "Soya · 선화·원화"
+    },
+    {
+      "id": "soya-game",
+      "name": "Soya · 게임 일러스트"
+    },
+    {
+      "id": "soya-paint",
+      "name": "Soya · 일러스트·질감"
+    },
+    {
+      "id": "artist",
+      "name": "혼합 화풍 · Anima"
+    },
+    {
+      "id": "flat",
+      "name": "플랫 컬러"
+    },
+    {
+      "id": "line",
+      "name": "선화"
+    },
+    {
+      "id": "anime",
+      "name": "애니메이션"
+    },
+    {
+      "id": "paint",
+      "name": "회화·채색"
+    },
+    {
+      "id": "mono",
+      "name": "흑백·인쇄"
+    },
+    {
+      "id": "game",
+      "name": "게임 그래픽"
+    },
+    {
+      "id": "artist-study",
+      "name": "작가 태그 실험 · 비교용"
+    },
+    {
+      "id": "rpg-sprite",
+      "name": "RPG 전투 스프라이트 · Illustrious"
+    }
+  ],
+  "looks": [
+    {
+      "id": "flat-paper",
+      "group": "flat",
+      "name": "종이 오리기",
+      "model": "anima-turbo",
+      "styleId": "flat-color",
+      "styleStrength": 0.8,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Paper cutout illustration, large interlocking solid color shapes, minimal interior detail, no outlines, sharply separated color areas.",
+      "negative": "gradients, realistic shading, detailed texture",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/flat-paper.webp",
+      "triggers": [
+        "flat color",
+        "no lineart"
+      ],
+      "note": "종이 질감보다 색면 단순화가 두드러지는 편이에요.",
+      "listed": true
+    },
+    {
+      "id": "flat-pastel",
+      "group": "flat",
+      "name": "파스텔 플랫",
+      "model": "anima-turbo",
+      "styleId": "flat-color",
+      "styleStrength": 0.55,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Pastel flat-color character illustration, soft muted palette, broad unshaded color areas, delicate colored outlines.",
+      "negative": "dramatic lighting, dark shadows, high saturation",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/flat-pastel.webp",
+      "triggers": [
+        "flat color"
+      ],
+      "listed": true
+    },
+    {
+      "id": "flat-bold",
+      "group": "flat",
+      "name": "원색 플랫",
+      "model": "anima-turbo",
+      "styleId": "flat-color",
+      "styleStrength": 0.7,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Bold flat-color illustration, vivid primary colors, large graphic shapes, two-tone shading, strong readable silhouette.",
+      "negative": "soft gradients, photorealism, muted palette",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/flat-bold.webp",
+      "triggers": [
+        "flat color"
+      ],
+      "listed": true
+    },
+    {
+      "id": "flat-vector",
+      "group": "flat",
+      "name": "벡터 그래픽",
+      "model": "anima-turbo",
+      "styleId": "flat-color",
+      "styleStrength": 0.85,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Vector-like character illustration, smooth geometric shapes, solid color fills, crisp edges, minimal shading, no texture.",
+      "negative": "brush texture, sketch, gradients",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/flat-vector.webp",
+      "triggers": [
+        "flat color",
+        "no lineart"
+      ],
+      "note": "벡터풍 래스터 PNG이며 실제 벡터 파일은 아니에요.",
+      "listed": true
+    },
+    {
+      "id": "flat-cel",
+      "group": "flat",
+      "name": "두 단계 셀 채색",
+      "model": "anima-turbo",
+      "styleId": "flat-color",
+      "styleStrength": 0.35,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Clean anime character illustration, exactly two clear tonal levels per material, sharp cel shadows, readable black outlines.",
+      "negative": "airbrush shading, complex gradients, painterly",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/flat-cel.webp",
+      "triggers": [
+        "flat color"
+      ],
+      "listed": true
+    },
+    {
+      "id": "flat-muted",
+      "group": "flat",
+      "name": "차분한 제한 팔레트",
+      "model": "anima-turbo",
+      "styleId": "flat-color",
+      "styleStrength": 0.6,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Flat illustration using a restrained palette of muted earth colors, economical shapes, minimal highlights, matte surfaces.",
+      "negative": "neon colors, glossy highlights, gradients",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/flat-muted.webp",
+      "triggers": [
+        "flat color"
+      ],
+      "listed": true
+    },
+    {
+      "id": "line-fine",
+      "group": "line",
+      "name": "섬세한 얇은 선",
+      "model": "anima-turbo",
+      "styleId": "smooth-lines",
+      "styleStrength": 0.25,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Delicate thin ink outlines, fine controlled line weight, subtle pale coloring, bright even lighting, precise anime drawing.",
+      "negative": "deep shadows, thick outlines, glossy surfaces",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/line-fine.webp",
+      "note": "선화 LoRA의 영향으로 명암이 함께 강해질 수 있어요.",
+      "listed": true
+    },
+    {
+      "id": "line-bold",
+      "group": "line",
+      "name": "굵은 외곽선",
+      "model": "animagine-xl",
+      "styleId": "",
+      "styleStrength": 0,
+      "steps": 28,
+      "cfg": 5,
+      "prompt": "bold thick outlines, anime style, clean lineart, simplified interior lines, flat shading, high contrast",
+      "negative": "thin outlines, sketch, painterly",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/line-bold.webp",
+      "listed": true
+    },
+    {
+      "id": "line-pencil",
+      "group": "line",
+      "name": "연필 스케치",
+      "model": "anima-turbo",
+      "styleId": "",
+      "styleStrength": 0,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Graphite pencil character drawing, lively construction strokes, fine crosshatching, lightly shaded forms, visible pencil texture.",
+      "negative": "digital painting, glossy surfaces, solid black shadows",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/line-pencil.webp",
+      "note": "캐릭터 설명에 지정한 색상이 남는 컬러 스케치가 될 수 있어요.",
+      "listed": true
+    },
+    {
+      "id": "line-ink",
+      "group": "line",
+      "name": "잉크 해칭",
+      "model": "anima-turbo",
+      "styleId": "smooth-lines",
+      "styleStrength": 0.3,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Pen-and-ink character drawing, expressive tapered lines, crosshatching following the form, restrained color washes.",
+      "negative": "airbrush, 3d render, glossy skin",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/line-ink.webp",
+      "listed": true
+    },
+    {
+      "id": "line-color",
+      "group": "line",
+      "name": "컬러 라인",
+      "model": "animagine-xl",
+      "styleId": "",
+      "styleStrength": 0,
+      "steps": 28,
+      "cfg": 5,
+      "prompt": "colored outlines, delicate lineart, pastel colors, soft cel shading, anime illustration",
+      "negative": "black outlines, heavy shadows, monochrome",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/line-color.webp",
+      "listed": true
+    },
+    {
+      "id": "line-brush",
+      "group": "line",
+      "name": "붓펜 선화",
+      "model": "anima-turbo",
+      "styleId": "",
+      "styleStrength": 0,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Expressive brush-pen illustration, strong variation between thick and thin strokes, dry-brush accents, sparse color fills.",
+      "negative": "uniform thin lines, photorealism, airbrush",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/line-brush.webp",
+      "listed": true
+    },
+    {
+      "id": "anime-clean",
+      "group": "anime",
+      "name": "현대 애니 셀",
+      "model": "animagine-xl",
+      "styleId": "",
+      "styleStrength": 0,
+      "steps": 28,
+      "cfg": 5,
+      "prompt": "anime screencap style, clean lineart, cel shading, balanced saturation, detailed eyes, clear silhouette",
+      "negative": "painterly, photorealistic, sketch",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/anime-clean.webp",
+      "listed": true
+    },
+    {
+      "id": "anime-retro",
+      "group": "anime",
+      "name": "90년대 셀 애니",
+      "model": "animagine-xl",
+      "styleId": "",
+      "styleStrength": 0,
+      "steps": 28,
+      "cfg": 5,
+      "prompt": "1990s anime style, traditional cel shading, muted colors, slightly thick outlines, restrained highlights",
+      "negative": "3d, glossy modern rendering, photorealistic",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/anime-retro.webp",
+      "listed": true
+    },
+    {
+      "id": "anime-soft",
+      "group": "anime",
+      "name": "부드러운 애니",
+      "model": "animagine-xl",
+      "styleId": "",
+      "styleStrength": 0,
+      "steps": 28,
+      "cfg": 5,
+      "prompt": "anime style, soft shading, delicate lineart, gentle highlights, pastel palette, bright lighting",
+      "negative": "harsh shadows, heavy outlines, high contrast",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/anime-soft.webp",
+      "listed": true
+    },
+    {
+      "id": "anime-vivid",
+      "group": "anime",
+      "name": "선명한 키 비주얼",
+      "model": "anima-turbo",
+      "styleId": "smooth-lines",
+      "styleStrength": 0.35,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Polished anime promotional illustration, vivid colors, crisp highlights, detailed eyes, clear linework, bright face lighting.",
+      "negative": "underexposed, muddy colors, photorealism",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/anime-vivid.webp",
+      "note": "얼굴 명암이 강하게 나올 수 있어요. 필요하면 LoRA 강도를 낮춰 주세요.",
+      "listed": true
+    },
+    {
+      "id": "anime-matte",
+      "group": "anime",
+      "name": "무광 애니 채색",
+      "model": "anima-turbo",
+      "styleId": "flat-color",
+      "styleStrength": 0.25,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Anime illustration with matte surfaces, restrained saturation, clean outlines, subtle cel shading, no glossy reflections.",
+      "negative": "glossy skin, specular highlights, photorealism",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/anime-matte.webp",
+      "triggers": [
+        "flat color"
+      ],
+      "listed": true
+    },
+    {
+      "id": "anime-dramatic",
+      "group": "anime",
+      "name": "강한 명암 애니",
+      "model": "anima-turbo",
+      "styleId": "smooth-lines",
+      "styleStrength": 0.55,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Dramatic anime character illustration, strong directional lighting, deep cel shadows, sharp highlights, intricate linework.",
+      "negative": "flat lighting, pastel palette, photorealism",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/anime-dramatic.webp",
+      "note": "얼굴과 의상에 깊은 그림자가 생기는 조합이에요.",
+      "listed": true
+    },
+    {
+      "id": "paint-gouache",
+      "group": "paint",
+      "name": "불투명 과슈",
+      "model": "anima-turbo",
+      "styleId": "painterly",
+      "styleStrength": 0.55,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Gouache character painting, opaque matte brush strokes, layered warm colors, softly broken edges, hand-painted texture.",
+      "negative": "glossy surfaces, vector art, sharp digital gradients",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/paint-gouache.webp",
+      "note": "현재 조합은 반실사에 가까운 얼굴과 물감 질감이 나타나는 편이에요.",
+      "listed": false,
+      "unlistedReason": "사용자 선호에 따라 서양 카툰·반실사 계열을 추천 목록에서 제외"
+    },
+    {
+      "id": "paint-water",
+      "group": "paint",
+      "name": "옅은 수채화",
+      "model": "anima-turbo",
+      "styleId": "painterly",
+      "styleStrength": 0.3,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Watercolor character illustration, translucent color washes inside the character, delicate edges, pale pigment variation.",
+      "negative": "opaque thick paint, heavy black outlines, dark shading",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/paint-water.webp",
+      "note": "물감 질감보다 각진 채색이 강해질 수 있어요.",
+      "listed": true
+    },
+    {
+      "id": "paint-oil",
+      "group": "paint",
+      "name": "두꺼운 유화",
+      "model": "anima-turbo",
+      "styleId": "painterly",
+      "styleStrength": 0.8,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Oil-painted character illustration, visible thick brushwork, rich layered colors, painterly planes, impasto-like texture.",
+      "negative": "vector art, flat fills, uniform outlines",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/paint-oil.webp",
+      "note": "현재 조합은 반실사에 가까운 얼굴과 물감 질감이 나타나는 편이에요.",
+      "listed": false,
+      "unlistedReason": "사용자 선호에 따라 서양 카툰·반실사 계열을 추천 목록에서 제외"
+    },
+    {
+      "id": "paint-soft",
+      "group": "paint",
+      "name": "부드러운 디지털 채색",
+      "model": "anima-turbo",
+      "styleId": "painterly",
+      "styleStrength": 0.25,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Softly painted anime character, gently blended shading, fine facial details, subtle brushwork, soft material transitions.",
+      "negative": "heavy brush marks, hard posterization, photorealism",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/paint-soft.webp",
+      "listed": true
+    },
+    {
+      "id": "paint-faceted",
+      "group": "paint",
+      "name": "각진 색면 채색",
+      "model": "anima-turbo",
+      "styleId": "painterly",
+      "styleStrength": 0.65,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Painterly character illustration built from angular color planes, visible broad brush strokes, faceted shading, rich accents.",
+      "negative": "smooth airbrush, vector art, photorealism",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/paint-faceted.webp",
+      "note": "현재 조합은 반실사에 가까운 얼굴과 물감 질감이 나타나는 편이에요.",
+      "listed": false,
+      "unlistedReason": "사용자 선호에 따라 서양 카툰·반실사 계열을 추천 목록에서 제외"
+    },
+    {
+      "id": "paint-story",
+      "group": "paint",
+      "name": "따뜻한 동화책",
+      "model": "anima-turbo",
+      "styleId": "painterly",
+      "styleStrength": 0.4,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Warm storybook character illustration, gentle textured brushwork, muted natural colors, friendly simplified shapes.",
+      "negative": "harsh contrast, glossy materials, photorealism",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/paint-story.webp",
+      "note": "현재 조합은 반실사에 가까운 얼굴과 물감 질감이 나타나는 편이에요.",
+      "listed": false,
+      "unlistedReason": "사용자 선호에 따라 서양 카툰·반실사 계열을 추천 목록에서 제외"
+    },
+    {
+      "id": "mono-manga",
+      "group": "mono",
+      "name": "흑백 만화",
+      "model": "animagine-xl",
+      "styleId": "",
+      "styleStrength": 0,
+      "steps": 28,
+      "cfg": 5,
+      "prompt": "monochrome, black and white, manga illustration, clean ink lines, screentones, sharp black accents",
+      "negative": "color, painterly, blurry lineart",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/mono-manga.webp",
+      "note": "캐릭터 설명의 색상 지시가 남을 수 있어요. 정확한 흑백·두 색 출력을 보장하지 않아요.",
+      "listed": true
+    },
+    {
+      "id": "mono-hatch",
+      "group": "mono",
+      "name": "펜 해칭 흑백",
+      "model": "anima-turbo",
+      "styleId": "",
+      "styleStrength": 0,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Black-and-white pen drawing, fine crosshatching, expressive contour lines, white highlights, grayscale only.",
+      "negative": "color, airbrush, 3d render",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/mono-hatch.webp",
+      "note": "캐릭터 설명의 색상 지시가 남을 수 있어요. 정확한 흑백·두 색 출력을 보장하지 않아요.",
+      "listed": true
+    },
+    {
+      "id": "mono-charcoal",
+      "group": "mono",
+      "name": "목탄 드로잉",
+      "model": "anima-turbo",
+      "styleId": "",
+      "styleStrength": 0,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Monochrome charcoal character drawing, broad soft charcoal shading, expressive rough contours, smudged graphite texture.",
+      "negative": "color, glossy, clean vector lines",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/mono-charcoal.webp",
+      "note": "캐릭터 설명의 색상 지시가 남을 수 있어요. 정확한 흑백·두 색 출력을 보장하지 않아요.",
+      "listed": true
+    },
+    {
+      "id": "mono-duotone",
+      "group": "mono",
+      "name": "두 색 인쇄",
+      "model": "anima-turbo",
+      "styleId": "flat-color",
+      "styleStrength": 0.65,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Duotone printed character illustration using only navy blue and muted orange, bold shapes, subtle halftone inside the figure.",
+      "negative": "rainbow colors, gradients, photorealism",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/mono-duotone.webp",
+      "triggers": [
+        "flat color"
+      ],
+      "note": "캐릭터 설명의 색상 지시가 남을 수 있어요. 정확한 흑백·두 색 출력을 보장하지 않아요.",
+      "listed": true
+    },
+    {
+      "id": "mono-woodcut",
+      "group": "mono",
+      "name": "목판화",
+      "model": "anima-turbo",
+      "styleId": "",
+      "styleStrength": 0,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Black-and-white woodcut character illustration, bold carved shapes, rough carved hatching, strong graphic contrast.",
+      "negative": "soft gradients, color, glossy shading",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/mono-woodcut.webp",
+      "note": "캐릭터 설명의 색상 지시가 남을 수 있어요. 정확한 흑백·두 색 출력을 보장하지 않아요.",
+      "listed": true
+    },
+    {
+      "id": "mono-riso",
+      "group": "mono",
+      "name": "리소 인쇄풍",
+      "model": "anima-turbo",
+      "styleId": "flat-color",
+      "styleStrength": 0.4,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Risograph-style character illustration, two overlapping ink colors, coarse halftone shading inside shapes, slightly offset color edges.",
+      "negative": "photorealism, smooth airbrush, glossy",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/mono-riso.webp",
+      "triggers": [
+        "flat color"
+      ],
+      "note": "캐릭터 설명의 색상 지시가 남을 수 있어요. 정확한 흑백·두 색 출력을 보장하지 않아요.",
+      "listed": true
+    },
+    {
+      "id": "game-chibi",
+      "group": "game",
+      "name": "SD 셀 캐릭터",
+      "model": "anima-turbo",
+      "styleId": "flat-color",
+      "styleStrength": 0.35,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Chibi game character, oversized head and compact body, clear thick outlines, simple cel shading, large readable shapes.",
+      "negative": "realistic proportions, tiny details, photorealism",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/game-chibi.webp",
+      "triggers": [
+        "flat color"
+      ],
+      "listed": true
+    },
+    {
+      "id": "game-tactical",
+      "group": "game",
+      "name": "전술 게임 일러스트",
+      "model": "anima-turbo",
+      "styleId": "smooth-lines",
+      "styleStrength": 0.4,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Detailed tactical anime game character illustration, precise equipment linework, subdued colors, bright readable face, controlled highlights.",
+      "negative": "underexposed face, messy linework, chibi",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/game-tactical.webp",
+      "note": "얼굴이 어둡게 나올 수 있어요. 강도 0.2~0.4부터 비교하세요.",
+      "listed": true
+    },
+    {
+      "id": "game-fantasy",
+      "group": "game",
+      "name": "판타지 RPG 채색",
+      "model": "anima-turbo",
+      "styleId": "painterly",
+      "styleStrength": 0.45,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Fantasy RPG character illustration, painterly material shading, detailed cloth and metal, elegant controlled edges, rich natural colors.",
+      "negative": "flat vector art, photorealism, chibi",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/game-fantasy.webp",
+      "note": "현재 조합은 반실사에 가까운 얼굴과 물감 질감이 나타나는 편이에요.",
+      "listed": false,
+      "unlistedReason": "사용자 선호에 따라 서양 카툰·반실사 계열을 추천 목록에서 제외"
+    },
+    {
+      "id": "game-sticker",
+      "group": "game",
+      "name": "스티커 캐릭터",
+      "model": "anima-turbo",
+      "styleId": "flat-color",
+      "styleStrength": 0.65,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Cute stylized character sticker art, bold clean outlines, large flat color areas, simplified details, compact readable silhouette, no sticker border.",
+      "negative": "drop shadow, white sticker border, tiny intricate details",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/game-sticker.webp",
+      "triggers": [
+        "flat color"
+      ],
+      "listed": true
+    },
+    {
+      "id": "game-pixel",
+      "group": "game",
+      "name": "픽셀아트풍",
+      "model": "anima-turbo",
+      "styleId": "",
+      "styleStrength": 0,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Pixel-art-inspired game character, visibly blocky hard edges, limited color palette, stepped shading, no smooth gradients.",
+      "negative": "antialiasing, smooth gradients, photorealism",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/game-pixel.webp",
+      "note": "픽셀아트풍이며 일정한 픽셀 격자나 게임용 저해상도를 보장하지 않아요.",
+      "listed": true
+    },
+    {
+      "id": "game-toon",
+      "group": "game",
+      "name": "서양 카툰 셀",
+      "model": "anima-turbo",
+      "styleId": "flat-color",
+      "styleStrength": 0.5,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "Western cartoon character illustration, expressive stylized proportions, thick tapered outlines, flat cel shading, exaggerated readable shapes.",
+      "negative": "realism, delicate manga lineart, glossy rendering",
+      "verification": "동일 설명·시드 실생성 확인 · 실험적",
+      "preview": "assets/image-look-previews/game-toon.webp",
+      "triggers": [
+        "flat color"
+      ],
+      "listed": false,
+      "unlistedReason": "사용자 선호에 따라 서양 카툰·반실사 계열을 추천 목록에서 제외"
+    },
+    {
+      "id": "artist-nardack",
+      "group": "artist-study",
+      "name": "선명한 선 · nardack",
+      "model": "anima-turbo",
+      "styleId": "",
+      "styleStrength": 0,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "@nardack",
+      "negative": "",
+      "verification": "Turbo · 동일 조건 2인물 비교 · 실험적",
+      "preview": "assets/artist-previews/nardack-operator.webp",
+      "previews": [
+        {
+          "url": "assets/artist-previews/nardack-operator.webp",
+          "label": "전술요원"
+        },
+        {
+          "url": "assets/artist-previews/nardack-swordsman.webp",
+          "label": "남성 검사"
+        }
+      ],
+      "note": "이번 표본에서 머리카락 선과 얼굴 표현 차이가 두드러졌어요.",
+      "listed": true,
+      "sources": [
+        "https://huggingface.co/circlestone-labs/Anima/blob/main/README.md",
+        "https://github.com/Moeblack/ComfyUI-AnimaTool/blob/main/wiki/Prompt-Guide.md"
+      ],
+      "experimental": true
+    },
+    {
+      "id": "artist-ask",
+      "group": "artist-study",
+      "name": "깊은 그림자 · ask",
+      "model": "anima-turbo",
+      "styleId": "",
+      "styleStrength": 0,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "@ask \\(askzy\\)",
+      "negative": "",
+      "verification": "Turbo · 동일 조건 2인물 비교 · 실험적",
+      "preview": "assets/artist-previews/ask-operator.webp",
+      "previews": [
+        {
+          "url": "assets/artist-previews/ask-operator.webp",
+          "label": "전술요원"
+        },
+        {
+          "url": "assets/artist-previews/ask-swordsman.webp",
+          "label": "남성 검사"
+        }
+      ],
+      "note": "이번 표본에서 붉은 그림자와 큰 명암 덩어리가 나타났어요.",
+      "listed": true,
+      "sources": [
+        "https://huggingface.co/circlestone-labs/Anima/blob/main/README.md",
+        "https://github.com/Moeblack/ComfyUI-AnimaTool/blob/main/wiki/Prompt-Guide.md"
+      ],
+      "experimental": true
+    },
+    {
+      "id": "artist-ciloranko",
+      "group": "artist-study",
+      "name": "담백한 채색 · ciloranko",
+      "model": "anima-turbo",
+      "styleId": "",
+      "styleStrength": 0,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "@ciloranko",
+      "negative": "",
+      "verification": "Turbo · 동일 조건 2인물 비교 · 실험적",
+      "preview": "assets/artist-previews/ciloranko-operator.webp",
+      "previews": [
+        {
+          "url": "assets/artist-previews/ciloranko-operator.webp",
+          "label": "전술요원"
+        },
+        {
+          "url": "assets/artist-previews/ciloranko-swordsman.webp",
+          "label": "남성 검사"
+        }
+      ],
+      "note": "색과 소품이 바뀔 수 있어요. 은발 입력이 갈색으로 변한 표본이 있어요.",
+      "listed": true,
+      "sources": [
+        "https://huggingface.co/circlestone-labs/Anima/blob/main/README.md",
+        "https://github.com/Moeblack/ComfyUI-AnimaTool/blob/main/wiki/Prompt-Guide.md"
+      ],
+      "experimental": true
+    },
+    {
+      "id": "artist-fkey-jima",
+      "group": "artist-study",
+      "name": "혼합 · fkey + jima",
+      "model": "anima-turbo",
+      "styleId": "",
+      "styleStrength": 0,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "@fkey, @jima",
+      "negative": "",
+      "verification": "Turbo · 동일 조건 2인물 비교 · 실험적",
+      "preview": "assets/artist-previews/fkey-jima-operator.webp",
+      "previews": [
+        {
+          "url": "assets/artist-previews/fkey-jima-operator.webp",
+          "label": "전술요원"
+        },
+        {
+          "url": "assets/artist-previews/fkey-jima-swordsman.webp",
+          "label": "남성 검사"
+        }
+      ],
+      "note": "소품 유지 주의: 무전기 대신 총이 생긴 표본이 있어요.",
+      "listed": true,
+      "sources": [
+        "https://huggingface.co/circlestone-labs/Anima/blob/main/README.md",
+        "https://github.com/Moeblack/ComfyUI-AnimaTool/blob/main/wiki/Prompt-Guide.md"
+      ],
+      "experimental": true
+    },
+    {
+      "id": "mix-tactical",
+      "group": "artist",
+      "name": "차가운 전술 채색",
+      "model": "anima-turbo",
+      "styleId": "",
+      "styleStrength": 0,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "@nardack, @ask \\(askzy\\), restrained cool gray palette, fine controlled linework, two-stage cel shadows, matte fabric, minimal highlights",
+      "negative": "",
+      "verification": "혼합 태그+채색 지시 · 두 인물 생성 확인 · 실험적",
+      "previews": [
+        {
+          "url": "assets/artist-previews/mix-tactical-operator.webp",
+          "label": "전술요원"
+        },
+        {
+          "url": "assets/artist-previews/mix-tactical-swordsman.webp",
+          "label": "남성 검사"
+        }
+      ],
+      "preview": "assets/artist-previews/mix-tactical-operator.webp",
+      "note": "표본에 따라 피부가 지나치게 창백해질 수 있어요.",
+      "listed": true
+    },
+    {
+      "id": "mix-cel",
+      "group": "artist",
+      "name": "담백한 셀 채색",
+      "model": "anima-turbo",
+      "styleId": "",
+      "styleStrength": 0,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "@ciloranko, @jima, clean tapered outlines, restrained saturation, clear cel shading, simple shadow shapes, matte colors",
+      "negative": "",
+      "verification": "혼합 태그+채색 지시 · 두 인물 생성 확인 · 실험적",
+      "previews": [
+        {
+          "url": "assets/artist-previews/mix-cel-operator.webp",
+          "label": "전술요원"
+        },
+        {
+          "url": "assets/artist-previews/mix-cel-swordsman.webp",
+          "label": "남성 검사"
+        }
+      ],
+      "preview": "assets/artist-previews/mix-cel-operator.webp",
+      "note": "간결한 명암 위주. 머리색·소품 변동은 남아 있어요.",
+      "listed": true
+    },
+    {
+      "id": "mix-soft",
+      "group": "artist",
+      "name": "색선·종이 질감",
+      "model": "anima-turbo",
+      "styleId": "",
+      "styleStrength": 0,
+      "steps": 10,
+      "cfg": 1,
+      "prompt": "@fkey, @nardack, delicate colored linework, soft cool shadows, restrained warm accent colors, subtle paper texture, no glossy skin",
+      "negative": "",
+      "verification": "혼합 태그+채색 지시 · 두 인물 생성 확인 · 실험적",
+      "previews": [
+        {
+          "url": "assets/artist-previews/mix-soft-operator.webp",
+          "label": "전술요원"
+        },
+        {
+          "url": "assets/artist-previews/mix-soft-swordsman.webp",
+          "label": "남성 검사"
+        }
+      ],
+      "preview": "assets/artist-previews/mix-soft-operator.webp",
+      "note": "색선과 질감이 강한 편. 배경에 종이 무늬가 생길 수 있어요.",
+      "listed": true
+    },
+    {
+      "id": "soya-cel-clean",
+      "group": "soya-cel",
+      "name": "깔끔한 2단 셀",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "clean tapered anime lineart, two-tone cel shading, crisp shadow boundaries, matte colors, restrained highlights",
+      "negative": "painterly texture, soft gradient shadows, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.3,
+        "detailStrength": 0.2,
+        "refineDenoise": 0.25,
+        "vibrance": 5,
+        "saturation": 0
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요.",
+      "listed": true,
+      "preview": "assets/soya-look-previews/soya-cel-clean.webp"
+    },
+    {
+      "id": "soya-cel-soft",
+      "group": "soya-cel",
+      "name": "부드러운 셀",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "delicate colored outlines, soft low-contrast cel shadows, gentle midtones, matte anime coloring",
+      "negative": "thick black outlines, harsh contrast, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.3,
+        "detailStrength": 0.2,
+        "refineDenoise": 0.25,
+        "vibrance": -5,
+        "saturation": -5
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요.",
+      "listed": true,
+      "preview": "assets/soya-look-previews/soya-cel-soft.webp"
+    },
+    {
+      "id": "soya-cel-vivid",
+      "group": "soya-cel",
+      "name": "선명한 셀",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "clean fine outlines, vivid controlled anime colors, clear two-tone shadows, sharp graphic color separation",
+      "negative": "muddy colors, oversaturated skin, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.3,
+        "detailStrength": 0.25,
+        "refineDenoise": 0.28,
+        "vibrance": 15,
+        "saturation": 10
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요.",
+      "listed": true,
+      "preview": "assets/soya-look-previews/soya-cel-vivid.webp"
+    },
+    {
+      "id": "soya-cel-muted",
+      "group": "soya-cel",
+      "name": "저채도 셀",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "fine clean linework, muted sophisticated colors, flat cel shadows, restrained cool highlights",
+      "negative": "neon colors, glossy skin, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.3,
+        "detailStrength": 0.15,
+        "refineDenoise": 0.25,
+        "vibrance": -15,
+        "saturation": -20
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요.",
+      "listed": true,
+      "preview": "assets/soya-look-previews/soya-cel-muted.webp"
+    },
+    {
+      "id": "soya-cel-pastel",
+      "group": "soya-cel",
+      "name": "파스텔 셀",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "light pastel palette, pale colored outlines, lavender and peach cel shadows, airy matte colors",
+      "negative": "dense black shadows, gritty texture, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.3,
+        "detailStrength": 0.2,
+        "refineDenoise": 0.3,
+        "vibrance": -5,
+        "saturation": -10
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요.",
+      "listed": true,
+      "preview": "assets/soya-look-previews/soya-cel-pastel.webp"
+    },
+    {
+      "id": "soya-cel-retro",
+      "group": "soya-cel",
+      "name": "레트로 TV 애니",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "1990s anime cel rendering, confident ink contours, simple flat shadows, restrained analog colors",
+      "negative": "3d lighting, glossy digital finish, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.3,
+        "detailStrength": 0.15,
+        "refineDenoise": 0.32,
+        "vibrance": -10,
+        "saturation": -5
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요.",
+      "listed": true,
+      "preview": "assets/soya-look-previews/soya-cel-retro.webp"
+    },
+    {
+      "id": "soya-cel-modern",
+      "group": "soya-cel",
+      "name": "현대 TV 애니",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "modern TV anime frame, precise thin lineart, consistent two-step cel shading, clean matte surfaces",
+      "negative": "sketch lines, photoreal textures, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.3,
+        "detailStrength": 0.25,
+        "refineDenoise": 0.25,
+        "vibrance": 5,
+        "saturation": 0
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요.",
+      "listed": true,
+      "preview": "assets/soya-look-previews/soya-cel-modern.webp"
+    },
+    {
+      "id": "soya-cel-highcontrast",
+      "group": "soya-cel",
+      "name": "강한 명암 셀",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "bold graphic anime shading, deep flat cast shadows, clear light-dark separation, minimal gradients",
+      "negative": "soft airbrush, heavy glow, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.3,
+        "detailStrength": 0.25,
+        "refineDenoise": 0.3,
+        "vibrance": 5,
+        "saturation": 0
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요.",
+      "listed": true,
+      "preview": "assets/soya-look-previews/soya-cel-highcontrast.webp"
+    },
+    {
+      "id": "soya-cel-coloredline",
+      "group": "soya-cel",
+      "name": "색선 셀",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "colored lineart matched to local colors, clean anime contours, matte cel shading, softly tinted shadows",
+      "negative": "heavy black outlines, grainy paint, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.3,
+        "detailStrength": 0.2,
+        "refineDenoise": 0.3,
+        "vibrance": 0,
+        "saturation": -5
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요.",
+      "listed": true,
+      "preview": "assets/soya-look-previews/soya-cel-coloredline.webp"
+    },
+    {
+      "id": "soya-line-ink",
+      "group": "soya-line",
+      "name": "정돈된 잉크 선화",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "monochrome anime ink drawing, precise tapered black lines, fine controlled contour variation, sparse flat shadows",
+      "negative": "colorful shading, gray wash, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.1,
+        "detailStrength": 0.15,
+        "refineDenoise": 0.32,
+        "vibrance": -100,
+        "saturation": -100
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요. 순수 윤곽선만 남기지는 않으며 명암과 색면이 남을 수 있어요.",
+      "listed": true,
+      "basePrompt": "monochrome anime pencil line drawing on white paper, uncolored, clean fine contours, minimal hatching, unshaded white spaces",
+      "baseNegative": "full color, painted skin, colorful illustration, heavy shading, realistic photograph",
+      "finalTone": "grayscale",
+      "preview": "assets/soya-look-previews/soya-line-ink.webp"
+    },
+    {
+      "id": "soya-line-pencil",
+      "group": "soya-line",
+      "name": "연필 러프",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "graphite anime pencil sketch, visible construction strokes, delicate hatching, light graphite texture, white paper",
+      "negative": "polished digital painting, colored skin, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.1,
+        "detailStrength": 0.1,
+        "refineDenoise": 0.35,
+        "vibrance": -100,
+        "saturation": -100
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요. 순수 윤곽선만 남기지는 않으며 명암과 색면이 남을 수 있어요.",
+      "listed": true,
+      "basePrompt": "monochrome anime pencil line drawing on white paper, uncolored, clean fine contours, minimal hatching, unshaded white spaces",
+      "baseNegative": "full color, painted skin, colorful illustration, heavy shading, realistic photograph",
+      "finalTone": "grayscale",
+      "preview": "assets/soya-look-previews/soya-line-pencil.webp"
+    },
+    {
+      "id": "soya-line-keyframe",
+      "group": "soya-line",
+      "name": "애니 원화 느낌",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "anime key animation drawing, clean expressive pencil contours, minimal shading, sparse light gray shadow guides",
+      "negative": "finished glossy illustration, full color rendering, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.1,
+        "detailStrength": 0.1,
+        "refineDenoise": 0.35,
+        "vibrance": -100,
+        "saturation": -100
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요. 순수 윤곽선만 남기지는 않으며 명암과 색면이 남을 수 있어요. 예시처럼 배경에 작은 기호나 소품이 추가될 수 있어요.",
+      "listed": true,
+      "basePrompt": "monochrome anime pencil line drawing on white paper, uncolored, clean fine contours, minimal hatching, unshaded white spaces",
+      "baseNegative": "full color, painted skin, colorful illustration, heavy shading, realistic photograph",
+      "finalTone": "grayscale",
+      "preview": "assets/soya-look-previews/soya-line-keyframe.webp"
+    },
+    {
+      "id": "soya-line-thin",
+      "group": "soya-line",
+      "name": "가는 펜 선화",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "very fine precise monochrome pen linework, delicate outer contours, sparse detail, minimal shadow masses",
+      "negative": "bold outlines, thick hatching, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.1,
+        "detailStrength": 0.15,
+        "refineDenoise": 0.3,
+        "vibrance": -100,
+        "saturation": -100
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요. 순수 윤곽선만 남기지는 않으며 명암과 색면이 남을 수 있어요.",
+      "listed": true,
+      "basePrompt": "monochrome anime pencil line drawing on white paper, uncolored, clean fine contours, minimal hatching, unshaded white spaces",
+      "baseNegative": "full color, painted skin, colorful illustration, heavy shading, realistic photograph",
+      "finalTone": "grayscale",
+      "preview": "assets/soya-look-previews/soya-line-thin.webp"
+    },
+    {
+      "id": "soya-line-bold",
+      "group": "soya-line",
+      "name": "굵은 잉크 외곽선",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "confident thick outer contours and thin interior details, monochrome anime ink drawing, clean graphic black shapes",
+      "negative": "messy scribbles, painterly gradients, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.1,
+        "detailStrength": 0.2,
+        "refineDenoise": 0.3,
+        "vibrance": -100,
+        "saturation": -100
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요. 순수 윤곽선만 남기지는 않으며 명암과 색면이 남을 수 있어요.",
+      "listed": true,
+      "basePrompt": "monochrome anime pencil line drawing on white paper, uncolored, clean fine contours, minimal hatching, unshaded white spaces",
+      "baseNegative": "full color, painted skin, colorful illustration, heavy shading, realistic photograph",
+      "finalTone": "grayscale",
+      "preview": "assets/soya-look-previews/soya-line-bold.webp"
+    },
+    {
+      "id": "soya-line-hatch",
+      "group": "soya-line",
+      "name": "해칭 선화",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "monochrome anime pen illustration, disciplined crosshatching shadows, varied line weight, clean white spaces",
+      "negative": "soft airbrush shading, color fill, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.1,
+        "detailStrength": 0.2,
+        "refineDenoise": 0.35,
+        "vibrance": -100,
+        "saturation": -100
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요. 순수 윤곽선만 남기지는 않으며 명암과 색면이 남을 수 있어요.",
+      "listed": true,
+      "basePrompt": "monochrome anime pencil line drawing on white paper, uncolored, clean fine contours, minimal hatching, unshaded white spaces",
+      "baseNegative": "full color, painted skin, colorful illustration, heavy shading, realistic photograph",
+      "finalTone": "grayscale",
+      "preview": "assets/soya-look-previews/soya-line-hatch.webp"
+    },
+    {
+      "id": "soya-line-bluepencil",
+      "group": "soya-line",
+      "name": "청색 연필 느낌",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "blue pencil anime drawing on white paper, loose clean strokes, pale blue shadows, minimal color",
+      "negative": "full color painting, black heavy shading, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.1,
+        "detailStrength": 0.1,
+        "refineDenoise": 0.38,
+        "vibrance": -20,
+        "saturation": -45
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요. 순수 윤곽선만 남기지는 않으며 명암과 색면이 남을 수 있어요. 예시처럼 배경에 작은 기호나 소품이 추가될 수 있어요.",
+      "listed": true,
+      "basePrompt": "monochrome anime pencil line drawing on white paper, uncolored, clean fine contours, minimal hatching, unshaded white spaces",
+      "baseNegative": "full color, painted skin, colorful illustration, heavy shading, realistic photograph",
+      "finalTone": "blue",
+      "preview": "assets/soya-look-previews/soya-line-bluepencil.webp"
+    },
+    {
+      "id": "soya-line-sepia",
+      "group": "soya-line",
+      "name": "세피아 잉크",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "sepia monochrome anime ink illustration, warm brown contours, light cream paper, restrained crosshatching",
+      "negative": "vivid saturated colors, realistic skin, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.1,
+        "detailStrength": 0.15,
+        "refineDenoise": 0.35,
+        "vibrance": -20,
+        "saturation": -65
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요. 순수 윤곽선만 남기지는 않으며 명암과 색면이 남을 수 있어요. 예시처럼 배경에 작은 기호나 소품이 추가될 수 있어요.",
+      "listed": true,
+      "basePrompt": "monochrome anime pencil line drawing on white paper, uncolored, clean fine contours, minimal hatching, unshaded white spaces",
+      "baseNegative": "full color, painted skin, colorful illustration, heavy shading, realistic photograph",
+      "finalTone": "sepia",
+      "preview": "assets/soya-look-previews/soya-line-sepia.webp"
+    },
+    {
+      "id": "soya-line-celguide",
+      "group": "soya-line",
+      "name": "명암 가이드 선화",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "anime production drawing, clear fine contours, sparse geometric shadow guide lines, pale flat shadow annotations",
+      "negative": "text labels, dense painterly rendering, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.1,
+        "detailStrength": 0.1,
+        "refineDenoise": 0.32,
+        "vibrance": -40,
+        "saturation": -65
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요. 순수 윤곽선만 남기지는 않으며 명암과 색면이 남을 수 있어요.",
+      "listed": true,
+      "basePrompt": "monochrome anime pencil line drawing on white paper, uncolored, clean fine contours, minimal hatching, unshaded white spaces",
+      "baseNegative": "full color, painted skin, colorful illustration, heavy shading, realistic photograph",
+      "preview": "assets/soya-look-previews/soya-line-celguide.webp"
+    },
+    {
+      "id": "soya-game-tactical",
+      "group": "soya-game",
+      "name": "차가운 전술 일러스트",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "refined tactical anime game illustration, cool gray color design, crisp linework, matte fabric, disciplined cel shadows",
+      "negative": "oily skin, dramatic neon bloom, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.3,
+        "detailStrength": 0.3,
+        "refineDenoise": 0.28,
+        "vibrance": -5,
+        "saturation": -15
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요.",
+      "listed": true,
+      "preview": "assets/soya-look-previews/soya-game-tactical.webp"
+    },
+    {
+      "id": "soya-game-rpg",
+      "group": "soya-game",
+      "name": "담백한 RPG 원화",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "Japanese RPG character illustration, elegant clean contours, subtle watercolor-like color edges, restrained material highlights",
+      "negative": "photoreal rendering, heavy oil paint, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.3,
+        "detailStrength": 0.25,
+        "refineDenoise": 0.32,
+        "vibrance": 0,
+        "saturation": -5
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요.",
+      "listed": true,
+      "preview": "assets/soya-look-previews/soya-game-rpg.webp"
+    },
+    {
+      "id": "soya-game-vn",
+      "group": "soya-game",
+      "name": "비주얼 노벨 채색",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "visual novel character art, polished thin lineart, smooth restrained cel shading, clear facial features, soft matte colors",
+      "negative": "3d skin lighting, harsh noisy texture, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.3,
+        "detailStrength": 0.25,
+        "refineDenoise": 0.28,
+        "vibrance": 5,
+        "saturation": 0
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요.",
+      "listed": true,
+      "preview": "assets/soya-look-previews/soya-game-vn.webp"
+    },
+    {
+      "id": "soya-game-card",
+      "group": "soya-game",
+      "name": "카드 일러스트 채색",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "refined anime character card illustration, precise layered shading, luminous controlled edge highlights, rich balanced colors",
+      "negative": "extreme bloom, cluttered composition, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.3,
+        "detailStrength": 0.35,
+        "refineDenoise": 0.32,
+        "vibrance": 15,
+        "saturation": 5
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요.",
+      "listed": true,
+      "preview": "assets/soya-look-previews/soya-game-card.webp"
+    },
+    {
+      "id": "soya-game-sprite",
+      "group": "soya-game",
+      "name": "전투 스프라이트 채색",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "readable anime game sprite rendering, decisive outer contours, simplified interior shadow shapes, crisp material boundaries",
+      "negative": "tiny noisy texture, smeared edges, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.3,
+        "detailStrength": 0.2,
+        "refineDenoise": 0.28,
+        "vibrance": 5,
+        "saturation": 0
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요. 예시처럼 배경에 작은 기호나 소품이 추가될 수 있어요.",
+      "listed": true,
+      "preview": "assets/soya-look-previews/soya-game-sprite.webp"
+    },
+    {
+      "id": "soya-game-scifi",
+      "group": "soya-game",
+      "name": "SF 콘셉트 채색",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "anime science fiction concept art rendering, cool graphite shadows, precise clean contours, restrained cyan edge accents, matte materials",
+      "negative": "cyberpunk neon fog, metallic skin, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.3,
+        "detailStrength": 0.3,
+        "refineDenoise": 0.3,
+        "vibrance": 5,
+        "saturation": -10
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요.",
+      "listed": true,
+      "preview": "assets/soya-look-previews/soya-game-scifi.webp"
+    },
+    {
+      "id": "soya-game-fantasy",
+      "group": "soya-game",
+      "name": "부드러운 판타지 채색",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "anime fantasy character illustration, elegant tapered outlines, warm subdued highlights, delicate cool shadows, matte fabric",
+      "negative": "photoreal skin, dense oily texture, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.3,
+        "detailStrength": 0.3,
+        "refineDenoise": 0.3,
+        "vibrance": 0,
+        "saturation": -5
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요.",
+      "listed": true,
+      "preview": "assets/soya-look-previews/soya-game-fantasy.webp"
+    },
+    {
+      "id": "soya-game-muted",
+      "group": "soya-game",
+      "name": "무광 콘셉트 아트",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "anime character concept rendering, desaturated sophisticated palette, clear graphic shadow planes, matte surfaces, restrained highlights",
+      "negative": "shiny plastic materials, heavy gradients, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.3,
+        "detailStrength": 0.2,
+        "refineDenoise": 0.3,
+        "vibrance": -20,
+        "saturation": -20
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요. 예시처럼 배경에 작은 기호나 소품이 추가될 수 있어요.",
+      "listed": true,
+      "preview": "assets/soya-look-previews/soya-game-muted.webp"
+    },
+    {
+      "id": "soya-game-graphic",
+      "group": "soya-game",
+      "name": "그래픽 게임 아트",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "graphic anime game character art, bold outer silhouettes, flat angular shadow planes, limited balanced palette, crisp edges",
+      "negative": "photographic textures, soft blurry gradients, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.3,
+        "detailStrength": 0.2,
+        "refineDenoise": 0.32,
+        "vibrance": 5,
+        "saturation": -5
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요. 예시처럼 배경에 작은 기호나 소품이 추가될 수 있어요.",
+      "listed": true,
+      "preview": "assets/soya-look-previews/soya-game-graphic.webp"
+    },
+    {
+      "id": "soya-paint-softwash",
+      "group": "soya-paint",
+      "name": "담백한 수채 채색",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "anime watercolor illustration, transparent light color washes, clean delicate contours, subtle paper grain, gentle shadow edges",
+      "negative": "thick impasto, oily skin, realistic portrait, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.1,
+        "detailStrength": 0.2,
+        "refineDenoise": 0.35,
+        "vibrance": -10,
+        "saturation": -10
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요. 질감 표현이 약해 셀 채색에 가깝게 나올 수 있어요.",
+      "listed": true,
+      "basePrompt": "anime watercolor illustration, pencil-like fine line texture, translucent matte color washes, subtle paper grain, isolated character only",
+      "baseNegative": "glossy digital painting, plastic skin, 3d render, photograph, art supplies, marker pens, pencils, brushes, paint tubes, artist palette, stationery, art tools beside the character",
+      "preview": "assets/soya-look-previews/soya-paint-softwash.webp"
+    },
+    {
+      "id": "soya-paint-gouache",
+      "group": "soya-paint",
+      "name": "과슈 색면",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "anime gouache illustration, opaque matte color planes, softly broken paint edges, restrained brush texture, clean facial drawing",
+      "negative": "thick oil impasto, 3d shading, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.1,
+        "detailStrength": 0.2,
+        "refineDenoise": 0.35,
+        "vibrance": 0,
+        "saturation": -5
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요. 질감 표현이 약해 셀 채색에 가깝게 나올 수 있어요. 예시처럼 배경에 작은 기호나 소품이 추가될 수 있어요.",
+      "listed": true,
+      "basePrompt": "anime watercolor illustration, pencil-like fine line texture, translucent matte color washes, subtle paper grain, isolated character only",
+      "baseNegative": "glossy digital painting, plastic skin, 3d render, photograph, art supplies, marker pens, pencils, brushes, paint tubes, artist palette, stationery, art tools beside the character",
+      "preview": "assets/soya-look-previews/soya-paint-gouache.webp"
+    },
+    {
+      "id": "soya-paint-paper",
+      "group": "soya-paint",
+      "name": "종이 질감 채색",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "clean anime illustration on subtly textured paper, fine colored outlines, matte muted colors, gentle grain",
+      "negative": "dirty noise, gritty damaged paper, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.1,
+        "detailStrength": 0.2,
+        "refineDenoise": 0.3,
+        "vibrance": -10,
+        "saturation": -10
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요. 질감 표현이 약해 셀 채색에 가깝게 나올 수 있어요. 예시처럼 배경에 작은 기호나 소품이 추가될 수 있어요.",
+      "listed": true,
+      "basePrompt": "anime watercolor illustration, pencil-like fine line texture, translucent matte color washes, subtle paper grain, isolated character only",
+      "baseNegative": "glossy digital painting, plastic skin, 3d render, photograph, art supplies, marker pens, pencils, brushes, paint tubes, artist palette, stationery, art tools beside the character",
+      "preview": "assets/soya-look-previews/soya-paint-paper.webp"
+    },
+    {
+      "id": "soya-paint-colorpencil",
+      "group": "soya-paint",
+      "name": "색연필 채색",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "anime colored pencil illustration, delicate layered colored strokes, light paper texture, crisp expressive contours",
+      "negative": "glossy digital skin, heavy black shading, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.1,
+        "detailStrength": 0.15,
+        "refineDenoise": 0.35,
+        "vibrance": -5,
+        "saturation": -10
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요. 질감 표현이 약해 셀 채색에 가깝게 나올 수 있어요. 예시처럼 배경에 작은 기호나 소품이 추가될 수 있어요.",
+      "listed": true,
+      "basePrompt": "anime watercolor illustration, pencil-like fine line texture, translucent matte color washes, subtle paper grain, isolated character only",
+      "baseNegative": "glossy digital painting, plastic skin, 3d render, photograph, art supplies, marker pens, pencils, brushes, paint tubes, artist palette, stationery, art tools beside the character",
+      "preview": "assets/soya-look-previews/soya-paint-colorpencil.webp"
+    },
+    {
+      "id": "soya-paint-editorial",
+      "group": "soya-paint",
+      "name": "담백한 표지 일러스트",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "refined anime editorial illustration, elegant sparse linework, flat color design, subtle dimensional shading, sophisticated muted palette",
+      "negative": "magazine text, typography, heavy glossy rendering, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.1,
+        "detailStrength": 0.25,
+        "refineDenoise": 0.3,
+        "vibrance": -10,
+        "saturation": -10
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요. 질감 표현이 약해 셀 채색에 가깝게 나올 수 있어요.",
+      "listed": true,
+      "basePrompt": "anime watercolor illustration, pencil-like fine line texture, translucent matte color washes, subtle paper grain, isolated character only",
+      "baseNegative": "glossy digital painting, plastic skin, 3d render, photograph, art supplies, marker pens, pencils, brushes, paint tubes, artist palette, stationery, art tools beside the character",
+      "preview": "assets/soya-look-previews/soya-paint-editorial.webp"
+    },
+    {
+      "id": "soya-paint-softlight",
+      "group": "soya-paint",
+      "name": "부드러운 확산광",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "clean anime illustration, soft diffused ambient lighting, fine contours, restrained smooth shadow transitions, matte highlights",
+      "negative": "overexposed glow, lens flare, realistic skin, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.1,
+        "detailStrength": 0.3,
+        "refineDenoise": 0.28,
+        "vibrance": 0,
+        "saturation": -5
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요. 질감 표현이 약해 셀 채색에 가깝게 나올 수 있어요.",
+      "listed": true,
+      "basePrompt": "anime watercolor illustration, pencil-like fine line texture, translucent matte color washes, subtle paper grain, isolated character only",
+      "baseNegative": "glossy digital painting, plastic skin, 3d render, photograph, art supplies, marker pens, pencils, brushes, paint tubes, artist palette, stationery, art tools beside the character",
+      "preview": "assets/soya-look-previews/soya-paint-softlight.webp"
+    },
+    {
+      "id": "soya-paint-twilight",
+      "group": "soya-paint",
+      "name": "차가운 보랏빛 채색",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "anime illustration with cool lavender shadow colors, subdued warm highlights, fine clean lines, balanced muted colors",
+      "negative": "neon purple saturation, heavy bloom, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.1,
+        "detailStrength": 0.25,
+        "refineDenoise": 0.3,
+        "vibrance": -5,
+        "saturation": -10
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요. 질감 표현이 약해 셀 채색에 가깝게 나올 수 있어요.",
+      "listed": true,
+      "basePrompt": "anime watercolor illustration, pencil-like fine line texture, translucent matte color washes, subtle paper grain, isolated character only",
+      "baseNegative": "glossy digital painting, plastic skin, 3d render, photograph, art supplies, marker pens, pencils, brushes, paint tubes, artist palette, stationery, art tools beside the character",
+      "preview": "assets/soya-look-previews/soya-paint-twilight.webp"
+    },
+    {
+      "id": "soya-paint-warm",
+      "group": "soya-paint",
+      "name": "따뜻한 크림색 채색",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "anime illustration with soft cream highlights, warm muted midtones, delicate brown contours, matte color finish",
+      "negative": "orange color cast, glossy skin, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.1,
+        "detailStrength": 0.25,
+        "refineDenoise": 0.3,
+        "vibrance": -5,
+        "saturation": -5
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요. 질감 표현이 약해 셀 채색에 가깝게 나올 수 있어요.",
+      "listed": true,
+      "basePrompt": "anime watercolor illustration, pencil-like fine line texture, translucent matte color washes, subtle paper grain, isolated character only",
+      "baseNegative": "glossy digital painting, plastic skin, 3d render, photograph, art supplies, marker pens, pencils, brushes, paint tubes, artist palette, stationery, art tools beside the character",
+      "preview": "assets/soya-look-previews/soya-paint-warm.webp"
+    },
+    {
+      "id": "soya-paint-crisp",
+      "group": "soya-paint",
+      "name": "정교한 선·담백한 채색",
+      "model": "soya-anima-flanime",
+      "styleId": null,
+      "styleStrength": 0.3,
+      "steps": 16,
+      "cfg": 2,
+      "prompt": "precise refined anime linework, finely separated material shadows, understated color gradients, controlled detail density, matte finish",
+      "negative": "excessive tiny details, plastic skin, heavy black outlines, photorealistic, 3d render, plastic skin, oily skin, excessive bloom, heavy lens flare",
+      "workflow": {
+        "kieedStrength": 0.1,
+        "detailStrength": 0.3,
+        "refineDenoise": 0.25,
+        "vibrance": 0,
+        "saturation": 0
+      },
+      "verification": "Soya 실제 생성 확인 · 1개 시드 · 실험적",
+      "note": "Soya 기본 조합의 재처리 채색 설정. 캐릭터·의상·소품이 달라질 수 있어요. 질감 표현이 약해 셀 채색에 가깝게 나올 수 있어요.",
+      "listed": true,
+      "basePrompt": "anime watercolor illustration, pencil-like fine line texture, translucent matte color washes, subtle paper grain, isolated character only",
+      "baseNegative": "glossy digital painting, plastic skin, 3d render, photograph, art supplies, marker pens, pencils, brushes, paint tubes, artist palette, stationery, art tools beside the character",
+      "preview": "assets/soya-look-previews/soya-paint-crisp.webp"
+    },
+    {
+      "id": "rpg-counter-side-sprites",
+      "group": "rpg-sprite",
+      "name": "현대 전투 · 원화",
+      "model": "flanime-xl",
+      "styleId": "counter-side-sprites",
+      "styleStrength": 0.6,
+      "steps": 32,
+      "cfg": 5,
+      "prompt": "full body, standing, idle, side view, facing right, grey background, clean lineart, game battle sprite",
+      "negative": "multiple views, reference sheet, turnaround, cropped, out of frame",
+      "triggers": [],
+      "verification": "원화 변형 0.3 / 전투 포즈 비교 완료 · 사용자 승인",
+      "note": "Flanime 참고 이미지 변형을 선택하고 원화를 올리세요. 변형 0.3부터 권장. 관절 포즈는 별도로 켤 수 있습니다.",
+      "listed": true,
+      "experimental": true,
+      "preview": "assets/rpg-sprite-previews/counter-preserve-030.webp",
+      "previews": [
+        {
+          "url": "assets/rpg-sprite-previews/counter-preserve-030.webp",
+          "label": "원화 입력 후 변형 0.3 · 텍스트 단독 생성 예시 아님"
+        }
+      ]
+    },
+    {
+      "id": "rpg-epic-seven-sprites",
+      "group": "rpg-sprite",
+      "name": "판타지 전투 · 측면 대기 원화",
+      "model": "flanime-xl",
+      "styleId": "epic-seven-sprites",
+      "styleStrength": 0.6,
+      "steps": 40,
+      "cfg": 5,
+      "prompt": "full body, standing, idle, side view, facing right, grey background, clean lineart, game battle sprite",
+      "negative": "multiple views, reference sheet, turnaround, cropped, out of frame",
+      "triggers": [
+        "e7sprites"
+      ],
+      "verification": "Flanime 원본 1024×1536 / 40 steps · 타 게임 태그 2종 실생성 확인 · 실험적",
+      "note": "Flanime 원본 1024×1536 / 40 steps. 캐릭터 태그를 직접 입력하세요. 이 프로필은 확대·전신 재생성·얼굴 보정 없는 원본 생성 전용입니다.",
+      "listed": true,
+      "experimental": true,
+      "previews": [
+        {
+          "url": "assets/rpg-sprite-previews/rapi-native.webp",
+          "label": "Flanime 원본 1024×1536 · 라피 태그"
+        },
+        {
+          "url": "assets/rpg-sprite-previews/enterprise-native.webp",
+          "label": "Flanime 원본 1024×1536 · 엔터프라이즈 태그"
+        }
+      ]
+    },
+    {
+      "id": "rpgchara-anima-sheet",
+      "group": "rpg-sprite",
+      "name": "RPG 4방향 시트 · Anima 도트풍",
+      "model": "anima-base",
+      "styleId": "rpgchara-anima",
+      "styleStrength": 1.0,
+      "steps": 28,
+      "cfg": 4,
+      "prompt": "",
+      "negative": "",
+      "triggers": [
+        "rpgchara"
+      ],
+      "verification": "4방향 시트 생성 확인 · 실험적",
+      "note": "3×4 시트 초안. 개별 셀 배경 제거 지원. 원본도 저장. 의상·발 정렬 검수 필요.",
+      "listed": true,
+      "experimental": true,
+      "sheetPreset": true,
+      "width": 512,
+      "height": 1024,
+      "previews": [
+        {
+          "url": "assets/rpg-sprite-previews/rpgchara-anima-base-100.webp",
+          "label": "실제 생성한 4방향 시트"
+        }
+      ]
+    },
+    {
+      "id": "rpgchara-illustrious-sheet",
+      "group": "rpg-sprite",
+      "name": "RPG 4방향 시트 · Illustrious SD풍",
+      "model": "flanime-xl",
+      "styleId": "rpgchara-illustrious",
+      "styleStrength": 0.7,
+      "steps": 32,
+      "cfg": 5,
+      "prompt": "",
+      "negative": "",
+      "triggers": [
+        "rpgchara"
+      ],
+      "verification": "4방향 시트 생성 확인 · 실험적",
+      "note": "3×4 시트 초안. 개별 셀 배경 제거 지원. 원본도 저장. 의상·발 정렬 검수 필요.",
+      "listed": true,
+      "experimental": true,
+      "sheetPreset": true,
+      "width": 768,
+      "height": 1280,
+      "previews": [
+        {
+          "url": "assets/rpg-sprite-previews/rpgchara-flanime-070.webp",
+          "label": "실제 생성한 4방향 시트"
+        }
+      ]
+    },
+    {
+      "id": "cutscene-counter-reviewed",
+      "group": "rpg-sprite",
+      "name": "셀 채색 전투 · 혼합 (검토 조합)",
+      "model": "wai-cutscene-counter",
+      "styleId": "",
+      "styleStrength": 0,
+      "steps": 28,
+      "cfg": 4.5,
+      "prompt": "",
+      "negative": "",
+      "verification": "사용자 검토 · 헤일로 억제/얼굴0.12·0.20",
+      "note": "셀 채색과 전투 자세를 함께 적용합니다. 원화 변환·부분 수정 지원. 자세를 바꾸면 외형과 소품도 달라질 수 있습니다.",
+      "listed": true,
+      "experimental": false,
+      "recipePreset": true,
+      "previews": [
+        {
+          "url": "assets/rpg-sprite-previews/cutscene-counter-reviewed.webp",
+          "label": "생성+얼굴0.12 실험 결과"
+        }
+      ]
+    }
+  ]
+}

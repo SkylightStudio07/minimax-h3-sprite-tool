@@ -2,6 +2,8 @@
 "use strict";
 const QUERY=new URLSearchParams(location.search);
 const OBS_MODE=QUERY.get('obs')==='1', CAMERA_MODE=QUERY.get('cam')==='1';
+const EDITOR_PREVIEW=QUERY.get('editor')==='1'&&parent!==window;
+if(EDITOR_PREVIEW){const css=document.createElement('style');css.textContent='body{min-height:0}header,#panel,#stageLabel,#rigInfo,#fps,#drop,#appStatus{display:none!important}#main{height:100vh;min-height:0;overflow:hidden;flex-direction:row}#stage{width:100%;height:100%;min-height:0;flex:1}#viewControls{font-size:10px;top:8px;left:8px}@media(max-width:350px){#viewControls span{display:none}}';document.head.append(css);}
 if(OBS_MODE) document.body.classList.add('obs');
 const trackingChannel=typeof BroadcastChannel!=='undefined'?new BroadcastChannel('anime25d-camera'):null;
 let trackingPostBusy=false;
@@ -256,7 +258,7 @@ async function loadModelUrl(value){
   },target.pathname.split('/').pop()||'character.psd');
 }
 const MODEL_URL=window.SHARED_MODEL_URL||QUERY.get('model');
-if(MODEL_URL)loadModelUrl(MODEL_URL).catch(err=>status('エラー: '+err.message,true));
+if(MODEL_URL&&!EDITOR_PREVIEW)loadModelUrl(MODEL_URL).catch(err=>status('エラー: '+err.message,true));
 else if(OBS_MODE)loadSample();
 (function(){ const miss=[];
   if(!window.agPsd)miss.push('ag-psd.min.js'); if(!window.Rigger)miss.push('rigger.js'); if(!window.GenericParts)miss.push('genericparts.js');
@@ -1014,5 +1016,21 @@ cv.addEventListener('webglcontextrestored',()=>{
   try{const saved=currentRig?settingsSnapshot():null;layers=[];initGL();contextLost=false;if(currentRig){applyRig(currentRig);applySettings(saved);}status('描画を復旧しました');}
   catch(err){contextLost=true;status('描画の復旧に失敗しました。ページを再読み込みしてください',true);}
 });
+if(EDITOR_PREVIEW){
+  let updates=0;
+  window.spriteEditorPreview={
+    async load(psd){
+      cancelLoad();const ticket=loadTicket;await customGenericReady;
+      if(ticket!==loadTicket)return;
+      const oldSize=[CW,CH],view=[viewZoom,viewPanX,viewPanY];
+      const rig=Rigger.buildRig(psd,genericOpts());
+      applyRig(rig);modelId='';modelName='편집 중 Live2D';lastPsd=null;lastPre=null;
+      if(oldSize[0]===CW&&oldSize[1]===CH){[viewZoom,viewPanX,viewPanY]=view;fit();}
+      updates++;return this.state();
+    },
+    options(value){for(const key of ['idle','blink','talk','phys'])if(typeof value[key]==='boolean')auto[key]=value[key];if(typeof value.paused==='boolean')paused=value.paused;lastFrame=null;},
+    state(){return{updates,width:CW,height:CH,paused,layers:layers.map(L=>({name:L.bn,visible:L.visible}))};}
+  };
+}
 requestAnimationFrame(tick);
 })();

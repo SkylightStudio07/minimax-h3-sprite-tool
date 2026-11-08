@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asset_types
 
 import base64
 import io
@@ -24,6 +25,10 @@ from PIL import Image
 from scipy import ndimage
 from subject_prompts import SUBJECT_DEFAULTS, subject_constraints
 import sprite_loop
+import sprite_workflows
+import sprite_combat
+import image_background
+import motion_timing
 
 
 ROOT = Path(__file__).resolve().parent
@@ -105,6 +110,7 @@ def status_payload() -> dict:
         "licenseConfirmed": LICENSE_MARKER.exists(),
         "modelsReady": all(item["ready"] for item in model_status.values()),
         "models": model_status,
+        "spriteWorkflows": sprite_workflows.status(COMFY_ROOT),
     }
 
 
@@ -121,17 +127,19 @@ def upload_image(image_bytes: bytes, filename: str) -> str:
     return payload.get("name", safe_name)
 
 
-def prepare_reference_image(image_bytes: bytes, width: int, height: int, motion_padding: int = 0) -> bytes:
+def prepare_reference_image(image_bytes: bytes, width: int, height: int, motion_padding: int = 0, pixel_art: bool = False) -> bytes:
     """Fit the source without distortion onto the exact H3 canvas size."""
     source = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
-    if type(motion_padding) is not int or motion_padding not in (0,10,20,30):
-        raise ValueError('동작 여백은 0, 10, 20, 30% 중 선택하세요.')
+    if type(motion_padding) is not int or motion_padding not in (0,10,20,30,40,50,58):
+        raise ValueError('동작 여백은 0, 10, 20, 30, 40, 50, 58% 중 선택하세요.')
     scale = min(width / source.width, height / source.height) * (1-motion_padding/100)
     resized_size = (
         max(1, round(source.width * scale)),
         max(1, round(source.height * scale)),
     )
-    resized = source.resize(resized_size, Image.Resampling.LANCZOS)
+    if pixel_art:
+        resized_size = tuple(max(4, round(v/4)*4) for v in resized_size)
+    resized = source.resize(resized_size, Image.Resampling.NEAREST if pixel_art else Image.Resampling.LANCZOS)
     if source.getchannel("A").getextrema()[0] < 255:
         # H3 encodes RGB and otherwise interprets transparent pixels as black.
         # A deliberate neutral matte is more stable and easier to remove later.
@@ -155,8 +163,8 @@ def frame_length(seconds: float) -> int:
 
 ANIMATION_DEFAULTS = {
     "idle": "one very slow shallow breathing cycle, barely perceptible movement of the upper torso, tiny secondary movement at hair tips and clothing hems, feet stay at their original screen coordinates",
-    "walk": "walk cycle in place, alternating steps, natural arm swing, consistent rhythm",
-    "run": "run cycle in place, energetic alternating strides and arm swing",
+    "walk": "continuous relaxed walking in place, alternating heel-to-toe steps with one support foot always on the ground, visible opposite arm swing past the hips with mildly bent elbows, shoulders counter-rotate against the pelvis, gentle rise and fall of the whole torso, coat hem follows each step with a delay",
+    "run": "continuous running in place, forward-leaning torso, alternating high knees and folded trailing legs with a clear airborne phase, elbows bent about 90 degrees and arms pumping strongly opposite the legs, shoulders and pelvis counter-rotate, rhythmic whole-body rise and fall, coat hem trails the stride",
     "attack": "one clear weapon attack, readable anticipation, strike and follow-through",
     "cast": "one clear magic casting action, hands gather energy and release it forward",
     "hit": "brief impact reaction, recoil backward and regain balance",
@@ -188,7 +196,11 @@ LEGACY_IDLE_PROMPTS = {
     'gentle breathing, subtle blinking, slight hair and clothing sway, feet remain planted',
 }
 ANIMATION_DEFAULTS['idle'] = 'continuous rhythmic breathing with a visible rise and fall of the shoulders and chest, ongoing small lateral weight shifts through the hips, hair tips and clothing hems follow the body with a slight delay throughout the clip, both feet remain planted at their original screen coordinates'
-PROMPT_REVISION = 'sprite-motion-v6-subject-types'
+PROMPT_REVISION = 'sprite-motion-v9-articulated-side-actions'
+LEGACY_GAIT_PROMPTS = {
+    'walk': 'walk cycle in place, alternating steps, natural arm swing, consistent rhythm',
+    'run': 'run cycle in place, energetic alternating strides and arm swing',
+}
 DEFAULT_NEGATIVE = 'scenery, textured background, changing background'
 
 
@@ -209,7 +221,8 @@ def guidance_options(payload):
 
 def animation_prompt(user_prompt: str, animation_type: str, loop: bool, facing: str = "preserve",
                      seconds: float = 5, flat_background: bool = False, blink_mode: str = 'none',
-                     motion_strength: str = 'normal', subject_type: str = 'human') -> str:
+                     motion_strength: str = 'normal', subject_type: str = 'human',
+                     rigid_idle: bool = False, image_guided: bool = False) -> str:
     if subject_type not in ('human', *SUBJECT_DEFAULTS):
         raise ValueError('잘못된 대상 유형입니다.')
     if motion_strength not in MOTION_PROMPTS:
@@ -220,6 +233,8 @@ def animation_prompt(user_prompt: str, animation_type: str, loop: bool, facing: 
     if subject_type == 'human' and animation_type == 'idle' and detail in LEGACY_IDLE_PROMPTS:
         # Old browser tabs may still submit the former default verbatim.
         detail = ANIMATION_DEFAULTS['idle']
+    if subject_type == 'human' and detail == LEGACY_GAIT_PROMPTS.get(animation_type):
+        detail = ANIMATION_DEFAULTS[animation_type]
     # Keep timestamps consistent with ComfyUI's 17k+5 frame grid.
     duration = frame_length(seconds) / 24
     alignment = f'<Picture 1> supplies the complete opening image of [Shot 1] at 0.00 seconds.'
@@ -236,7 +251,18 @@ def animation_prompt(user_prompt: str, animation_type: str, loop: bool, facing: 
             cycle += ('The closing pose matches <Picture 2> at the same phase of the ongoing motion as the opening; '
                       'movement direction and speed connect smoothly across the loop boundary. '
                       'The closing character scale and placement match the opening for a seamless loop.')
+    elif animation_type in ('walk','run'):
+        cycle=(f'This is continuous {"walking" if animation_type=="walk" else "running"} already in progress at 0.00 seconds and still in progress at {duration:.2f} seconds. '
+               'Complete alternating cycles with both near and far limbs; do not repeat just one leg pose. '
+               'Maintain even cadence through the entire clip without an opening idle, slowdown, finishing gesture or held pose. ')
+        if loop:
+            cycle+=('Return to the same gait phase in <Picture 2>, with matching movement direction and speed through the loop boundary. ')
     facing_prompt = FACING_PROMPTS.get(facing, FACING_PROMPTS["preserve"])
+    if subject_type == 'human' and facing in ('right','left') and animation_type in ('walk','run','attack'):
+        facing_prompt = (f'The character travels or attacks toward screen {facing}; the nose and gaze stay directed to screen {facing}. '
+                         'Keep the side-view camera. Allow natural shoulder and pelvis counterrotation, elbow and knee articulation, '
+                         'and foot pivots needed for this action. Do not freeze the torso or hips into a rigid profile. '
+                         'No complete turn toward the viewer or reversal of the action direction.')
     background = (
         'The character is a separate illustrated element over a perfectly flat, uniform medium-gray color field matching the input matte. '
         'This gray field fills every exposed area around and between the moving limbs, with the same color and brightness from edge to edge in every frame. '
@@ -248,13 +274,41 @@ def animation_prompt(user_prompt: str, animation_type: str, loop: bool, facing: 
             'No blinking or repeated facial expressions. ' if blink_mode == 'none' else
             'Allow at most one brief natural blink near the middle of the clip; otherwise retain the opening eye shape and gaze. ')
     anatomy = 'The opening character size, screen placement, head-to-body proportions, costume, equipment, linework and painted shading are retained. '
+    if image_guided:
+        direction = 'the reference direction' if facing == 'preserve' else 'screen '+facing
+        facing_prompt = (f'Keep the original camera-relative view and face {direction}. '
+                         'Allow the described head inclination and natural shoulder/pelvis counterrotation and joint articulation. '
+                         'No unrequested full turn toward the viewer or reversal of attack direction.')
     constraints = facing_prompt + ' ' + eyes + 'The mouth keeps its original shape without speaking. '
     motion = MOTION_PROMPTS[motion_strength]
+    if rigid_idle and subject_type == 'human' and animation_type == 'idle':
+        if not user_prompt.strip() or user_prompt.strip() in LEGACY_IDLE_PROMPTS or user_prompt.strip() == ANIMATION_DEFAULTS['idle']:
+            detail = ('the head, shoulders and torso move together in a tiny relaxed vertical sway as one solid shape, '
+                      'loose hair tips and clothing hems sway gently with a delayed follow-through, feet stay planted')
+        anatomy += ('The chest and abdomen keep exactly the same volume, width and contour in every frame. '
+                    'The jacket front, buttons and seams retain their spacing and move together as one surface. '
+                    'No local swelling, inflation, pulsing or stretching of the torso. ')
+        cycle = cycle.replace('breathing rhythm', 'sway rhythm')
+        motion = {'low': 'Keep the sway very small.',
+                  'normal': 'Keep body displacement small; make the movement readable through loose hair tips and hems.',
+                  'high': 'Use more visible hair and hem follow-through while keeping body displacement small.'}[motion_strength]
     if subject_type != 'human':
         anatomy = 'The original subject scale, composition, silhouette, component proportions, linework and painted shading are retained. '
         constraints, motion = subject_constraints(subject_type, facing, motion_strength, blink_mode, animation_type)
         cycle = cycle.replace('breathing rhythm', 'motion rhythm')
         background = background.replace('moving limbs', 'moving parts')
+    if image_guided:
+        # The reviewed character-specific plan already describes amplitude and
+        # articulation. Generic breathing/body-pumping instructions can conflict.
+        motion = 'Follow the detailed character-specific movement and amplitude above. Do not add unrelated motion.'
+        if subject_type != 'human':
+            constraints = facing_prompt+' Preserve the original anatomy and rigid mechanical construction where present. No new limbs or components.'
+            anatomy = ('Retain original scale, part proportions, construction, linework and painted shading. '
+                       'Allow the articulated silhouette to change at existing joints as described, without bending rigid parts. ')
+        if animation_type == 'idle':
+            cycle = ('Keep the described restrained idle movement ongoing, without an exaggerated body-pumping rhythm. '
+                     + ('Match the opening pose, motion phase and velocity at the closing reference.' if loop else
+                        'End in the described ready pose.'))
     return (alignment + '\n\n'
         'integrated_multimodal_description: [Shot 1] A single continuous game-sprite animation retaining the exact illustration style of the input. '
         + anatomy + 'The camera holds a static shot throughout: identical framing and magnification, with the full character remaining inside the original canvas. '
@@ -269,16 +323,26 @@ def build_workflow(image_name: str, prompt: str, seconds: float, width: int, hei
                    flat_background: bool = False, blink_mode: str = 'none',
                    negative_enabled: bool = False, negative_prompt: str = DEFAULT_NEGATIVE,
                    cfg_scale: float = 1.5, sampling_mode: str = 'quality', motion_strength: str = 'normal',
-                   subject_type: str = 'human') -> dict:
+                   subject_type: str = 'human', workflow_id: str = 'standard', combat_settings: dict | None = None,
+                   image_guided: bool = False) -> dict:
+    sprite_workflows.validate(dict(workflowId=workflow_id,width=width,height=height,negativeEnabled=negative_enabled),COMFY_ROOT,require_ready=False)
     if sampling_mode not in ('quality','turbo'):
         raise ValueError('잘못된 생성 모드입니다.')
     negative_enabled, negative_prompt, cfg_scale = guidance_options({
         'negativeEnabled': negative_enabled, 'negativePrompt': negative_prompt, 'cfgScale': cfg_scale})
     video_inputs = {
         "clip": ["3", 0], "vae": ["4", 0], "first_frame": ["1", 0],
-        "prompt": animation_prompt(prompt, animation_type, loop, facing, seconds, flat_background, blink_mode, motion_strength, subject_type),
+        "prompt": animation_prompt(prompt, animation_type, loop, facing, seconds, flat_background, blink_mode, motion_strength, subject_type, rigid_idle=workflow_id=='fasth3-sprite',image_guided=image_guided),
         "width": width, "height": height, "length": frame_length(seconds),
     }
+    effect_prompt = sprite_combat.prompt(combat_settings or {})
+    if (combat_settings or {}).get('combatEffect')=='subtle':
+        video_inputs['prompt']=sprite_combat.subtle_animation_prompt(prompt,combat_settings,
+            loop=loop,seconds=frame_length(seconds)/24,flat_background=flat_background,facing=facing,
+            motion_strength=motion_strength,blink_mode=blink_mode)
+    elif effect_prompt:
+        video_inputs['prompt'] = video_inputs['prompt'].replace('Subject movement only:', 'Subject movement and synchronized effects:')
+        video_inputs['prompt'] = video_inputs['prompt'].replace('\n\noverall_soundscape:', effect_prompt+'\n\noverall_soundscape:')
     # A matching final reference strongly biases cyclic actions toward a closed loop.
     # One-shot actions intentionally omit it so they can end in a different pose.
     if loop:
@@ -323,6 +387,18 @@ def build_workflow(image_name: str, prompt: str, seconds: float, width: int, hei
         workflow['10']['inputs']['model'] = ['2',0]
         workflow['10']['inputs']['steps'] = 20
         workflow['11']['inputs']['model'] = ['2',0]
+    if workflow_id=='fasth3-sprite':
+        workflow.pop('7',None)
+        workflow['2']['inputs']['unet_name']=sprite_workflows.FAST_FILENAME
+        workflow['18']={'class_type':'MiniMaxH3SigmaShift','inputs':{'model':['2',0],'shift_video':10.0,'shift_audio':3.0}}
+        workflow['10']['inputs'].update(model=['18',0],steps=8)
+        workflow['11']={'class_type':'BasicGuider','inputs':{'model':['18',0],'conditioning':['6',0]}}
+        workflow['16']['inputs']['filename_prefix']='fasth3_sprite/sprite'
+    if effect_prompt or (combat_settings or {}).get('pixelOutput'):
+        # Sprite VFX need no synthesized audio; matches the accepted joint test.
+        workflow['15']['inputs'].pop('audio',None)
+        workflow.pop('14',None)
+        workflow.pop('5',None)
     return workflow
 
 
@@ -346,6 +422,18 @@ def find_saved_video(history: dict) -> Path:
     if not path.exists():
         raise FileNotFoundError(path)
     return path
+
+
+def background_options(payload):
+    enabled=payload.get('removeBackground',False)
+    if type(enabled) is not bool:raise ValueError('배경 제거 옵션을 확인하세요.')
+    method=payload.get('backgroundRemoval','flat')
+    if method not in ('ai','ai-sparks','flat'):raise ValueError('배경 제거 방식을 확인하세요.')
+    needs_character_mask=payload.get('combatEffect')=='subtle' and not payload.get('pixelOutput',False)
+    if enabled and (method in ('ai','ai-sparks') or needs_character_mask) and not image_background.status()['ready']:
+        if needs_character_mask:raise ValueError('작은 검기용 배경 정리가 아직 준비되지 않았습니다. 잠시 후 다시 시도하세요.')
+        raise ValueError('AI 배경 제거 모델이 준비되지 않았습니다. 단색 배경 제거를 선택하거나 잠시 후 다시 시도하세요.')
+    return method
 
 
 def remove_flat_background(image: Image.Image, tolerance: int = 24) -> Image.Image:
@@ -380,7 +468,10 @@ def video_thumbnail(video_path: Path) -> bytes:
 
 
 def make_sprite_sheet(video_path: Path, output_path: Path, count: int, loop: bool = True,
-                      transparent_path: Path | None = None, tolerance: int = 24) -> None:
+                      transparent_path: Path | None = None, tolerance: int = 24, background_mode: str = 'flat') -> None:
+    if background_mode not in ('ai','ai-sparks','flat','subtle'):raise ValueError('배경 제거 방식을 확인하세요.')
+    if transparent_path is not None and background_mode in ('ai','ai-sparks','subtle') and not image_background.status()['ready']:
+        raise ValueError('AI 배경 제거 모델이 준비되지 않았습니다.')
     container = av.open(str(video_path))
     frames = [frame.to_image().convert("RGBA") for frame in container.decode(video=0)]
     container.close()
@@ -404,8 +495,14 @@ def make_sprite_sheet(video_path: Path, output_path: Path, count: int, loop: boo
     if transparent_path is not None:
         transparent = Image.new("RGBA", sheet.size, (0, 0, 0, 0))
         for index, image in enumerate(selected):
-            transparent.alpha_composite(remove_flat_background(image, tolerance),
-                                        ((index % columns) * cell_w, (index // columns) * cell_h))
+            if background_mode=='subtle':
+                import sprite_vfx_matte
+                cutout,_=sprite_vfx_matte.remove(image)
+            elif background_mode=='ai-sparks':
+                cutout=image_background.remove_sprite_with_sparks(image)
+            else:
+                cutout=image_background.remove_sprite(image) if background_mode=='ai' else remove_flat_background(image,tolerance)
+            transparent.paste(cutout,((index % columns)*cell_w+(cell_w-image.width)//2,(index//columns)*cell_h+(cell_h-image.height)//2))
         transparent.save(transparent_path, optimize=True)
 
 
@@ -510,17 +607,26 @@ def update_job(job_id: str, **changes) -> None:
 
 def run_job(job_id: str, payload: dict) -> None:
     try:
+        sprite_workflows.validate(payload,COMFY_ROOT)
+        combat = sprite_combat.options(payload)
+        timing_settings = motion_timing.options(payload)
         update_job(job_id, state="uploading", message="기준 이미지를 ComfyUI로 전송 중")
         encoded = payload["imageData"].split(",", 1)[-1]
         image_bytes = base64.b64decode(encoded, validate=True)
         source_image = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
         had_transparency = source_image.getchannel("A").getextrema()[0] < 255
+        subtle=combat['combatEffect']=='subtle' and not combat['pixelOutput']
+        if subtle and payload.get('removeBackground',False) and not had_transparency:
+            update_job(job_id,state='uploading',message='캐릭터의 배경을 먼저 정리하는 중')
+            cut=image_background.remove_sprite(source_image)
+            buffer=io.BytesIO();cut.save(buffer,format='PNG');image_bytes=buffer.getvalue()
+            had_transparency=True
         width = int(payload.get("width", 864))
         height = int(payload.get("height", 480))
         if width % 32 or height % 32 or width < 256 or height < 256:
             raise ValueError("해상도의 가로·세로는 256 이상이며 32의 배수여야 합니다.")
         motion_padding = payload.get('motionPadding',10)
-        prepared_bytes = prepare_reference_image(image_bytes, width, height, motion_padding)
+        prepared_bytes = prepare_reference_image(image_bytes, width, height, motion_padding, pixel_art=combat['pixelOutput'])
         result_dir = RESULT_ROOT / job_id
         result_dir.mkdir(parents=True, exist_ok=True)
         (result_dir / "reference_prepared.png").write_bytes(prepared_bytes)
@@ -530,6 +636,15 @@ def run_job(job_id: str, payload: dict) -> None:
         loop = bool(payload.get("loop", animation_type in {"idle", "walk", "run", "jump"}))
         facing = str(payload.get("facing", "preserve"))
         prompt = str(payload.get("prompt", ""))
+        asset_spec=asset_types.validate(payload.get("assetSpec"))
+        # Character-specific plans obey the current direction selector. An old
+        # entry-card direction must not append a contradictory left/right cue.
+        asset_prompt=(asset_types.CAMERAS[asset_spec['type']]
+                      if asset_spec and payload.get('motionPromptMode')=='image-guided'
+                      else asset_types.motion_prompt(asset_spec))
+        # The small-trail template preserves the reference and allows a full body
+        # turn; the generic asset wrapper otherwise locks that turn out again.
+        if asset_prompt and not (combat['combatEffect']=='subtle'):prompt+=", "+asset_prompt
         workflow = build_workflow(
             image_name,
             prompt,
@@ -548,17 +663,25 @@ def run_job(job_id: str, payload: dict) -> None:
             negative_prompt=payload.get('negativePrompt',DEFAULT_NEGATIVE),
             cfg_scale=payload.get('cfgScale',1.5),
             sampling_mode=payload.get('samplingMode','quality'),
+            workflow_id=payload.get('workflowId','standard'),
+            combat_settings=combat,
+            image_guided=payload.get('motionPromptMode')=='image-guided',
         )
         # Local audit record for reproducible comparisons; never part of the public gallery.
         (result_dir / 'generation_prompt.json').write_text(json.dumps({
+            'assetSpec': asset_spec,
+            **combat, 'combatVersion': sprite_combat.VERSION,
             'revision': PROMPT_REVISION, 'seed': seed, 'prompt': workflow['6']['inputs']['prompt'],
+            'motionPromptMode': payload.get('motionPromptMode','manual'),
             'width': width, 'height': height, 'length': workflow['6']['inputs']['length'],
             'flatBackground': had_transparency, 'blinkMode': payload.get('blinkMode','none'),
             'motionPadding': motion_padding,
             'motionStrength': payload.get('motionStrength','normal'),
             'subjectType': payload.get('subjectType','human'),
             'negativeEnabled': '17' in workflow,
-            'samplingMode': payload.get('samplingMode','quality'),
+            'samplingMode': 'fasth3-8step' if payload.get('workflowId')=='fasth3-sprite' else payload.get('samplingMode','quality'),
+            'workflowId': payload.get('workflowId','standard'),
+            'diffusionModel': workflow['2']['inputs']['unet_name'],
             'steps': workflow['10']['inputs']['steps'],
             'negativePrompt': workflow.get('17',{}).get('inputs',{}).get('prompt'),
             'cfgScale': workflow['11']['inputs'].get('cfg',1.0),
@@ -586,7 +709,7 @@ def run_job(job_id: str, payload: dict) -> None:
         video_path = result_dir / f"{animation_type}.mp4"
         shutil.copy2(source_video, raw_video_path)
         stabilization_warning = None
-        if payload.get("stabilize", True):
+        if payload.get("stabilize", True) and combat['combatEffect']=='none' and not combat['pixelOutput']:
             update_job(job_id, state="stabilizing", message="캐릭터 크기와 프레이밍을 정규화하는 중")
             try:
                 stabilize_video(raw_video_path, video_path, preserve_padding=motion_padding>0)
@@ -595,6 +718,8 @@ def run_job(job_id: str, payload: dict) -> None:
                 shutil.copy2(raw_video_path, video_path)
         else:
             shutil.copy2(raw_video_path, video_path)
+            if payload.get('stabilize', True) and (combat['combatEffect']!='none' or combat['pixelOutput']):
+                stabilization_warning='이펙트 크기와 도트 격자를 보존하도록 자동 크기 정규화를 생략했습니다.'
         loop_report = None
         if loop and payload.get('optimizeLoop', True):
             update_job(job_id, state='packing', message='자세와 이동 방향이 이어지는 루프 구간을 찾는 중')
@@ -606,11 +731,44 @@ def run_job(job_id: str, payload: dict) -> None:
                 loop_report = dict(version=sprite_loop.VERSION, method='unchanged', quality='needs_review', reason='processing_failed')
             finally:
                 loop_path.unlink(missing_ok=True)
+        timing_report=None
+        if timing_settings['motionSpeed']!=1 or timing_settings['trimAction']:
+            update_job(job_id,state='packing',message='동작 속도와 공격 앞뒤 멈춤 구간을 정리하는 중')
+            timed_path=result_dir/f'{animation_type}_timed.mp4'
+            timing_report=motion_timing.retime_video(video_path,timed_path,timing_settings)
+            os.replace(timed_path,video_path)
+            (result_dir/'motion_timing.json').write_text(json.dumps(timing_report,ensure_ascii=False,indent=2),encoding='utf-8')
         update_job(job_id, state="packing", message="프레임을 골라 스프라이트 시트로 패킹 중")
         sheet_path = result_dir / f"{animation_type}_sprite_sheet.png"
         transparent_path = result_dir / f"{animation_type}_transparent.png" if payload.get("removeBackground", False) else None
-        make_sprite_sheet(video_path, sheet_path, int(payload.get("frameCount", 8)), loop,
-                          transparent_path, int(payload.get("backgroundTolerance", 24)))
+        background_mode=background_options(payload)
+        pixel_report = None
+        sheet_timing=None
+        effective_count=int(payload.get('frameCount',8))
+        if timing_report:
+            effective_count=min(effective_count,timing_report['outputFrames'])
+            sheet_timing=motion_timing.sheet_durations(video_path,effective_count,loop)
+        try:
+            if transparent_path and background_mode in ('ai','ai-sparks'):update_job(job_id,state='packing',message='AI로 프레임별 배경 제거 중 · 원본 영상과 시트 보존')
+            if combat['pixelOutput']:
+                import sprite_pixel_export
+                update_job(job_id,state='packing',message='배경 윤곽·공통 팔레트·시간축을 정리해 도트 시트로 만드는 중')
+                pixel_report = sprite_pixel_export.export(video_path, prepared_bytes, sheet_path, transparent_path,
+                    effective_count, loop, combat['pixelColorLock'])
+                (result_dir/'pixel_export.json').write_text(json.dumps(pixel_report,ensure_ascii=False,indent=2),encoding='utf-8')
+                if pixel_report['edgeContactFrames']:
+                    stabilization_warning=' / '.join(filter(None,[stabilization_warning,'일부 프레임이 캔버스 가장자리에 닿습니다. 결과를 확인하고 필요하면 동작 여백을 늘리거나 효과 강도를 낮춰 주세요.']))
+            else:
+                sheet_mode='subtle' if subtle else background_mode
+                if transparent_path and subtle:update_job(job_id,state='packing',message='캐릭터와 옅은 검기 경계를 함께 정리하는 중')
+                make_sprite_sheet(video_path, sheet_path, effective_count, loop,
+                                  transparent_path, int(payload.get("backgroundTolerance", 24)), sheet_mode)
+        except Exception:
+            if combat['pixelOutput']:raise
+            if not transparent_path or not sheet_path.is_file():raise
+            transparent_path.unlink(missing_ok=True)
+            transparent_path=None
+            stabilization_warning=' / '.join(filter(None,[stabilization_warning,'배경 제거에 실패해 원본 영상과 시트만 저장했습니다.']))
         update_job(
             job_id,
             state="complete",
@@ -625,6 +783,11 @@ def run_job(job_id: str, payload: dict) -> None:
             loopReport=loop_report,
             facing=facing,
             warning=stabilization_warning,
+            backgroundRemoval=('flat' if combat['pixelOutput'] else background_mode) if transparent_path else None,
+            pixelExport=pixel_report,
+            motionTiming=timing_report,
+            sheetTimingMs=pixel_report['durationMs'] if pixel_report else sheet_timing,
+            frameCount=pixel_report['frameCount'] if pixel_report else effective_count,
         )
     except Exception as error:
         update_job(job_id, state="error", message=str(error))
@@ -647,6 +810,34 @@ class Handler(SimpleHTTPRequestHandler):
         if path == "/api/status":
             self.send_json(status_payload())
             return
+        if path.startswith('/api/jobs/') and path.endswith('/sheet.gif'):
+            from urllib.parse import parse_qs
+            import sprite_gif
+            parts=path.split('/')
+            with JOBS_LOCK:job=JOBS.get(parts[3]) if len(parts)==5 else None
+            if not job or job.get('state')!='complete':
+                self.send_json({'error':'완료된 시트를 선택하세요.'},HTTPStatus.NOT_FOUND);return
+            key=parse_qs(urlparse(self.path).query).get('source',['spriteSheet'])[0]
+            if key not in ('spriteSheet','transparentSheet') or not job.get(key):
+                self.send_json({'error':'저장된 시트를 선택하세요.'},HTTPStatus.BAD_REQUEST);return
+            folder=(RESULT_ROOT/parts[3]).resolve();source=(ROOT/job[key].lstrip('/')).resolve()
+            if not folder.is_relative_to(RESULT_ROOT.resolve()) or not source.is_relative_to(folder) or not source.is_file():
+                self.send_error(HTTPStatus.NOT_FOUND);return
+            try:
+                count=job.get('frameCount',8)
+                if job.get('video'):
+                    video=(ROOT/job['video'].lstrip('/')).resolve()
+                    if video.is_relative_to(folder) and video.is_file():
+                        with av.open(str(video)) as container:
+                            count=min(count,int(container.streams.video[0].frames) or count)
+                cols=min(count,8)
+                with Image.open(source) as image:frames=sprite_gif.split_sheet(image,cols,(count+cols-1)//cols,count)
+                timing=job.get('sheetTimingMs')
+                if not isinstance(timing,list) or len(timing)!=count:timing=[125]*count
+                data,_=sprite_gif.encode(frames,timing)
+            except ValueError as error:
+                self.send_json({'error':str(error)},HTTPStatus.BAD_REQUEST);return
+            self.send_response(HTTPStatus.OK);self.send_header('Content-Type','image/gif');self.send_header('Content-Disposition','attachment; filename="sprite.gif"');self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data);return
         if path.startswith("/api/jobs/"):
             job_id = path.rsplit("/", 1)[-1]
             with JOBS_LOCK:

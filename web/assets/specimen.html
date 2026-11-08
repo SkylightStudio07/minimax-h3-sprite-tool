@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sprite Lab UI 견본</title>
+<script src="ui.js"></script>
+<link rel="stylesheet" href="ui.css">
+<style>
+  /* specimen-only layout */
+  .spec-top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: var(--sp-3); padding: 12px var(--sp-6); background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .spec-top nav { display: flex; gap: var(--sp-1); overflow-x: auto; scrollbar-width: none; }
+  .spec-main { padding: var(--sp-10) 0 var(--sp-16); display: grid; gap: var(--sp-16); }
+  .spec-section > header { margin-bottom: var(--sp-6); }
+  .spec-section > header p { color: var(--text-2); margin-top: 6px; }
+  .spec-frame { border: 1px solid var(--line-strong); border-radius: var(--r-xl); overflow: hidden; box-shadow: var(--shadow-md); background: var(--bg); }
+  .spec-block { display: grid; gap: var(--sp-4); padding: var(--sp-6); border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--surface); }
+  .spec-block + .spec-block { margin-top: var(--sp-4); }
+  .spec-block h3 { font-size: var(--fs-sm); color: var(--text-3); font-weight: 600; }
+  .spec-cols { display: grid; gap: var(--sp-4); grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+
+  .swatches { display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); }
+  .swatch { border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; background: var(--surface); font-size: var(--fs-xs); }
+  .swatch i { display: block; height: 52px; }
+  .swatch span { display: block; padding: 8px 10px; color: var(--text-2); font-family: var(--font-mono); }
+
+  /* ---- app shell mock (becomes team.html in phase 2) ---- */
+  .app { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 860px; }
+  .app-side { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-4) var(--sp-3); border-right: 1px solid var(--line); background: var(--bg); }
+  .app-side .ui-brand { padding: 4px 6px var(--sp-3); }
+  .app-side-foot { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: var(--sp-3) 6px 0; border-top: 1px solid var(--line); }
+  .app-side-foot b { display: block; font-size: var(--fs-sm); }
+  .app-side-foot span { display: block; font-size: var(--fs-xs); color: var(--text-3); }
+  .app-main { min-width: 0; background: var(--bg); }
+  .app-bar { display: flex; align-items: center; gap: var(--sp-3); height: 60px; padding: 0 var(--sp-8); border-bottom: 1px solid var(--line); background: var(--surface); }
+  .app-bar .crumb { font-size: var(--fs-sm); color: var(--text-3); }
+  .app-bar .crumb b { color: var(--text); font-weight: 600; }
+  .app-content { display: grid; gap: var(--sp-6); padding: var(--sp-8); max-width: 1180px; }
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap; }
+  .page-head .ui-h1 { display: flex; align-items: center; gap: var(--sp-3); }
+  .page-head p { color: var(--text-2); margin-top: 6px; }
+  .feature-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--sprite-soft); color: var(--sprite); }
+  .stats { display: grid; gap: var(--sp-3); grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .gen { display: grid; gap: var(--sp-5); grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: start; }
+  .two { display: grid; gap: var(--sp-4); grid-template-columns: 1fr 1fr; }
+
+  .art { position: absolute; inset: 0; display: grid; place-items: center; }
+  .art svg { width: 70%; height: 70%; }
+
+  /* ---- landing mock ---- */
+  .landing { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: var(--sp-12); align-items: center; padding: var(--sp-12) var(--sp-12) var(--sp-10); background:
+      radial-gradient(600px 320px at 8% 0%, color-mix(in srgb, var(--rig) 16%, transparent), transparent 70%),
+      radial-gradient(520px 300px at 92% 100%, color-mix(in srgb, var(--music) 12%, transparent), transparent 70%),
+      var(--bg); }
+  .landing-top { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-4) var(--sp-12); border-bottom: 1px solid var(--line); background: var(--surface); }
+  .landing h1 { margin: var(--sp-4) 0 var(--sp-4); }
+  .features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-3); margin-top: var(--sp-8); }
+  .feature { display: grid; gap: 6px; padding: var(--sp-4); border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+  .feature .feature-icon { width: 36px; height: 36px; margin-bottom: 4px; }
+  .feature b { font-size: var(--fs-md); }
+  .feature span { font-size: var(--fs-xs); color: var(--text-2); }
+  .login { padding: var(--sp-8); border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--shadow-lg); }
+  .login .ui-h2 { margin-bottom: 4px; }
+
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+    .app-side { display: none; }
+    .app-content { padding: var(--sp-5); }
+    .app-bar { padding: 0 var(--sp-5); }
+    .gen, .two, .landing { grid-template-columns: 1fr; }
+    .landing { padding: var(--sp-8) var(--sp-5); }
+    .landing-top { padding: var(--sp-3) var(--sp-5); }
+    .features { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: 1fr; }
+    .ui-display { font-size: var(--fs-4xl); }
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-sprite" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 7.5h4M3 12h18M3 16.5h4M17 7.5h4M17 16.5h4"/></symbol>
+  <symbol id="i-rig" viewBox="0 0 24 24"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></symbol>
+  <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+  <symbol id="i-queue" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+  <symbol id="i-gallery" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></symbol>
+  <symbol id="i-guide" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m16 11 2 2 4-4"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2m-7.07-14.07 1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="i-error" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4M22 5h-4"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16M8 16H3v5"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+</svg>
+
+<div class="spec-top">
+  <a class="ui-brand" href="#"><span class="ui-brand__mark"><svg class="ui-icon"><use href="#i-spark"/></svg></span>UI 견본</a>
+  <nav class="ui-tabs" style="border:0">
+    <a href="#app" aria-current="page">앱 화면</a>
+    <a href="#landing">랜딩</a>
+    <a href="#color">색</a>
+    <a href="#type">글자</a>
+    <a href="#controls">컨트롤</a>
+    <a href="#feedback">피드백</a>
+  </nav>
+  <span class="ui-spacer"></span>
+  <button class="ui-btn ui-btn--icon" type="button" data-theme-toggle><svg class="ui-icon"><use href="#i-moon"/></svg></button>
+</div>
+
+<main class="ui-container spec-main">
+
+  <!-- =============================================================== APP -->
+  <section class="spec-section" id="app">
+    <header>
+      <span class="ui-eyebrow">미리보기 1</span>
+      <h2 class="ui-h1">로그인 후 작업 공간</h2>
+      <p>team.html이 이 구조로 바뀝니다. 좌측 내비, 상단 바, 기능별 컬러 아이콘, 2단 생성 폼, 결과 갤러리.</p>
+    </header>
+    <div class="spec-frame">
+      <div class="app">
+        <aside class="app-side">
+          <a class="ui-brand" href="#"><span class="ui-brand__mark"><svg class="ui-icon"><use href="#i-spark"/></svg></span><span>Sprite Lab<small>게임 에셋 스튜디오</small></span></a>
+          <nav class="ui-nav" aria-label="작업">
+            <div class="ui-nav__label">만들기</div>
+            <button class="ui-nav__item ui-nav__item--sprite" aria-current="page"><span class="ui-nav__icon"><svg class="ui-icon"><use href="#i-sprite"/></svg></span>스프라이트</button>
+            <button class="ui-nav__item ui-nav__item--rig"><span class="ui-nav__icon"><svg class="ui-icon"><use href="#i-rig"/></svg></span>2D 리깅</button>
+            <button class="ui-nav__item ui-nav__item--music"><span class="ui-nav__icon"><svg class="ui-icon"><use href="#i-music"/></svg></span>게임 BGM</button>
+            <div class="ui-nav__label">팀</div>
+            <button class="ui-nav__item"><span class="ui-nav__icon"><svg class="ui-icon"><use href="#i-queue"/></svg></span>팀 대기열<span class="ui-nav__count">2</span></button>
+            <button class="ui-nav__item"><span class="ui-nav__icon"><svg class="ui-icon"><use href="#i-gallery"/></svg></span>결과 갤러리</button>
+            <button class="ui-nav__item"><span class="ui-nav__icon"><svg class="ui-icon"><use href="#i-guide"/></svg></span>사용 가이드</button>
+            <button class="ui-nav__item"><span class="ui-nav__icon"><svg class="ui-icon"><use href="#i-users"/></svg></span>계정 승인</button>
+          </nav>
+          <div class="app-side-foot">
+            <span class="ui-avatar">테</span>
+            <div><b>테스트 팀원</b><span>관리자</span></div>
+            <span class="ui-spacer"></span>
+            <button class="ui-btn ui-btn--ghost ui-btn--icon ui-btn--sm ui-tooltip" data-tip="로그아웃" type="button" aria-label="로그아웃"><svg class="ui-icon ui-icon--sm"><use href="#i-logout"/></svg></button>
+          </div>
+        </aside>
+
+        <div class="app-main">
+          <div class="app-bar">
+            <span class="crumb">만들기 / <b>스프라이트</b></span>
+            <span class="ui-spacer"></span>
+            <span class="ui-badge ui-badge--success"><span class="ui-dot"></span>ComfyUI 연결됨</span>
+            <a class="ui-btn ui-btn--ghost ui-btn--sm" href="#"><svg class="ui-icon ui-icon--sm"><use href="#i-guide"/></svg>가이드</a>
+            <button class="ui-btn ui-btn--icon ui-btn--sm" type="button" data-theme-toggle><svg class="ui-icon ui-icon--sm"><use href="#i-moon"/></svg></button>
+          </div>
+
+          <div class="app-content">
+            <div class="page-head">
+              <div>
+                <h1 class="ui-h1"><span class="feature-icon"><svg class="ui-icon ui-icon--lg"><use href="#i-sprite"/></svg></span>이미지에 움직임을</h1>
+                <p>캐릭터 이미지 한 장을 게임 속 애니메이션과 스프라이트 시트로 만듭니다.</p>
+              </div>
+            </div>
+
+            <div class="stats">
+              <div class="ui-stat"><span class="ui-stat__label"><span class="ui-dot ui-dot--live" style="color:var(--primary)"></span>생성 중</span><span class="ui-stat__value">1</span></div>
+              <div class="ui-stat"><span class="ui-stat__label"><span class="ui-dot" style="color:var(--warning)"></span>대기 중</span><span class="ui-stat__value">2</span></div>
+              <div class="ui-stat"><span class="ui-stat__label"><span class="ui-dot" style="color:var(--success)"></span>최근 완료</span><span class="ui-stat__value">14</span></div>
+            </div>
+
+            <div class="ui-alert"><svg class="ui-icon"><use href="#i-info"/></svg><span>등록한 작업은 페이지를 닫아도 계속됩니다. 진행 상태는 <b>팀 대기열</b>에서 확인하세요.</span></div>
+
+            <div class="gen">
+              <section class="ui-panel">
+                <div class="ui-panel__head"><span class="ui-panel__step">1</span><h2 class="ui-panel__title">원본 이미지</h2></div>
+                <div class="ui-panel__body">
+                  <label class="ui-dropzone">
+                    <span class="ui-dropzone__icon"><svg class="ui-icon"><use href="#i-upload"/></svg></span>
+                    <b style="color:var(--text)">이미지를 끌어오거나 클릭해서 선택</b>
+                    <span class="ui-small">전신·고정 구도 이미지 권장 · PNG, JPG, WebP</span>
+                    <input type="file" hidden>
+                  </label>
+                  <div class="ui-field">
+                    <label class="ui-label">배경 처리</label>
+                    <div class="ui-seg ui-seg--block"><label><input type="radio" name="bg" checked>투명 배경</label><label><input type="radio" name="bg">원본 유지</label><label><input type="radio" name="bg">단색</label></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="ui-panel">
+                <div class="ui-panel__head"><span class="ui-panel__step">2</span><h2 class="ui-panel__title">움직임 설정</h2></div>
+                <div class="ui-panel__body">
+                  <div class="ui-field">
+                    <label class="ui-label" for="m1">생성 모드</label>
+                    <select class="ui-select" id="m1"><option>일반 · 20스텝 (기본 · 느림)</option><option>빠름 · 8스텝</option></select>
+                    <span class="ui-hint">일반 모드는 더 오래 걸리지만 배경 유지가 개선됩니다.</span>
+                  </div>
+                  <div class="two">
+                    <div class="ui-field"><label class="ui-label" for="m2">애니메이션 종류</label><select class="ui-select" id="m2"><option>Idle · 대기</option><option>Walk · 걷기</option><option>Attack · 공격</option></select></div>
+                    <div class="ui-field"><label class="ui-label" for="m3">프레임 수</label><input class="ui-input" id="m3" type="number" value="16"></div>
+                  </div>
+                  <div class="ui-field">
+                    <label class="ui-label" for="m4">동작 설명 <span class="ui-optional">선택</span></label>
+                    <textarea class="ui-textarea" id="m4" placeholder="예: 숨을 고르며 망토가 가볍게 흔들린다"></textarea>
+                  </div>
+                  <div class="ui-field">
+                    <div class="ui-row ui-row--between"><label class="ui-label" for="m5">움직임 강도</label><span class="ui-small ui-text-2">0.6</span></div>
+                    <input class="ui-range" id="m5" type="range" min="0" max="1" step=".1" value=".6">
+                  </div>
+                  <label class="ui-check"><input type="checkbox" checked><span>자연스러운 루프 구간 자동 선택<small>시작과 끝이 매끄럽게 이어지는 구간으로 자릅니다.</small></span></label>
+                </div>
+                <div class="ui-panel__foot">
+                  <button class="ui-btn ui-btn--ghost" type="button">초기화</button>
+                  <button class="ui-btn ui-btn--primary" type="button"><svg class="ui-icon"><use href="#i-spark"/></svg>생성 시작</button>
+                </div>
+              </section>
+            </div>
+
+            <div>
+              <div class="ui-section-head">
+                <div><h2 class="ui-h2">최근 결과</h2><p>팀이 만든 결과물을 모아 봅니다.</p></div>
+                <div class="ui-row">
+                  <div class="ui-seg"><button aria-pressed="true">전체</button><button>스프라이트</button><button>리깅</button><button>BGM</button></div>
+                  <button class="ui-btn ui-btn--sm" type="button"><svg class="ui-icon ui-icon--sm"><use href="#i-refresh"/></svg>새로고침</button>
+                </div>
+              </div>
+              <div class="ui-grid" style="--min:230px">
+                <article class="ui-card ui-card--interactive">
+                  <div class="ui-card__media ui-checker">
+                    <span class="ui-card__badge ui-badge ui-badge--sprite"><svg class="ui-icon" style="width:12px;height:12px"><use href="#i-sprite"/></svg>스프라이트</span>
+                    <div class="art"><svg viewBox="0 0 200 120"><g fill="var(--sprite)" opacity=".85"><rect x="18" y="30" width="34" height="60" rx="8"/><rect x="62" y="26" width="34" height="64" rx="8" opacity=".75"/><rect x="106" y="30" width="34" height="60" rx="8" opacity=".55"/><rect x="150" y="34" width="34" height="56" rx="8" opacity=".35"/></g></svg></div>
+                  </div>
+                  <div class="ui-card__body"><span class="ui-card__title">기사 Idle · 16프레임</span><span class="ui-card__meta">테스트 · 10월 13일 14:20</span></div>
+                  <div class="ui-card__actions"><a class="ui-btn ui-btn--sm" href="#"><svg class="ui-icon ui-icon--sm"><use href="#i-download"/></svg>시트</a><a class="ui-btn ui-btn--sm" href="#">MP4</a><button class="ui-btn ui-btn--ghost ui-btn--sm ui-btn--icon" aria-label="더 보기"><svg class="ui-icon ui-icon--sm"><use href="#i-more"/></svg></button></div>
+                </article>
+                <article class="ui-card ui-card--interactive">
+                  <div class="ui-card__media ui-checker">
+                    <span class="ui-card__badge ui-badge ui-badge--rig"><svg class="ui-icon" style="width:12px;height:12px"><use href="#i-rig"/></svg>2D 리깅</span>
+                    <div class="art"><svg viewBox="0 0 200 120"><g fill="var(--rig)"><ellipse cx="100" cy="46" rx="26" ry="28" opacity=".9"/><rect x="74" y="72" width="52" height="40" rx="14" opacity=".55"/><ellipse cx="100" cy="40" rx="34" ry="22" opacity=".3"/></g></svg></div>
+                  </div>
+                  <div class="ui-card__body"><div class="ui-row ui-row--between"><span class="ui-card__title">후드 캐릭터</span><span class="ui-badge">v3</span></div><span class="ui-card__meta">테스트 · 10월 12일 22:05</span></div>
+                  <div class="ui-card__actions"><a class="ui-btn ui-btn--soft ui-btn--sm" href="#"><svg class="ui-icon ui-icon--sm"><use href="#i-edit"/></svg>레이어 수정</a><a class="ui-btn ui-btn--sm" href="#">PSD</a><button class="ui-btn ui-btn--ghost ui-btn--sm ui-btn--icon" aria-label="더 보기"><svg class="ui-icon ui-icon--sm"><use href="#i-more"/></svg></button></div>
+                </article>
+                <article class="ui-card ui-card--interactive">
+                  <div class="ui-card__media" style="background:var(--music-soft)">
+                    <span class="ui-card__badge ui-badge ui-badge--music"><svg class="ui-icon" style="width:12px;height:12px"><use href="#i-music"/></svg>BGM</span>
+                    <div class="art"><svg viewBox="0 0 200 120"><g stroke="var(--music)" stroke-width="6" stroke-linecap="round"><path d="M30 50v20M46 36v48M62 44v32M78 24v72M94 40v40M110 30v60M126 46v28M142 34v52M158 44v32M174 54v12"/></g></svg></div>
+                  </div>
+                  <div class="ui-card__body"><span class="ui-card__title">평화로운 숲 테마</span><span class="ui-card__meta">테스트 · 10월 11일 09:41 · YuE2</span></div>
+                  <div class="ui-card__actions"><button class="ui-btn ui-btn--sm"><svg class="ui-icon ui-icon--sm"><use href="#i-download"/></svg>FLAC</button><button class="ui-btn ui-btn--ghost ui-btn--sm">ABC 악보</button></div>
+                </article>
+                <article class="ui-card">
+                  <div class="ui-card__media"><div class="art"><div class="ui-skeleton" style="width:150px;height:110px;border-radius:12px"></div></div></div>
+                  <div class="ui-card__body"><div class="ui-row ui-row--between"><span class="ui-card__title">마법사 Walk</span><span class="ui-badge ui-badge--primary"><span class="ui-dot ui-dot--live"></span>생성 중</span></div><div class="ui-progress"><span style="--value:62%"></span></div><span class="ui-card__meta">약 2분 남음</span></div>
+                </article>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================== LANDING -->
+  <section class="spec-section" id="landing">
+    <header>
+      <span class="ui-eyebrow">미리보기 2</span>
+      <h2 class="ui-h1">로그인 전 랜딩</h2>
+      <p>장식 대각선·원·세리프 대신 부드러운 컬러 글로우와 기능 카드로 정리합니다.</p>
+    </header>
+    <div class="spec-frame">
+      <div class="landing-top">
+        <a class="ui-brand" href="#"><span class="ui-brand__mark"><svg class="ui-icon"><use href="#i-spark"/></svg></span><span>Sprite Lab<small>게임 에셋 스튜디오</small></span></a>
+        <div class="ui-row"><a class="ui-btn ui-btn--ghost ui-btn--sm" href="#"><svg class="ui-icon ui-icon--sm"><use href="#i-globe"/></svg>공개 Live2D</a><a class="ui-btn ui-btn--ghost ui-btn--sm" href="#">갤러리 둘러보기</a><button class="ui-btn ui-btn--icon ui-btn--sm" type="button" data-theme-toggle><svg class="ui-icon ui-icon--sm"><use href="#i-moon"/></svg></button></div>
+      </div>
+      <div class="landing">
+        <div>
+          <span class="ui-badge ui-badge--primary"><svg class="ui-icon" style="width:12px;height:12px"><use href="#i-spark"/></svg>팀 전용 게임 에셋 스튜디오</span>
+          <h1 class="ui-display">상상하던 게임,<br><span class="ui-gradient-text">에셋이 되는 공간</span></h1>
+          <p class="ui-lead">캐릭터의 첫 움직임부터 장면을 채우는 음악까지.<br>팀의 아이디어를 하나의 제작 공간에서 완성하세요.</p>
+          <div class="features">
+            <div class="feature"><span class="feature-icon"><svg class="ui-icon"><use href="#i-sprite"/></svg></span><b>스프라이트</b><span>이미지 한 장에 움직임을</span></div>
+            <div class="feature"><span class="feature-icon" style="background:var(--rig-soft);color:var(--rig)"><svg class="ui-icon"><use href="#i-rig"/></svg></span><b>2D 리깅</b><span>레이어로 살아나는 캐릭터</span></div>
+            <div class="feature"><span class="feature-icon" style="background:var(--music-soft);color:var(--music)"><svg class="ui-icon"><use href="#i-music"/></svg></span><b>게임 BGM</b><span>세계관을 담은 사운드트랙</span></div>
+          </div>
+        </div>
+        <form class="login ui-stack" style="--gap:var(--sp-4)" onsubmit="return false">
+          <div><h2 class="ui-h2">로그인</h2><p class="ui-small ui-text-2">승인된 팀원만 생성과 대기열을 사용할 수 있어요.</p></div>
+          <div class="ui-field"><label class="ui-label" for="l1">아이디</label><input class="ui-input" id="l1" autocomplete="username"></div>
+          <div class="ui-field"><label class="ui-label" for="l2">비밀번호</label><input class="ui-input" id="l2" type="password" autocomplete="current-password"></div>
+          <button class="ui-btn ui-btn--primary ui-btn--lg ui-btn--block">로그인</button>
+          <button class="ui-btn ui-btn--block" type="button">가입 요청</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================= COLOR -->
+  <section class="spec-section" id="color">
+    <header><span class="ui-eyebrow">토큰</span><h2 class="ui-h1">색</h2><p>강조색은 보라 하나. 기능색은 아이콘 타일·배지에만 작게 씁니다.</p></header>
+    <div class="spec-block">
+      <h3>중립</h3>
+      <div class="swatches">
+        <div class="swatch"><i style="background:var(--bg)"></i><span>--bg</span></div>
+        <div class="swatch"><i style="background:var(--surface)"></i><span>--surface</span></div>
+        <div class="swatch"><i style="background:var(--surface-2)"></i><span>--surface-2</span></div>
+        <div class="swatch"><i style="background:var(--surface-3)"></i><span>--surface-3</span></div>
+        <div class="swatch"><i style="background:var(--line-strong)"></i><span>--line-strong</span></div>
+        <div class="swatch"><i style="background:var(--text-3)"></i><span>--text-3</span></div>
+        <div class="swatch"><i style="background:var(--text-2)"></i><span>--text-2</span></div>
+        <div class="swatch"><i style="background:var(--text)"></i><span>--text</span></div>
+      </div>
+    </div>
+    <div class="spec-block">
+      <h3>브랜드 · 기능 · 상태</h3>
+      <div class="swatches">
+        <div class="swatch"><i style="background:var(--brand-gradient)"></i><span>brand-gradient</span></div>
+        <div class="swatch"><i style="background:var(--primary)"></i><span>--primary</span></div>
+        <div class="swatch"><i style="background:var(--primary-soft)"></i><span>--primary-soft</span></div>
+        <div class="swatch"><i style="background:var(--sprite)"></i><span>--sprite</span></div>
+        <div class="swatch"><i style="background:var(--rig)"></i><span>--rig</span></div>
+        <div class="swatch"><i style="background:var(--music)"></i><span>--music</span></div>
+        <div class="swatch"><i style="background:var(--success)"></i><span>--success</span></div>
+        <div class="swatch"><i style="background:var(--warning)"></i><span>--warning</span></div>
+        <div class="swatch"><i style="background:var(--danger)"></i><span>--danger</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================== TYPE -->
+  <section class="spec-section" id="type">
+    <header><span class="ui-eyebrow">토큰</span><h2 class="ui-h1">글자</h2><p>Pretendard 한 종류, 무게와 크기로만 위계를 만듭니다.</p></header>
+    <div class="spec-block">
+      <div class="ui-display">상상하던 게임 48</div>
+      <div class="ui-h1">페이지 제목 28 · 750</div>
+      <div class="ui-h2">섹션 제목 22 · 700</div>
+      <div class="ui-h3">카드·패널 제목 18 · 700</div>
+      <p class="ui-lead">리드 문단 16 — 캐릭터의 첫 움직임부터 장면을 채우는 음악까지.</p>
+      <p>본문 14 — 등록한 작업은 페이지를 닫아도 계속됩니다. 진행 상태는 팀 대기열에서 확인하세요. Sprite Lab 0123456789</p>
+      <p class="ui-small ui-text-2">보조 13 — 일반 모드는 더 오래 걸리지만 배경 유지가 개선됩니다.</p>
+      <p class="ui-xsmall ui-text-3">캡션 12 — 테스트 · 10월 13일 14:20</p>
+      <p>단축키 <span class="ui-kbd">Ctrl</span> <span class="ui-kbd">Z</span> 되돌리기 · <span class="ui-kbd">B</span> 복원</p>
+    </div>
+  </section>
+
+  <!-- ========================================================== CONTROLS -->
+  <section class="spec-section" id="controls">
+    <header><span class="ui-eyebrow">컴포넌트</span><h2 class="ui-h1">컨트롤</h2></header>
+    <div class="spec-block">
+      <h3>버튼</h3>
+      <div class="ui-row">
+        <button class="ui-btn ui-btn--primary"><svg class="ui-icon"><use href="#i-spark"/></svg>생성 시작</button>
+        <button class="ui-btn">보조 버튼</button>
+        <button class="ui-btn ui-btn--soft"><svg class="ui-icon"><use href="#i-edit"/></svg>레이어 수정</button>
+        <button class="ui-btn ui-btn--ghost">고스트</button>
+        <button class="ui-btn ui-btn--danger">갤러리에서 내리기</button>
+        <button class="ui-btn ui-btn--primary" aria-busy="true">저장</button>
+        <button class="ui-btn" disabled>비활성</button>
+        <button class="ui-btn ui-btn--icon" aria-label="다운로드"><svg class="ui-icon"><use href="#i-download"/></svg></button>
+      </div>
+      <div class="ui-row">
+        <button class="ui-btn ui-btn--primary ui-btn--sm">작게</button>
+        <button class="ui-btn ui-btn--sm"><svg class="ui-icon ui-icon--sm"><use href="#i-external"/></svg>내부 공유 링크 열기</button>
+        <button class="ui-btn ui-btn--primary ui-btn--lg">크게</button>
+      </div>
+    </div>
+    <div class="spec-cols" style="margin-top:var(--sp-4)">
+      <div class="spec-block">
+        <h3>입력</h3>
+        <div class="ui-field"><label class="ui-label" for="c1">작업 이름</label><input class="ui-input" id="c1" placeholder="예: 기사 Idle"></div>
+        <div class="ui-field"><label class="ui-label" for="c2">오류 상태</label><input class="ui-input" id="c2" aria-invalid="true" value="ab"><span class="ui-error">3자 이상 입력하세요.</span></div>
+        <div class="ui-field"><label class="ui-label" for="c3">셀렉트</label><select class="ui-select" id="c3"><option>See-through (기본)</option><option>Qwen 2.1 원본 보존 (실험)</option></select></div>
+        <div class="ui-field"><label class="ui-label" for="c4">비활성</label><input class="ui-input" id="c4" disabled value="수정 불가"></div>
+      </div>
+      <div class="spec-block">
+        <h3>선택</h3>
+        <label class="ui-check"><input type="checkbox" checked>원본 눈 픽셀 보존</label>
+        <label class="ui-check"><input type="checkbox">원본 눈썹 보존</label>
+        <label class="ui-check"><input type="radio" name="mouth" checked>닫힌 입</label>
+        <label class="ui-check"><input type="radio" name="mouth">살짝 열린 입</label>
+        <label class="ui-switch"><input type="checkbox" role="switch" checked>원본 겹치기</label>
+        <div class="ui-field"><div class="ui-row ui-row--between"><span class="ui-label">겹치기 투명도</span><span class="ui-small ui-text-2">40%</span></div><input class="ui-range" type="range" value="40"></div>
+      </div>
+      <div class="spec-block">
+        <h3>세그먼트 · 옵션 카드</h3>
+        <div class="ui-seg"><label><input type="radio" name="eye" checked>쉬운 영역 칠하기</label><label><input type="radio" name="eye">감은 눈 선 그리기</label></div>
+        <label class="ui-option"><input type="radio" name="eng" checked><span><b>See-through</b><small>기본 레이어 분리 엔진</small></span></label>
+        <label class="ui-option"><input type="radio" name="eng"><span><b>Qwen 2.1 원본 보존 <span class="ui-badge ui-badge--warning">실험</span></b><small>후드·안경·복잡한 의상 보존 전처리. 내부 품질 평가용</small></span></label>
+      </div>
+    </div>
+    <div class="spec-block" style="margin-top:var(--sp-4)">
+      <h3>탭 · 페이지네이션</h3>
+      <div class="ui-tabs" role="tablist"><button role="tab" aria-selected="true">생성 설정</button><button role="tab">마스크</button><button role="tab">결과</button></div>
+      <div class="ui-pagination"><button aria-current="page">1</button><button>2</button><button>3</button><button>…</button><button>9</button></div>
+    </div>
+  </section>
+
+  <!-- ========================================================== FEEDBACK -->
+  <section class="spec-section" id="feedback">
+    <header><span class="ui-eyebrow">컴포넌트</span><h2 class="ui-h1">피드백 · 데이터</h2></header>
+    <div class="spec-cols">
+      <div class="spec-block">
+        <h3>알림</h3>
+        <div class="ui-alert"><svg class="ui-icon"><use href="#i-info"/></svg><span>8190 엔진은 유휴 상태에서 꺼져 있을 수 있으며 작업 시 자동으로 켜집니다.</span></div>
+        <div class="ui-alert ui-alert--success"><svg class="ui-icon"><use href="#i-check"/></svg><span><b>저장했습니다.</b> 새 작업 버전 v4가 만들어졌습니다.</span></div>
+        <div class="ui-alert ui-alert--warning"><svg class="ui-icon"><use href="#i-warn"/></svg><span>V2 패키지가 현재 버전과 맞지 않습니다. 다시 생성하세요.</span></div>
+        <div class="ui-alert ui-alert--danger"><svg class="ui-icon"><use href="#i-error"/></svg><span>업로드에 실패했습니다. 30MB 이하 이미지를 사용하세요.</span></div>
+      </div>
+      <div class="spec-block">
+        <h3>배지 · 진행</h3>
+        <div class="ui-row"><span class="ui-badge">대기</span><span class="ui-badge ui-badge--primary"><span class="ui-dot ui-dot--live"></span>생성 중</span><span class="ui-badge ui-badge--success">완료</span><span class="ui-badge ui-badge--warning">실험</span><span class="ui-badge ui-badge--danger">오류</span></div>
+        <div class="ui-row"><span class="ui-badge ui-badge--sprite">스프라이트</span><span class="ui-badge ui-badge--rig">2D 리깅</span><span class="ui-badge ui-badge--music">BGM</span></div>
+        <div class="ui-progress"><span style="--value:62%"></span></div>
+        <div class="ui-progress ui-progress--indeterminate"><span></span></div>
+      </div>
+    </div>
+    <div class="spec-block" style="margin-top:var(--sp-4)">
+      <h3>표 (계정 승인)</h3>
+      <div class="ui-table-wrap">
+        <table class="ui-table">
+          <thead><tr><th>이름</th><th>아이디</th><th>상태</th><th>요청일</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><span class="ui-row"><span class="ui-avatar">민</span>민지</span></td><td>minji</td><td><span class="ui-badge ui-badge--warning">승인 대기</span></td><td>10월 12일</td><td style="text-align:right"><span class="ui-btn-group"><button class="ui-btn ui-btn--primary ui-btn--sm">승인</button><button class="ui-btn ui-btn--ghost ui-btn--sm">거절</button></span></td></tr>
+            <tr><td><span class="ui-row"><span class="ui-avatar">준</span>준호</span></td><td>junho</td><td><span class="ui-badge ui-badge--success">승인됨</span></td><td>10월 3일</td><td style="text-align:right"><button class="ui-btn ui-btn--ghost ui-btn--sm">권한 변경</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="spec-cols" style="margin-top:var(--sp-4)">
+      <div class="ui-empty">
+        <span class="ui-empty__icon"><svg class="ui-icon ui-icon--lg"><use href="#i-gallery"/></svg></span>
+        <b>아직 완료된 결과가 없어요</b>
+        <span class="ui-small">팀 서버에서 생성한 결과가 여기에 모입니다.</span>
+        <button class="ui-btn ui-btn--primary ui-btn--sm" style="margin-top:8px"><svg class="ui-icon ui-icon--sm"><use href="#i-plus"/></svg>첫 작업 만들기</button>
+      </div>
+      <div class="spec-block">
+        <h3>토스트 · 모달</h3>
+        <div class="ui-toast" style="position:static"><svg class="ui-icon"><use href="#i-check"/></svg><span><b>링크를 복사했습니다.</b><br><span class="ui-text-2">내부 PSD 링크를 팀원에게 붙여넣으세요.</span></span></div>
+        <button class="ui-btn" type="button" onclick="document.getElementById('demoModal').showModal()">모달 열기</button>
+        <dialog class="ui-modal" id="demoModal">
+          <div class="ui-modal__head"><h2 class="ui-h3">공개본을 갱신할까요?</h2></div>
+          <div class="ui-modal__body">같은 공개 주소의 PSD가 현재 작업 버전으로 교체됩니다. 공개 페이지를 보고 있는 사람에게도 바로 반영됩니다.</div>
+          <form class="ui-modal__foot" method="dialog"><button class="ui-btn ui-btn--ghost">취소</button><button class="ui-btn ui-btn--primary">공개본 갱신</button></form>
+        </dialog>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+  // keep theme-toggle icons in sync (specimen only)
+  document.addEventListener('themechange', function (e) {
+    document.querySelectorAll('[data-theme-toggle] use').forEach(function (u) { u.setAttribute('href', e.detail.theme === 'dark' ? '#i-sun' : '#i-moon'); });
+  });
+</script>
+</body>
+</html>

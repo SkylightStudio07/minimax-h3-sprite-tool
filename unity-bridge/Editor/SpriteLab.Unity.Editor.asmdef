@@ -1,0 +1,14 @@
+{
+  "name": "SpriteLab.Unity.Editor",
+  "rootNamespace": "SpriteLab",
+  "references": [
+    "SpriteLab.Unity.Runtime",
+    "Unity.2D.Animation.Runtime",
+    "Unity.2D.Sprite.Editor",
+    "UnityEngine.UI"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": true
+}

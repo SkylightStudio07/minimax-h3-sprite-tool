@@ -1,0 +1,58 @@
+// Windows Script Host bridge for spritelab-unity:// links.
+(function () {
+  if (WScript.Arguments.length < 1) WScript.Quit(2);
+  var link = String(WScript.Arguments.Item(0));
+  var lowerLink = link.toLowerCase();
+  if (lowerLink.indexOf("spritelab-unity://import?") !== 0 &&
+      lowerLink.indexOf("spritelab-unity://import/?") !== 0) WScript.Quit(3);
+  var shell = new ActiveXObject("WScript.Shell");
+  var files = new ActiveXObject("Scripting.FileSystemObject");
+  var root = shell.ExpandEnvironmentStrings("%LOCALAPPDATA%") + "\\SpriteLabUnityLink";
+  if (!files.FolderExists(root)) files.CreateFolder(root);
+  var configPath = root + "\\config.txt";
+  if (!files.FileExists(configPath)) {
+    shell.Popup("Unity 프로젝트에서 Tools > Sprite Lab > One-click Link > Enable을 먼저 실행하세요.", 12, "Sprite Lab", 48);
+    WScript.Quit(4);
+  }
+  var configFile = files.OpenTextFile(configPath, 1, false, -1);
+  var unityPath = configFile.ReadLine();
+  var projectPath = configFile.ReadLine();
+  var projectName = configFile.AtEndOfStream ? "Unity" : configFile.ReadLine();
+  configFile.Close();
+  var logPath = projectPath + "\\Library\\SpriteLabUnityLink.log";
+  function log(message) {
+    try {
+      var logFile = files.OpenTextFile(logPath, 8, true, -1);
+      logFile.WriteLine((new Date()).toUTCString() + " " + message);
+      logFile.Close();
+    } catch (_) {}
+  }
+  log("protocol request received");
+
+  var queue = root + "\\queue";
+  if (!files.FolderExists(queue)) files.CreateFolder(queue);
+  var request = queue + "\\" + (new Date().getTime()) + "-" + Math.floor(Math.random() * 1000000) + ".link";
+  var output = files.CreateTextFile(request, true, true);
+  output.Write(link);
+  output.Close();
+  log("request queued");
+
+  var heartbeat = root + "\\heartbeat.txt";
+  var active = false;
+  if (files.FileExists(heartbeat)) {
+    active = (new Date().getTime() - new Date(files.GetFile(heartbeat).DateLastModified).getTime()) < 10000;
+  }
+  if (active) {
+    log("active Unity editor detected");
+    // The queue is consumed on Unity's next editor update. Keep bringing the
+    // project forward briefly so a first-host confirmation cannot open behind
+    // the browser that launched the custom URL.
+    for (var focusAttempt = 0; focusAttempt < 5; focusAttempt++) {
+      shell.AppActivate(projectName);
+      WScript.Sleep(300);
+    }
+  } else {
+    log("starting configured Unity editor");
+    shell.Run('"' + unityPath + '" -projectPath "' + projectPath + '"', 1, false);
+  }
+})();

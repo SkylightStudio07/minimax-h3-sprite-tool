@@ -1,0 +1,136 @@
+/* Temporary bridge: restyles the legacy creation tools (index.html, rigging.html, music.html)
+ * when team.html embeds them. Loaded after ui.css; every rule is scoped to html.embedded-studio,
+ * so opening a tool page directly keeps its own styles.
+ * Remove once phase 6 rewrites those pages on ui.css (see docs/FRONTEND_IA_PLAN.md).
+ */
+html.embedded-studio, html.embedded-studio body { min-height: 0; height: auto; background: var(--bg); color: var(--text); }
+.embedded-studio body { margin: 0; padding: 0; font: 14px/1.55 var(--font); overflow-wrap: anywhere; }
+.embedded-studio main { position: relative; width: 100%; max-width: none; margin: 0; padding: 0; }
+
+/* the shell already shows the page title */
+.embedded-studio main > h1, .embedded-studio main > .sub, .embedded-studio main > section.panel:first-child:has(+ form#form) { display: none; }
+
+.embedded-studio .panel { min-width: 0; padding: var(--sp-6); border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--surface); color: var(--text); box-shadow: var(--shadow-xs); }
+.embedded-studio h1, .embedded-studio h2, .embedded-studio h3 { color: var(--text); font-family: var(--font); letter-spacing: -.02em; }
+.embedded-studio h1 { font-size: var(--fs-2xl); font-weight: 750; }
+.embedded-studio h2 { font-size: var(--fs-xl); font-weight: 700; }
+.embedded-studio h3 { font-size: var(--fs-lg); font-weight: 650; }
+.embedded-studio .muted, .embedded-studio .sub, .embedded-studio small, .embedded-studio .notice { color: var(--text-2); }
+.embedded-studio .notice { font-size: var(--fs-xs); line-height: 1.7; }
+.embedded-studio .eyebrow { color: var(--primary-text); font-size: var(--fs-xs); font-weight: 650; letter-spacing: .02em; }
+.embedded-studio a { color: var(--primary-text); }
+.embedded-studio code { color: var(--primary-text); }
+
+.embedded-studio label { color: var(--text); font-size: var(--fs-sm); font-weight: 600; }
+.embedded-studio .grid label, .embedded-studio .check, .embedded-studio .mouth-state { color: var(--text); }
+.embedded-studio .option { font-size: var(--fs-sm); font-weight: 500; }
+
+.embedded-studio input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),
+.embedded-studio select, .embedded-studio textarea {
+  max-width: 100%; min-width: 0; min-height: var(--control-h); padding: 0 var(--sp-3);
+  border: 1px solid var(--line-strong); border-radius: var(--r-md);
+  background: var(--surface); color: var(--text); font-size: var(--fs-md);
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.embedded-studio textarea { padding: 10px var(--sp-3); line-height: 1.65; }
+.embedded-studio select {
+  appearance: none; -webkit-appearance: none; padding-right: 36px; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%238b8898' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+.embedded-studio :is(input, select, textarea):hover { border-color: var(--text-3); }
+.embedded-studio :is(input, select, textarea):focus { outline: none; border-color: var(--primary); box-shadow: var(--ring); }
+.embedded-studio input[type=checkbox], .embedded-studio input[type=radio], .embedded-studio input[type=range] { accent-color: var(--primary); }
+.embedded-studio input[type=file] { width: 100%; padding: var(--sp-2); border: 1px dashed var(--line-strong); border-radius: var(--r-md); background: var(--surface-2); color: var(--text-2); font-size: var(--fs-sm); }
+.embedded-studio input::file-selector-button { margin-right: var(--sp-3); padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--text); font-weight: 600; cursor: pointer; }
+
+.embedded-studio button {
+  min-height: var(--control-h); padding: 0 var(--sp-4);
+  border: 1px solid var(--line-strong); border-radius: var(--r-md);
+  background: var(--surface); color: var(--text); box-shadow: var(--shadow-xs);
+  font: 600 var(--fs-md)/1.2 var(--font); text-transform: none; cursor: pointer;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.embedded-studio button:hover { background: var(--surface-2); color: var(--text); transform: none; }
+.embedded-studio button:disabled { opacity: .45; cursor: not-allowed; }
+.embedded-studio #generate, .embedded-studio button.primary { border-color: transparent; background: var(--primary); color: var(--on-primary); font-weight: 650; box-shadow: 0 1px 2px rgba(76, 43, 214, .25); }
+.embedded-studio #generate:hover, .embedded-studio button.primary:hover { background: var(--primary-hover); color: var(--on-primary); }
+.embedded-studio #form > #generate { margin-top: var(--sp-2); min-height: var(--control-h-lg); padding: 0 var(--sp-6); border-radius: var(--r-lg); font-size: var(--fs-lg); }
+.embedded-studio .secondary, .embedded-studio .examples button { min-height: var(--control-h-sm); padding: 0 var(--sp-3); border-color: var(--line); background: var(--surface-2); color: var(--text-2); font-size: var(--fs-sm); box-shadow: none; }
+.embedded-studio .secondary:hover, .embedded-studio .examples button:hover { background: var(--primary-soft); color: var(--primary-text); }
+.embedded-studio :where(button, a, input, select, textarea, summary):focus-visible { outline: none; box-shadow: var(--ring); }
+
+.embedded-studio .drop { border: 1.5px dashed var(--line-strong); border-radius: var(--r-lg); color: var(--text-2); background-color: var(--checker-a); background-image: conic-gradient(var(--checker-b) 25%, transparent 0 50%, var(--checker-b) 0 75%, transparent 0); background-size: 20px 20px; transition: border-color var(--dur) var(--ease); }
+.embedded-studio .drop:hover, .embedded-studio .drop.drag { border-color: var(--primary); }
+
+.embedded-studio .status { padding: var(--sp-3) var(--sp-4); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2); color: var(--text-2); font-size: var(--fs-sm); line-height: 1.7; }
+.embedded-studio .status .dot { background: var(--warning); box-shadow: none; }
+.embedded-studio .ready .dot { background: var(--success); }
+.embedded-studio .status.error { color: var(--danger-text); background: var(--danger-soft); border-color: transparent; }
+.embedded-studio .warn { color: var(--warning-text); }
+.embedded-studio .good { color: var(--success-text); }
+.embedded-studio .bad { color: var(--danger-text); }
+
+.embedded-studio .mode, .embedded-studio .mode-picker label { padding: var(--sp-3) var(--sp-4); border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); color: var(--text); cursor: pointer; box-shadow: none; transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease); }
+.embedded-studio .mode:hover, .embedded-studio .mode-picker label:hover { border-color: var(--line-strong); }
+.embedded-studio .mode:has(input:checked), .embedded-studio .mode-picker label:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); color: var(--text); box-shadow: 0 0 0 1px var(--primary) inset; }
+.embedded-studio .mode:has(input:disabled) { opacity: .5; }
+.embedded-studio .mode .muted, .embedded-studio .mode-picker small { color: var(--text-2); font-size: var(--fs-xs); }
+
+.embedded-studio .preview { border: 0; border-left: 3px solid var(--primary); border-radius: var(--r-sm); background: var(--surface-2); color: var(--text); font-size: var(--fs-sm); }
+.embedded-studio details { margin-top: var(--sp-5); padding-top: var(--sp-4); border-top: 1px solid var(--line); }
+.embedded-studio summary { color: var(--text); font-size: var(--fs-sm); font-weight: 650; text-transform: none; cursor: pointer; }
+
+.embedded-studio .workspace-tabs { border-bottom: 1px solid var(--line); }
+.embedded-studio .workspace-tabs button { min-height: 38px; border: 0; border-radius: 0; background: transparent; color: var(--text-2); box-shadow: none; }
+.embedded-studio .workspace-tabs button[aria-selected=true] { background: transparent; color: var(--text); box-shadow: inset 0 -2px var(--primary); }
+
+.embedded-studio .tool { justify-content: flex-start; }
+.embedded-studio .tool[aria-pressed=true] { outline: 0 !important; border-color: var(--primary); background: var(--primary-soft); color: var(--text); box-shadow: 0 0 0 1px var(--primary) inset !important; }
+.embedded-studio .tool[aria-pressed=true]::after { border-color: var(--primary); background: var(--primary); color: var(--on-primary); }
+.embedded-studio .pose-steps button.active { outline: 2px solid var(--primary); background: var(--primary-soft); }
+.embedded-studio .pose-steps button.done { color: var(--success-text); }
+
+.embedded-studio .canvas-scroll, .embedded-studio .checker { border: 1px solid var(--line); border-radius: var(--r-lg); background-color: var(--checker-a); background-image: conic-gradient(var(--checker-b) 25%, transparent 0 50%, var(--checker-b) 0 75%, transparent 0); background-size: 20px 20px; }
+.embedded-studio .pose-stage { background: var(--surface-2); }
+.embedded-studio .guide-card, .embedded-studio .legend { border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface-2); color: var(--text); }
+.embedded-studio .badge { padding: 2px 8px; border: 0; border-radius: var(--r-full); background: var(--surface-2); color: var(--text-2); font-size: var(--fs-xs); font-weight: 600; }
+.embedded-studio .player { border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface-2); }
+.embedded-studio .result video, .embedded-studio .result img { border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface-2); }
+.embedded-studio .help { border-top-color: var(--line); }
+
+.embedded-studio .grid { gap: var(--sp-5); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.embedded-studio .row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.embedded-studio .links { flex-wrap: wrap; }
+.embedded-studio .modes { gap: var(--sp-3); margin: var(--sp-6) 0; }
+.embedded-studio #form > section { margin: var(--sp-5) 0; }
+.embedded-studio #form > .grid { margin-bottom: var(--sp-5); align-items: start; }
+.embedded-studio .source-panel { align-self: start; position: sticky; top: var(--sp-5); }
+.embedded-studio .source-panel h2, .embedded-studio .settings-title { margin: 0 0 var(--sp-4); font-size: var(--fs-lg); }
+.embedded-studio .source-note { padding: var(--sp-4) 0 0; color: var(--text-2); font-size: var(--fs-xs); line-height: 1.8; }
+.embedded-studio .source-note strong { display: block; margin-bottom: 4px; color: var(--text); font-weight: 650; }
+.embedded-studio .source-panel .drop { min-height: 360px; }
+.embedded-studio .source-panel .drop img { max-height: 520px; }
+.embedded-studio .layout { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); max-width: none; }
+.embedded-studio .layout > .span { grid-column: 1 / -1; }
+
+@media (max-width: 950px) {
+  .embedded-studio .layout { grid-template-columns: minmax(0, 1fr); }
+  .embedded-studio .mask-layout, .embedded-studio .result, .embedded-studio .pose-wrap { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .embedded-studio main > .grid { grid-template-columns: minmax(0, 1fr); }
+  .embedded-studio .source-panel { position: static; }
+  .embedded-studio .source-panel .drop { min-height: 240px; }
+  .embedded-studio .modes { grid-template-columns: minmax(0, 1fr); gap: var(--sp-2); }
+  .embedded-studio .mode br { display: none; }
+  .embedded-studio .mode .muted { margin: 0 0 0 10px; }
+  .embedded-studio .panel { padding: var(--sp-4); }
+}
+@media (max-width: 480px) {
+  .embedded-studio .grid, .embedded-studio .row { grid-template-columns: minmax(0, 1fr); }
+  .embedded-studio input, .embedded-studio select, .embedded-studio textarea { font-size: 16px; }
+  .embedded-studio .mode .muted { display: block; margin: 4px 0 0 23px; }
+  .embedded-studio #form > #generate { width: 100%; }
+  .embedded-studio .drop { min-height: 230px; }
+}

@@ -7,6 +7,8 @@ from pathlib import Path
 import shutil
 import tempfile
 import zipfile
+import rigging_bones
+import rigging_animation
 
 from PIL import Image
 
@@ -17,6 +19,14 @@ POSE_KEYS = (
     "shoulder_r", "arm_r", "hand_r", "hips",
     "knee_l", "foot_l", "knee_r", "foot_r",
 )
+
+
+def has_editor_skinning(folder: Path) -> bool:
+    try:
+        with zipfile.ZipFile(folder / V2_FILENAME) as archive:
+            return json.loads(archive.read('rig-v2.json')).get('editorSkinningVersion') == 2
+    except (OSError, ValueError, KeyError, zipfile.BadZipFile):
+        return False
 
 
 def _number(value, fallback: float) -> float:
@@ -160,7 +170,10 @@ def build_package(folder: Path, unity_root: Path, source_revision: int, pose: ob
     if not (unity_root / "Editor" / "RiggingV2Importer.cs").is_file():
         raise FileNotFoundError("V2 Unity importer를 찾을 수 없습니다.")
 
-    rig = build_skeleton(manifest, _silhouette_bounds(folder, manifest), pose)
+    rig = rigging_bones.get_rig(manifest, folder, pose)
+    rig['layerMeshes'] = rigging_bones.layer_meshes(manifest, rig)
+    rig['editorSkinningVersion'] = 2
+    rig['animations'] = rigging_animation.unity_clips(rigging_animation.reconcile(manifest.get('rigAnimations', {'schemaVersion':1,'clips':[]}), rig))
     rig["sourceRevision"] = int(source_revision)
     output = folder / V2_FILENAME
     with tempfile.TemporaryDirectory(prefix="rig-v2-", dir=folder) as raw:
@@ -179,6 +192,7 @@ def build_package(folder: Path, unity_root: Path, source_revision: int, pose: ob
 3. Unity 메뉴 `Tools > Sprite Lab > Import Rigging V2 ZIP`에서 이 ZIP을 선택합니다.
 4. 생성된 `RiggingV2Avatar.prefab`에는 공유 전신 본, 각 파츠의 메시와 자동 웨이트, 눈·입 컨트롤이 들어 있습니다.
 5. Sprite Editor의 Skinning Editor에서 본 위치와 웨이트를 캐릭터 자세에 맞게 보정합니다.
+6. 웹 타임라인을 저장했다면 Animations 폴더에 .anim 클립이 생성됩니다. RiggingV2ClipPlayer.Play("클립 이름")으로 재생하고 Stop()으로 idle을 복구합니다. 기존 원클릭 임포터는 0.4.0 이상으로 업데이트하세요.
 
 V2는 자동 리깅 초안입니다. 측면 자세, 겹친 팔다리, 무기와 긴 머리카락은 수동 보정이 필요합니다.
 """)

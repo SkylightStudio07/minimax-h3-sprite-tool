@@ -1,0 +1,1208 @@
+{
+  "styles": [
+    {
+      "id": "flat-color",
+      "name": "플랫 컬러",
+      "description": "윤곽선을 줄이고 면과 색으로 표현하는 그림체",
+      "family": "anima",
+      "enabled": true,
+      "verification": "Turbo 1.1 실생성 확인 · 실험적 (강도 0/0.5/0.7 비교)",
+      "filename": "sprite-lab/anima-base-1-flat-color-v3.safetensors",
+      "versionId": 2947255,
+      "modelId": 1132089,
+      "creator": "motimalu",
+      "source": "https://civitai.com/models/1132089?modelVersionId=2947255",
+      "triggers": [
+        "flat color",
+        "no lineart"
+      ],
+      "strength": 0.5,
+      "previews": [
+        {
+          "url": "assets/style-diversity/flat-color-operator.webp",
+          "source": "assets/style-diversity/flat-color-operator.webp",
+          "label": "은발 전술요원 · 상반신"
+        },
+        {
+          "url": "assets/style-diversity/flat-color-swordsman.webp",
+          "source": "assets/style-diversity/flat-color-swordsman.webp",
+          "label": "남성 검사 · 전신"
+        },
+        {
+          "url": "assets/style-diversity/flat-color-mage.webp",
+          "source": "assets/style-diversity/flat-color-mage.webp",
+          "label": "안경 학자 · 측면"
+        }
+      ],
+      "license": "Anima 기반 모델 조건 + 제작자 이용 조건",
+      "permissions": {
+        "allowNoCredit": true,
+        "allowCommercialUse": [
+          "Image",
+          "RentCivit",
+          "Rent"
+        ],
+        "allowDerivatives": true,
+        "allowDifferentLicense": true
+      },
+      "downloadUrl": "https://civitai.com/api/download/models/2947255?fileId=2826524",
+      "sha256": "532ae5ec6ae5e2fc51abdcdde92a02562b4e3b63a5bfb5bfa713cf8c9f5dd964",
+      "bytes": 138662176,
+      "publisherPreviews": [
+        {
+          "url": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/93efdf2a-2454-4465-b079-991c3f56acb4/width=640/130774994.jpeg",
+          "source": "https://civitai.com/models/1132089?modelVersionId=2947255"
+        },
+        {
+          "url": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/b82da8ea-e8fe-485e-9da7-93585e066efd/width=640/130774996.jpeg",
+          "source": "https://civitai.com/models/1132089?modelVersionId=2947255"
+        },
+        {
+          "url": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/61122963-2f15-454b-ac1f-883945251b16/width=640/130775003.jpeg",
+          "source": "https://civitai.com/models/1132089?modelVersionId=2947255"
+        },
+        {
+          "url": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/0f04bc96-78b7-4b79-8ee7-e4d77337f89d/width=640/130775034.jpeg",
+          "source": "https://civitai.com/models/1132089?modelVersionId=2947255"
+        }
+      ]
+    },
+    {
+      "id": "smooth-lines",
+      "name": "부드러운 선화",
+      "description": "선과 명암을 강조하는 스타일. Turbo에서는 얼굴과 의상이 어두워질 수 있어요.",
+      "family": "anima",
+      "enabled": true,
+      "verification": "Turbo 1.1 실생성 확인 · 실험적 (강도 0/0.5/0.7 비교)",
+      "filename": "sprite-lab/AnimaMythSmo0thL1nes.safetensors",
+      "versionId": 3226360,
+      "modelId": 599757,
+      "creator": "VelvetS",
+      "source": "https://civitai.com/models/599757?modelVersionId=3226360",
+      "triggers": [
+        "Smo0thL1nes"
+      ],
+      "strength": 0.5,
+      "previews": [
+        {
+          "url": "assets/style-diversity/smooth-lines-operator.webp",
+          "source": "assets/style-diversity/smooth-lines-operator.webp",
+          "label": "은발 전술요원 · 상반신"
+        },
+        {
+          "url": "assets/style-diversity/smooth-lines-swordsman.webp",
+          "source": "assets/style-diversity/smooth-lines-swordsman.webp",
+          "label": "남성 검사 · 전신"
+        },
+        {
+          "url": "assets/style-diversity/smooth-lines-mage.webp",
+          "source": "assets/style-diversity/smooth-lines-mage.webp",
+          "label": "안경 학자 · 측면"
+        }
+      ],
+      "license": "Anima 기반 모델 조건 + 제작자 이용 조건",
+      "permissions": {
+        "allowNoCredit": true,
+        "allowCommercialUse": [
+          "RentCivit",
+          "Image",
+          "Rent",
+          "Sell",
+          "SellMerge"
+        ],
+        "allowDerivatives": true,
+        "allowDifferentLicense": true
+      },
+      "downloadUrl": "https://civitai.com/api/download/models/3226360?fileId=3108500",
+      "sha256": "9be17d7ac7fa441d751ed98fbb5e3e7f08e55a025e55f644751b318782f7fff9",
+      "bytes": 138663755,
+      "publisherPreviews": [
+        {
+          "url": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/913713f1-a874-4b49-9ced-6b9649b3bf5b/width=640/139639449.jpeg",
+          "source": "https://civitai.com/models/599757?modelVersionId=3226360"
+        },
+        {
+          "url": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/910d6ff4-332b-4b4b-8dbf-ab687b8bd942/width=640/139639469.jpeg",
+          "source": "https://civitai.com/models/599757?modelVersionId=3226360"
+        },
+        {
+          "url": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/6a4a12a9-2146-4340-a3ee-a08a2594a394/width=640/139639457.jpeg",
+          "source": "https://civitai.com/models/599757?modelVersionId=3226360"
+        },
+        {
+          "url": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/aa6e530a-7559-40c3-800c-27e5dbc6aae9/width=640/139639470.jpeg",
+          "source": "https://civitai.com/models/599757?modelVersionId=3226360"
+        }
+      ]
+    },
+    {
+      "id": "painterly",
+      "name": "회화풍",
+      "description": "애니메이션 캐릭터에 물감 질감을 더하는 LoRA. 낮은 강도 0.25~0.3을 권장해요.",
+      "family": "anima",
+      "enabled": true,
+      "verification": "Turbo 1.1 실생성 확인 · 실험적 (강도 0/0.5/0.7 비교)",
+      "filename": "sprite-lab/anima-base-1-painterly-v2.safetensors",
+      "versionId": 2955844,
+      "modelId": 1478417,
+      "creator": "motimalu",
+      "source": "https://civitai.com/models/1478417?modelVersionId=2955844",
+      "triggers": [
+        "painterly",
+        "brushstroke",
+        "impasto",
+        "oil painting \\(medium\\)",
+        "impressionism",
+        "chiaroscuro"
+      ],
+      "strength": 0.3,
+      "previews": [
+        {
+          "url": "assets/image-look-previews/paint-water.webp",
+          "source": "assets/image-look-previews/paint-water.webp",
+          "label": "자체 생성 예시"
+        },
+        {
+          "url": "assets/image-look-previews/paint-soft.webp",
+          "source": "assets/image-look-previews/paint-soft.webp",
+          "label": "자체 생성 예시"
+        },
+        {
+          "url": "assets/image-look-previews/painterly-05.webp",
+          "source": "assets/image-look-previews/painterly-05.webp",
+          "label": "자체 생성 예시"
+        },
+        {
+          "url": "assets/image-look-previews/painterly-07.webp",
+          "source": "assets/image-look-previews/painterly-07.webp",
+          "label": "자체 생성 예시"
+        }
+      ],
+      "license": "Anima 기반 모델 조건 + 제작자 이용 조건",
+      "permissions": {
+        "allowNoCredit": true,
+        "allowCommercialUse": [
+          "Image",
+          "RentCivit",
+          "Rent"
+        ],
+        "allowDerivatives": true,
+        "allowDifferentLicense": true
+      },
+      "downloadUrl": "https://civitai.com/api/download/models/2955844?fileId=2835227",
+      "sha256": "4cf69120fe0a6fbeff2c331f3d46ea8a0d6b5aa8144df8fd8b97e5571b6bcdb1",
+      "bytes": 148902616,
+      "publisherPreviews": [
+        {
+          "url": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/47b39897-7430-49d7-aac6-93eadd551e14/width=640/131093777.jpeg",
+          "source": "https://civitai.com/models/1478417?modelVersionId=2955844"
+        },
+        {
+          "url": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/d23e08ec-bd4c-49ad-b58e-4e42531317ae/width=640/131093486.jpeg",
+          "source": "https://civitai.com/models/1478417?modelVersionId=2955844"
+        },
+        {
+          "url": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/0d791a32-b03d-4dec-8ac3-1ba0c92558bb/width=640/131093605.jpeg",
+          "source": "https://civitai.com/models/1478417?modelVersionId=2955844"
+        },
+        {
+          "url": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/d9fa7e48-24f3-48b6-a588-3a49fb5de836/width=640/131093901.jpeg",
+          "source": "https://civitai.com/models/1478417?modelVersionId=2955844"
+        }
+      ]
+    },
+    {
+      "id": "smooth-anime-booster",
+      "name": "애니메이션 디테일 보정",
+      "description": "Anima용 선·디테일 보정. VFX 전용이 아니며 Turbo 호환성 검증 전입니다.",
+      "family": "anima",
+      "enabled": true,
+      "verification": "Turbo 1.1 강도 0.4 · 캐릭터 3종 실생성 확인 (실험적)",
+      "filename": "sprite-lab/Smooth_Booster_Anima_AnimeStyle.safetensors",
+      "versionId": 3271822,
+      "modelId": 1145743,
+      "creator": "DigitalPastel",
+      "source": "https://civitai.com/models/1145743?modelVersionId=3271822",
+      "triggers": [
+        "Smooth_Anima_Booster"
+      ],
+      "strength": 0.4,
+      "previews": [
+        {
+          "url": "assets/style-diversity/smooth-anime-booster-operator.webp",
+          "source": "assets/style-diversity/smooth-anime-booster-operator.webp",
+          "label": "은발 전술요원 · 상반신"
+        },
+        {
+          "url": "assets/style-diversity/smooth-anime-booster-swordsman.webp",
+          "source": "assets/style-diversity/smooth-anime-booster-swordsman.webp",
+          "label": "남성 검사 · 전신"
+        },
+        {
+          "url": "assets/style-diversity/smooth-anime-booster-mage.webp",
+          "source": "assets/style-diversity/smooth-anime-booster-mage.webp",
+          "label": "안경 학자 · 측면"
+        }
+      ],
+      "sha256": "9d3acd927e0252c6c10b7d5683ac94797cce64455b731d6282a7c22e531cc66c",
+      "bytes": 138663776,
+      "downloadUrl": "https://civitai.com/api/download/models/3271822?fileId=3155768",
+      "license": {
+        "allowCommercialUse": [
+          "RentCivit",
+          "Image"
+        ],
+        "allowDerivatives": true,
+        "allowDifferentLicense": false,
+        "allowNoCredit": false
+      }
+    },
+    {
+      "id": "soya-anima-ci10ranko",
+      "name": "ci10ranko · 작가 화풍",
+      "description": "선과 얼굴 표현을 정리하는 작가 화풍. 포즈와 의상 디테일이 바뀔 수 있어요.",
+      "family": "anima",
+      "enabled": true,
+      "experimental": true,
+      "verification": "Turbo 1.1 · 강도 0.5 · 캐릭터 2종 생성 확인 · 실험적",
+      "filename": "soya-import/anima_ci10ranko_v1.1-epoch28.safetensors",
+      "strength": 0.5,
+      "previews": [
+        {
+          "url": "assets/soya-style-previews/soya-anima-ci10ranko-operator.webp",
+          "source": "assets/soya-style-previews/soya-anima-ci10ranko-operator.webp",
+          "label": "실제 생성 · 전술요원 · 상반신"
+        },
+        {
+          "url": "assets/soya-style-previews/soya-anima-ci10ranko-swordsman.webp",
+          "source": "assets/soya-style-previews/soya-anima-ci10ranko-swordsman.webp",
+          "label": "실제 생성 · 남성 검사 · 전신"
+        }
+      ],
+      "license": "기반 모델 및 제작자 이용 조건 확인",
+      "downloadUrl": "https://civitai.com/api/download/models/2972611",
+      "bytes": 275357376,
+      "sha256": "e9448087f414b514ca815b4a24e8f10bdbe02b7095d0eed0e19dbfa2379052f5",
+      "versionId": 2972611,
+      "modelId": 2647381,
+      "baseModel": "Anima",
+      "creator": "N0VA39",
+      "triggers": [
+        "@ci10ranko"
+      ],
+      "source": "https://civitai.com/models/2647381?modelVersionId=2972611",
+      "permissions": {
+        "allowNoCredit": true,
+        "allowCommercialUse": [
+          "Image",
+          "RentCivit"
+        ],
+        "allowDerivatives": false,
+        "allowDifferentLicense": true
+      },
+      "artistName": "ci10ranko"
+    },
+    {
+      "id": "soya-anima-n4t4r4p1su",
+      "name": "Na tarapisu · 작가 화풍",
+      "description": "샤프한 눈매와 선명한 머리카락 명암. 전신 포즈가 바뀔 수 있어요.",
+      "family": "anima",
+      "enabled": true,
+      "experimental": true,
+      "verification": "Turbo 1.1 · 강도 0.5 · 캐릭터 2종 생성 확인 · 실험적",
+      "filename": "soya-import/anima_n4t4r4p1su_v1.0-epoch10.safetensors",
+      "strength": 0.5,
+      "previews": [
+        {
+          "url": "assets/soya-style-previews/soya-anima-n4t4r4p1su-operator.webp",
+          "source": "assets/soya-style-previews/soya-anima-n4t4r4p1su-operator.webp",
+          "label": "실제 생성 · 전술요원 · 상반신"
+        },
+        {
+          "url": "assets/soya-style-previews/soya-anima-n4t4r4p1su-swordsman.webp",
+          "source": "assets/soya-style-previews/soya-anima-n4t4r4p1su-swordsman.webp",
+          "label": "실제 생성 · 남성 검사 · 전신"
+        }
+      ],
+      "license": "기반 모델 및 제작자 이용 조건 확인",
+      "downloadUrl": "https://civitai.com/api/download/models/2975701",
+      "bytes": 183606592,
+      "sha256": "f1694a00b220fdb9a4e406be37ac59f25ef2d58f93684ec5629937cf5cde6f87",
+      "versionId": 2975701,
+      "modelId": 2650098,
+      "baseModel": "Anima",
+      "creator": "N0VA39",
+      "triggers": [
+        "@n4t4r4p1su"
+      ],
+      "source": "https://civitai.com/models/2650098?modelVersionId=2975701",
+      "permissions": {
+        "allowNoCredit": true,
+        "allowCommercialUse": [
+          "Image",
+          "RentCivit"
+        ],
+        "allowDerivatives": false,
+        "allowDifferentLicense": true
+      },
+      "artistName": "Na tarapisu"
+    },
+    {
+      "id": "soya-atomsphere-style",
+      "name": "Atomsphere · 분위기 채색",
+      "description": "공간감과 재질 명암을 보완하는 화풍. Turbo 강도 0.5에서는 변화가 비교적 작아요.",
+      "family": "anima",
+      "enabled": true,
+      "experimental": true,
+      "verification": "Turbo 1.1 · 강도 0.5 · 캐릭터 2종 생성 확인 · 실험적",
+      "filename": "soya-import/atomsphere_style_v1.2-anima-e20.safetensors",
+      "strength": 0.5,
+      "previews": [
+        {
+          "url": "assets/soya-style-previews/soya-atomsphere-style-operator.webp",
+          "source": "assets/soya-style-previews/soya-atomsphere-style-operator.webp",
+          "label": "실제 생성 · 전술요원 · 상반신"
+        },
+        {
+          "url": "assets/soya-style-previews/soya-atomsphere-style-swordsman.webp",
+          "source": "assets/soya-style-previews/soya-atomsphere-style-swordsman.webp",
+          "label": "실제 생성 · 남성 검사 · 전신"
+        }
+      ],
+      "license": "기반 모델 및 제작자 이용 조건 확인",
+      "downloadUrl": "https://civitai.com/api/download/models/3064694",
+      "bytes": 91929784,
+      "sha256": "9726c61539ff365747b535715e95f45fc0df6321fdaf25cc3d5f4e829fcc3be9",
+      "versionId": 3064694,
+      "modelId": 2713337,
+      "baseModel": "Anima",
+      "creator": "Sansui",
+      "triggers": [
+        "atomsphere_style"
+      ],
+      "source": "https://civitai.com/models/2713337?modelVersionId=3064694",
+      "permissions": {
+        "allowNoCredit": true,
+        "allowCommercialUse": [
+          "Image",
+          "RentCivit",
+          "Rent"
+        ],
+        "allowDerivatives": true,
+        "allowDifferentLicense": true
+      }
+    },
+    {
+      "id": "soya-kieed-style",
+      "name": "Kieed · 작가 화풍",
+      "description": "차분한 색과 깔끔한 애니 선화. 의상 디테일과 머리 모양이 달라질 수 있어요.",
+      "family": "anima",
+      "enabled": true,
+      "experimental": true,
+      "verification": "Turbo 1.1 · 강도 0.5 · 캐릭터 2종 생성 확인 · 실험적",
+      "filename": "soya-import/kieed-anima-lokr-000018.safetensors",
+      "strength": 0.5,
+      "previews": [
+        {
+          "url": "assets/soya-style-previews/soya-kieed-style-operator.webp",
+          "source": "assets/soya-style-previews/soya-kieed-style-operator.webp",
+          "label": "실제 생성 · 전술요원 · 상반신"
+        },
+        {
+          "url": "assets/soya-style-previews/soya-kieed-style-swordsman.webp",
+          "source": "assets/soya-style-previews/soya-kieed-style-swordsman.webp",
+          "label": "실제 생성 · 남성 검사 · 전신"
+        }
+      ],
+      "license": "기반 모델 및 제작자 이용 조건 확인",
+      "downloadUrl": "https://civitai.com/api/download/models/2680198",
+      "bytes": 233044432,
+      "sha256": "5ce40595eff3cb21ade9427df19e5ef2c15f5e61ddbf341971a36824b8919115",
+      "versionId": 2680198,
+      "modelId": 2383428,
+      "baseModel": "Anima",
+      "creator": "FHfanshu",
+      "triggers": [
+        "@kieed"
+      ],
+      "source": "https://civitai.com/models/2383428?modelVersionId=2680198",
+      "permissions": {
+        "allowNoCredit": true,
+        "allowCommercialUse": [],
+        "allowDerivatives": false,
+        "allowDifferentLicense": true
+      },
+      "artistName": "Kieed"
+    },
+    {
+      "id": "soya-suujiniku-style",
+      "name": "suujiniku · 작가 화풍",
+      "description": "Illustrious 전용 · 현재 Anima 및 Animagine 경로에서는 사용 불가",
+      "family": "illustrious",
+      "enabled": false,
+      "experimental": true,
+      "verification": "다운로드 준비 · 실생성 검증 전",
+      "filename": "soya-import/suujiniku.safetensors",
+      "strength": 0.5,
+      "previews": [],
+      "license": "기반 모델 및 제작자 이용 조건 확인",
+      "downloadUrl": "https://civitai.com/api/download/models/1798353",
+      "bytes": 228478868,
+      "sha256": "85f5879c5da59ec40cd03d23236f6a8d40a786db8acaf11c354ac67eda4ce718",
+      "versionId": 1798353,
+      "modelId": 1589205,
+      "baseModel": "Illustrious",
+      "creator": "THEANTLERS",
+      "triggers": [
+        "suujiniku"
+      ],
+      "source": "https://civitai.com/models/1589205?modelVersionId=1798353",
+      "permissions": {
+        "allowNoCredit": true,
+        "allowCommercialUse": [
+          "Image",
+          "RentCivit",
+          "Rent",
+          "Sell",
+          "SellMerge"
+        ],
+        "allowDerivatives": true,
+        "allowDifferentLicense": true
+      },
+      "artistName": "suujiniku"
+    },
+    {
+      "id": "soya-anima-m4me-v1.2",
+      "name": "m4me · 작가 화풍",
+      "description": "얼굴과 선을 정리하는 화풍. 전신 테스트에서 배경에 얼굴이 중복 생성되어 보류 중이에요.",
+      "family": "anima",
+      "enabled": false,
+      "experimental": true,
+      "verification": "생성은 성공 · 전신 인물 중복 문제로 활성화 보류",
+      "filename": "soya-import/anima_m4me_v1.2-epoch16.safetensors",
+      "strength": 0.5,
+      "previews": [
+        {
+          "url": "assets/soya-style-previews/soya-anima-m4me-v1.2-operator.webp",
+          "source": "assets/soya-style-previews/soya-anima-m4me-v1.2-operator.webp",
+          "label": "실제 생성 · 전술요원 · 상반신"
+        },
+        {
+          "url": "assets/soya-style-previews/soya-anima-m4me-v1.2-swordsman.webp",
+          "source": "assets/soya-style-previews/soya-anima-m4me-v1.2-swordsman.webp",
+          "label": "실제 생성 · 남성 검사 · 전신"
+        }
+      ],
+      "license": "기반 모델 및 제작자 이용 조건 확인",
+      "downloadUrl": "https://civitai.com/api/download/models/2955581",
+      "bytes": 183606432,
+      "sha256": "235aa544a63643a38d12449250842592ec2d16a94a1497c90280ce37dd90c9fa",
+      "versionId": 2955581,
+      "modelId": 2632362,
+      "baseModel": "Anima",
+      "creator": "N0VA39",
+      "triggers": [
+        "@m4me"
+      ],
+      "source": "https://civitai.com/models/2632362?modelVersionId=2955581",
+      "permissions": {
+        "allowNoCredit": true,
+        "allowCommercialUse": [
+          "RentCivit",
+          "Image"
+        ],
+        "allowDerivatives": false,
+        "allowDifferentLicense": true
+      },
+      "artistName": "m4me"
+    },
+    {
+      "id": "soya-anima-screenshot-v5-000009",
+      "name": "Screenshot · 애니 화면",
+      "description": "TV 애니메이션 화면 같은 선과 셀 명암. 전술 장비 등 의상 세부가 단순해질 수 있어요.",
+      "family": "anima",
+      "enabled": true,
+      "experimental": true,
+      "verification": "Turbo 1.1 · 강도 0.5 · 캐릭터 2종 생성 확인 · 실험적",
+      "filename": "soya-import/screenshot_v5-000009.safetensors",
+      "strength": 0.5,
+      "previews": [
+        {
+          "url": "assets/soya-style-previews/soya-anima-screenshot-v5-000009-operator.webp",
+          "source": "assets/soya-style-previews/soya-anima-screenshot-v5-000009-operator.webp",
+          "label": "실제 생성 · 전술요원 · 상반신"
+        },
+        {
+          "url": "assets/soya-style-previews/soya-anima-screenshot-v5-000009-swordsman.webp",
+          "source": "assets/soya-style-previews/soya-anima-screenshot-v5-000009-swordsman.webp",
+          "label": "실제 생성 · 남성 검사 · 전신"
+        }
+      ],
+      "license": "기반 모델 및 제작자 이용 조건 확인",
+      "downloadUrl": "https://civitai.com/api/download/models/2903778?fileId=2781738",
+      "bytes": 84413176,
+      "sha256": "d55729aee9f1e69004b1e8f494d896a009c4aeb4794837c1af1eea2dc6ea74ee",
+      "versionId": 2903778,
+      "modelId": 2570109,
+      "baseModel": "Anima",
+      "creator": "desm0nt",
+      "triggers": [
+        "@screencap_(anime), screenshot from anime TV series"
+      ],
+      "source": "https://civitai.com/models/2570109?modelVersionId=2903778",
+      "permissions": {
+        "allowNoCredit": true,
+        "allowCommercialUse": [
+          "Image",
+          "RentCivit",
+          "Rent",
+          "Sell",
+          "SellMerge"
+        ],
+        "allowDerivatives": true,
+        "allowDifferentLicense": true
+      }
+    },
+    {
+      "id": "soya-anima-boldline-v13",
+      "name": "Boldline · 굵은 선",
+      "description": "검고 굵은 선과 강한 명암. 전신 테스트에서 인물이 중복 생성되어 보류 중이에요.",
+      "family": "anima",
+      "enabled": false,
+      "experimental": true,
+      "verification": "생성은 성공 · 전신 인물 중복 문제로 활성화 보류",
+      "filename": "soya-import/anima-boldline-v13.safetensors",
+      "strength": 0.5,
+      "previews": [
+        {
+          "url": "assets/soya-style-previews/soya-anima-boldline-v13-operator.webp",
+          "source": "assets/soya-style-previews/soya-anima-boldline-v13-operator.webp",
+          "label": "실제 생성 · 전술요원 · 상반신"
+        },
+        {
+          "url": "assets/soya-style-previews/soya-anima-boldline-v13-swordsman.webp",
+          "source": "assets/soya-style-previews/soya-anima-boldline-v13-swordsman.webp",
+          "label": "실제 생성 · 남성 검사 · 전신"
+        }
+      ],
+      "license": "기반 모델 및 제작자 이용 조건 확인",
+      "downloadUrl": "https://civitai.com/api/download/models/3021106?fileId=2899921",
+      "bytes": 59046920,
+      "sha256": "1e9dd389ae0bdf598dbb6b0149c7fedca7ccb72079dfa6481ec6d2c1fe7d7479",
+      "versionId": 3021106,
+      "modelId": 2595504,
+      "baseModel": "Anima",
+      "creator": "OMCCOM",
+      "triggers": [],
+      "source": "https://civitai.com/models/2595504?modelVersionId=3021106",
+      "permissions": {
+        "allowNoCredit": true,
+        "allowCommercialUse": [
+          "RentCivit",
+          "Rent"
+        ],
+        "allowDerivatives": true,
+        "allowDifferentLicense": true
+      }
+    },
+    {
+      "id": "soya-blue-archive-style-b1",
+      "name": "밝은 셀 채색 · 일러스트",
+      "description": "밝은 셀 채색 스타일 LoRA. 이번 Turbo 강도 0.5 테스트에서는 화풍 변화가 작았어요.",
+      "family": "anima",
+      "enabled": true,
+      "experimental": true,
+      "verification": "Turbo 1.1 · 강도 0.5 · 캐릭터 2종 생성 확인 · 실험적",
+      "filename": "soya-import/BlueArchiveStyleB1.safetensors",
+      "strength": 0.5,
+      "previews": [
+        {
+          "url": "assets/soya-style-previews/soya-blue-archive-style-b1-operator.webp",
+          "source": "assets/soya-style-previews/soya-blue-archive-style-b1-operator.webp",
+          "label": "실제 생성 · 전술요원 · 상반신"
+        },
+        {
+          "url": "assets/soya-style-previews/soya-blue-archive-style-b1-swordsman.webp",
+          "source": "assets/soya-style-previews/soya-blue-archive-style-b1-swordsman.webp",
+          "label": "실제 생성 · 남성 검사 · 전신"
+        }
+      ],
+      "license": "기반 모델 및 제작자 이용 조건 확인",
+      "downloadUrl": "https://civitai.com/api/download/models/2949191?fileId=2828479",
+      "bytes": 137731072,
+      "sha256": "05eaec899cf03412dea811f9e7820e898056774f8e65fb24e64fed79d99875e7",
+      "versionId": 2949191,
+      "modelId": 2530730,
+      "baseModel": "Anima",
+      "creator": "FlyingOyster",
+      "triggers": [],
+      "source": "https://civitai.com/models/2530730?modelVersionId=2949191",
+      "permissions": {
+        "allowNoCredit": true,
+        "allowCommercialUse": [
+          "RentCivit",
+          "Rent"
+        ],
+        "allowDerivatives": true,
+        "allowDifferentLicense": true
+      }
+    },
+    {
+      "id": "soya-ix7-style",
+      "name": "ix7 · 작가 화풍",
+      "description": "단순한 면과 가벼운 애니 선화. 얼굴이 어려 보이거나 장비가 단순해질 수 있어요.",
+      "family": "anima",
+      "enabled": true,
+      "experimental": true,
+      "verification": "Turbo 1.1 · 강도 0.5 · 캐릭터 2종 생성 확인 · 실험적",
+      "filename": "soya-import/@ix7.safetensors",
+      "strength": 0.5,
+      "previews": [
+        {
+          "url": "assets/soya-style-previews/soya-ix7-style-operator.webp",
+          "source": "assets/soya-style-previews/soya-ix7-style-operator.webp",
+          "label": "실제 생성 · 전술요원 · 상반신"
+        },
+        {
+          "url": "assets/soya-style-previews/soya-ix7-style-swordsman.webp",
+          "source": "assets/soya-style-previews/soya-ix7-style-swordsman.webp",
+          "label": "실제 생성 · 남성 검사 · 전신"
+        }
+      ],
+      "license": "기반 모델 및 제작자 이용 조건 확인",
+      "downloadUrl": "https://civitai.com/api/download/models/3119258?fileId=2999526",
+      "bytes": 91919200,
+      "sha256": "f7a889a81cd746b8c52a556589507e13799d12377944d726849cfb846f99629e",
+      "versionId": 3119258,
+      "modelId": 2770600,
+      "baseModel": "Anima",
+      "creator": "Azriaelis",
+      "triggers": [
+        "@ixy",
+        "@ix7"
+      ],
+      "source": "https://civitai.com/models/2770600?modelVersionId=3119258",
+      "permissions": {
+        "allowNoCredit": true,
+        "allowCommercialUse": [
+          "Image",
+          "RentCivit"
+        ],
+        "allowDerivatives": false,
+        "allowDifferentLicense": true
+      },
+      "artistName": "ixy / ix7"
+    },
+    {
+      "id": "soya-flat0521-anima-lora",
+      "name": "Flat0521 · 플랫 화풍",
+      "description": "색면과 명암을 정리하는 플랫 화풍. 이번 Turbo 테스트에서는 변화가 작았어요.",
+      "family": "anima",
+      "enabled": true,
+      "experimental": true,
+      "verification": "Turbo 1.1 · 강도 0.5 · 캐릭터 2종 생성 확인 · 실험적",
+      "filename": "soya-import/flat0521_anima_lora_comfy.safetensors",
+      "strength": 0.5,
+      "previews": [
+        {
+          "url": "assets/soya-style-previews/soya-flat0521-anima-lora-operator.webp",
+          "source": "assets/soya-style-previews/soya-flat0521-anima-lora-operator.webp",
+          "label": "실제 생성 · 전술요원 · 상반신"
+        },
+        {
+          "url": "assets/soya-style-previews/soya-flat0521-anima-lora-swordsman.webp",
+          "source": "assets/soya-style-previews/soya-flat0521-anima-lora-swordsman.webp",
+          "label": "실제 생성 · 남성 검사 · 전신"
+        }
+      ],
+      "license": "기반 모델 및 제작자 이용 조건 확인",
+      "downloadUrl": "https://civitai.com/api/download/models/2984489?fileId=2863978",
+      "bytes": 33237056,
+      "sha256": "601b82181af58b98b49ee6b6eeb3b1c2417dc464aeb818a2c41d2685e0ed0727",
+      "versionId": 2984489,
+      "modelId": 2657866,
+      "baseModel": "Anima",
+      "creator": "Minami_No",
+      "triggers": [],
+      "source": "https://civitai.com/models/2657866?modelVersionId=2984489",
+      "permissions": {
+        "allowNoCredit": true,
+        "allowCommercialUse": [
+          "Image",
+          "RentCivit",
+          "Rent"
+        ],
+        "allowDerivatives": true,
+        "allowDifferentLicense": true
+      }
+    },
+    {
+      "id": "soya-anima-matsuda-hikari-v1.0",
+      "name": "Matsuda Hikari · 작가 화풍",
+      "description": "거친 스케치 선과 담백한 채색. 나이감·의상·배경 구성이 바뀔 수 있어요.",
+      "family": "anima",
+      "enabled": true,
+      "experimental": true,
+      "verification": "Turbo 1.1 · 강도 0.5 · 캐릭터 2종 생성 확인 · 실험적",
+      "filename": "soya-import/matsuda_hikari.safetensors",
+      "strength": 0.5,
+      "previews": [
+        {
+          "url": "assets/soya-style-previews/soya-anima-matsuda-hikari-v1.0-operator.webp",
+          "source": "assets/soya-style-previews/soya-anima-matsuda-hikari-v1.0-operator.webp",
+          "label": "실제 생성 · 전술요원 · 상반신"
+        },
+        {
+          "url": "assets/soya-style-previews/soya-anima-matsuda-hikari-v1.0-swordsman.webp",
+          "source": "assets/soya-style-previews/soya-anima-matsuda-hikari-v1.0-swordsman.webp",
+          "label": "실제 생성 · 남성 검사 · 전신"
+        }
+      ],
+      "license": "기반 모델 및 제작자 이용 조건 확인",
+      "downloadUrl": "https://civitai.com/api/download/models/3307880?fileId=3193024",
+      "bytes": 138663783,
+      "sha256": "8c4d55121f5bddc3ce87ddc5f20d75b0168639dd929a3234fcf9a558d66f2bb6",
+      "versionId": 3307880,
+      "modelId": 2923440,
+      "baseModel": "Anima",
+      "creator": "aka0604",
+      "triggers": [
+        "(((@matsuda hikari, @gogalking):2.0), matsuda-hikari, vector trace, sketch, sketch lines), ((watercolor pencil (medium), oekaki):1.2)"
+      ],
+      "source": "https://civitai.com/models/2923440?modelVersionId=3307880",
+      "permissions": {
+        "allowNoCredit": true,
+        "allowCommercialUse": [
+          "Image",
+          "RentCivit",
+          "Rent",
+          "Sell",
+          "SellMerge"
+        ],
+        "allowDerivatives": true,
+        "allowDifferentLicense": true
+      },
+      "artistName": "Matsuda Hikari / gogalking"
+    },
+    {
+      "id": "anime-pixel",
+      "name": "Anime Pixel · 픽셀 애니",
+      "description": "SDXL용 픽셀 애니 화풍. 기본 모델에 따라 픽셀과 애니 느낌의 비중이 달라져요.",
+      "family": "sdxl",
+      "enabled": false,
+      "experimental": true,
+      "verification": "설치·호환성 검증 대기",
+      "filename": "requested/pixel style-000007.safetensors",
+      "versionId": 221090,
+      "modelId": 196639,
+      "creator": "meiyouzhuya",
+      "source": "https://civitai.com/models/196639?modelVersionId=221090",
+      "triggers": [
+        "pixel style"
+      ],
+      "strength": 0.7,
+      "previews": [],
+      "license": "기반 모델 및 제작자 이용 조건 확인",
+      "permissions": {
+        "allowNoCredit": false,
+        "allowCommercialUse": [
+          "Image",
+          "RentCivit",
+          "Rent",
+          "Sell",
+          "SellMerge"
+        ],
+        "allowDerivatives": false,
+        "allowDifferentLicense": true
+      },
+      "downloadUrl": "https://civitai.com/api/download/models/221090?fileId=170372",
+      "sha256": "f0d066436500b7f161f926b85b4aa3a49f4a4ae681d4714c749cb4701c2c9aff",
+      "bytes": 70648320
+    },
+    {
+      "id": "anime-original-sd15",
+      "name": "Anime Original · 원화 선화 (SD 1.5)",
+      "description": "애니 제작 원화 같은 단색 선화. SD 1.5 전용으로 현재 생성 경로에서는 사용할 수 없어요.",
+      "family": "sd15",
+      "enabled": false,
+      "experimental": true,
+      "verification": "설치·호환성 검증 대기",
+      "filename": "requested/OriginalAnimeStyle9-000090.safetensors",
+      "versionId": 261140,
+      "modelId": 231343,
+      "creator": "markwatkin",
+      "source": "https://civitai.com/models/231343?modelVersionId=261140",
+      "triggers": [
+        "(white background:1.2),simple background,monochrome"
+      ],
+      "strength": 0.75,
+      "previews": [],
+      "license": "기반 모델 및 제작자 이용 조건 확인",
+      "permissions": {
+        "allowNoCredit": true,
+        "allowCommercialUse": [
+          "RentCivit"
+        ],
+        "allowDerivatives": true,
+        "allowDifferentLicense": false
+      },
+      "downloadUrl": "https://civitai.com/api/download/models/261140?fileId=202930",
+      "sha256": "a8c660dd51067aa9d4ffd579532c436f6f61768d29559d42069b648fda8df841",
+      "bytes": 7093622
+    },
+    {
+      "id": "anime-original-shadow-il",
+      "name": "Anime Original · 음영 원화 (Illustrious)",
+      "description": "애니 제작 원화의 선과 음영 표시. 단색·녹색 테마 권장, Illustrious 전용이에요.",
+      "family": "illustrious",
+      "enabled": false,
+      "experimental": true,
+      "verification": "설치·호환성 검증 대기",
+      "filename": "requested/originalanime_shadow_illustrious_v1_uo-000140.safetensors",
+      "versionId": 963502,
+      "modelId": 861153,
+      "creator": "markwatkin",
+      "source": "https://civitai.com/models/861153?modelVersionId=963502",
+      "triggers": [
+        "oamhfs, simple background,monochrome, green theme,"
+      ],
+      "strength": 0.8,
+      "previews": [],
+      "license": "기반 모델 및 제작자 이용 조건 확인",
+      "permissions": {
+        "allowNoCredit": true,
+        "allowCommercialUse": [
+          "RentCivit"
+        ],
+        "allowDerivatives": true,
+        "allowDifferentLicense": false
+      },
+      "downloadUrl": "https://civitai.com/api/download/models/963502?fileId=870117",
+      "sha256": "5a9731e450a57325a7c8840b6bab36d12960a7c3d7c4e975d1272de727c2e8aa",
+      "bytes": 42868020
+    },
+    {
+      "id": "fsthicc-anima",
+      "name": "FSThicc · 굵은 선 / Anima",
+      "family": "anima",
+      "enabled": false,
+      "experimental": true,
+      "verification": "다운로드·실생성 검증 대기",
+      "description": "굵은 검은 윤곽선과 곡선 체형을 함께 강조합니다. 가슴 등 신체 비율이 과장될 수 있어 낮은 강도부터 비교하세요. 2.9B에서는 LoRA 블록 재매핑 검증이 필요합니다.",
+      "filename": "requested/fsthicc-anima-v1.safetensors",
+      "versionId": 3135585,
+      "modelId": 2061456,
+      "creator": "forsenScoots",
+      "source": "https://civitai.com/models/2061456?modelVersionId=3135585",
+      "triggers": [
+        "thick black outline"
+      ],
+      "strength": 0.3,
+      "previews": [],
+      "license": "제작자 크레딧 요구. 표시된 상업 허용은 RentCivit만이며 게임 이용 허용을 확인한 상태가 아닙니다. 원문 및 기반 모델 조건 확인 필요.",
+      "permissions": {
+        "allowNoCredit": false,
+        "allowCommercialUse": [
+          "RentCivit"
+        ],
+        "allowDerivatives": false,
+        "allowDifferentLicense": true
+      },
+      "downloadUrl": "https://civitai.com/api/download/models/3135585?fileId=3016316",
+      "sha256": "0ddb7b52d7d39bbb575830c6907966137354f761700be1afe86c7fbecdaa67af",
+      "bytes": 138663776,
+      "authorRecommendedSettings": {
+        "cfg": [
+          5,
+          7
+        ],
+        "steps": 25,
+        "samplers": [
+          "Euler A",
+          "DPM++ 2M Karras"
+        ],
+        "triggerRequired": false,
+        "note": "페이지 공통 권장값. Anima Turbo 및 Soya에 그대로 적용하지 말 것. 강도 0.3은 로컬 시험 시작값이며 제작자 권장값 아님."
+      }
+    },
+    {
+      "id": "fsthicc-anima-b",
+      "name": "FSThicc · B-side / Anima",
+      "family": "anima",
+      "enabled": false,
+      "experimental": true,
+      "verification": "다운로드·실생성 검증 대기",
+      "description": "굵은 검은 윤곽선과 곡선 체형을 함께 강조합니다. 가슴 등 신체 비율이 과장될 수 있어 낮은 강도부터 비교하세요. 2.9B에서는 LoRA 블록 재매핑 검증이 필요합니다.",
+      "filename": "requested/fsthicc-anima-v1-b-side.safetensors",
+      "versionId": 3135604,
+      "modelId": 2061456,
+      "creator": "forsenScoots",
+      "source": "https://civitai.com/models/2061456?modelVersionId=3135604",
+      "triggers": [
+        "thick black outline"
+      ],
+      "strength": 0.3,
+      "previews": [],
+      "license": "제작자 크레딧 요구. 표시된 상업 허용은 RentCivit만이며 게임 이용 허용을 확인한 상태가 아닙니다. 원문 및 기반 모델 조건 확인 필요.",
+      "permissions": {
+        "allowNoCredit": false,
+        "allowCommercialUse": [
+          "RentCivit"
+        ],
+        "allowDerivatives": false,
+        "allowDifferentLicense": true
+      },
+      "downloadUrl": "https://civitai.com/api/download/models/3135604?fileId=3016333",
+      "sha256": "01cf6db76eb61f5af7b8414bfda6dc5a5c2c2c3d6d2698354ac2837e6a41c947",
+      "bytes": 138663776,
+      "authorRecommendedSettings": {
+        "cfg": [
+          5,
+          7
+        ],
+        "steps": 25,
+        "samplers": [
+          "Euler A",
+          "DPM++ 2M Karras"
+        ],
+        "triggerRequired": false,
+        "note": "페이지 공통 권장값. Anima Turbo 및 Soya에 그대로 적용하지 말 것. 강도 0.3은 로컬 시험 시작값이며 제작자 권장값 아님."
+      }
+    },
+    {
+      "id": "fsthicc-illustrious",
+      "name": "FSThicc · 굵은 선 / Illustrious",
+      "family": "illustrious",
+      "enabled": false,
+      "experimental": true,
+      "verification": "다운로드·실생성 검증 대기",
+      "description": "굵은 검은 윤곽선과 곡선 체형을 함께 강조합니다. 가슴 등 신체 비율이 과장될 수 있어 낮은 강도부터 비교하세요. Illustrious 전용으로 현재 Anima/Soya와 호환되지 않습니다.",
+      "filename": "requested/fsthicc-illustrious-v4.safetensors",
+      "versionId": 3059910,
+      "modelId": 2061456,
+      "creator": "forsenScoots",
+      "source": "https://civitai.com/models/2061456?modelVersionId=3059910",
+      "triggers": [
+        "thick black outline"
+      ],
+      "strength": 0.3,
+      "previews": [],
+      "license": "제작자 크레딧 요구. 표시된 상업 허용은 RentCivit만이며 게임 이용 허용을 확인한 상태가 아닙니다. 원문 및 기반 모델 조건 확인 필요.",
+      "permissions": {
+        "allowNoCredit": false,
+        "allowCommercialUse": [
+          "RentCivit"
+        ],
+        "allowDerivatives": false,
+        "allowDifferentLicense": true
+      },
+      "downloadUrl": "https://civitai.com/api/download/models/3059910?fileId=2938521",
+      "sha256": "a32cc082c544cefe58f7a6b5d3d7b5cf29e1f6f7e7ee3543508e94b97f9d943c",
+      "bytes": 228466580,
+      "authorRecommendedSettings": {
+        "cfg": [
+          5,
+          7
+        ],
+        "steps": 25,
+        "samplers": [
+          "Euler A",
+          "DPM++ 2M Karras"
+        ],
+        "triggerRequired": false,
+        "note": "페이지 공통 권장값. Anima Turbo 및 Soya에 그대로 적용하지 말 것. 강도 0.3은 로컬 시험 시작값이며 제작자 권장값 아님."
+      }
+    },
+    {
+      "id": "counter-side-sprites",
+      "name": "현대 전투 · 스프라이트",
+      "description": "전투 형식 전투 스프라이트풍 Illustrious LoRA. Flanime 참고 이미지 변형 0.3에서 원화 외형 보존을 비교했습니다. 강도를 높이면 장갑·의상·소품이 달라질 수 있습니다. 전투 자세는 관절 포즈로 별도 지정합니다.",
+      "family": "illustrious",
+      "enabled": true,
+      "experimental": true,
+      "verification": "실생성 검토 후 사용자 승인 · 원화 변형 0.3 권장 · 게시 해시와 불일치 이력 있음",
+      "filename": "requested/counter-side-sprites-reviewed-9f3a0f44.safetensors",
+      "versionId": 2198107,
+      "modelId": 1942132,
+      "creator": "iPiKo",
+      "source": "https://civitai.com/models/1942132?modelVersionId=2198107",
+      "triggers": [],
+      "strength": 0.6,
+      "previews": [
+        {
+          "url": "assets/rpg-sprite-previews/counter-preserve-030.webp",
+          "source": "assets/rpg-sprite-previews/counter-preserve-030.webp",
+          "label": "원화 변형 0.3 · 동일 자세"
+        },
+        {
+          "url": "assets/rpg-sprite-previews/counter-dedicated-pose-080.webp",
+          "source": "assets/rpg-sprite-previews/counter-dedicated-pose-080.webp",
+          "label": "전투 포즈 · 원화 변형 0.8"
+        },
+        {
+          "url": "assets/rpg-sprite-previews/counter-dedicated-pose-100.webp",
+          "source": "assets/rpg-sprite-previews/counter-dedicated-pose-100.webp",
+          "label": "측면 포즈 · 원화 세부 손실 있음"
+        }
+      ],
+      "license": "Civitai 표시상 Image 상업 이용 허용 · 기반 모델 조건 및 캐릭터 권리 별도",
+      "permissions": {
+        "allowNoCredit": true,
+        "allowCommercialUse": [
+          "Image",
+          "RentCivit",
+          "Rent",
+          "Sell",
+          "SellMerge"
+        ],
+        "allowDerivatives": true,
+        "allowDifferentLicense": true
+      },
+      "downloadUrl": "https://civitai.com/api/download/models/2198107?fileId=2091877",
+      "sha256": "9f3a0f44bea6c093c178700521a22576f4e10ae5a8ffe30a2c1c6680f02030d8",
+      "bytes": 228481396,
+      "recommendedSettings": {
+        "model": "flanime-xl",
+        "width": 1024,
+        "height": 1536,
+        "steps": 32,
+        "cfg": 5,
+        "styleStrength": 0.6,
+        "denoise": 0.3,
+        "note": "사용자가 검토한 원화 변형 실험값. 제작자 권장값 아님."
+      },
+      "upstreamSha256": "d5224d243d68bef339f09b728d315a4fb7d796a0d9fe21652a69dbb241a972f2",
+      "integrityStatus": "upstream-mismatch-user-approved"
+    },
+    {
+      "id": "epic-seven-sprites",
+      "name": "판타지 전투 · 측면 스프라이트",
+      "description": "판타지 전투풍 측면·전신·대기 자세. 여성 캐릭터 중심 학습, 남성·몬스터 미검증. 권장 896×1152, 회색 배경. 연속 동작 프레임 생성기는 아닙니다. 타 게임 캐릭터 태그 2종 시험 완료. 세부 얼굴·의상이 간략화되거나 원작과 달라질 수 있습니다.",
+      "family": "illustrious",
+      "enabled": true,
+      "experimental": true,
+      "verification": "Flanime 원본 1024×1536 / 40 steps · 타 게임 태그 2종 실생성 확인 · 실험적",
+      "filename": "requested/epic-seven-sprites-v1.safetensors",
+      "versionId": 1977902,
+      "modelId": 1747637,
+      "creator": "iPiKo",
+      "source": "https://civitai.com/models/1747637?modelVersionId=1977902",
+      "triggers": [
+        "e7sprites"
+      ],
+      "strength": 0.6,
+      "previews": [
+        {
+          "url": "assets/rpg-sprite-previews/rapi-native.webp",
+          "source": "assets/rpg-sprite-previews/rapi-native.webp",
+          "label": "Flanime 원본 1024×1536 · 라피 태그"
+        },
+        {
+          "url": "assets/rpg-sprite-previews/enterprise-native.webp",
+          "source": "assets/rpg-sprite-previews/enterprise-native.webp",
+          "label": "Flanime 원본 1024×1536 · 엔터프라이즈 태그"
+        }
+      ],
+      "license": "Civitai 표시상 Image 상업 이용 허용 · 기반 모델 조건 및 캐릭터 권리 별도",
+      "permissions": {
+        "allowNoCredit": true,
+        "allowCommercialUse": [
+          "Image",
+          "RentCivit",
+          "Rent",
+          "Sell",
+          "SellMerge"
+        ],
+        "allowDerivatives": true,
+        "allowDifferentLicense": true
+      },
+      "downloadUrl": "https://civitai.com/api/download/models/1977902?fileId=1887605",
+      "sha256": "d0645c244c98ecc0526d1dfc8cb054b39acfdeab1759a4461c364196bce78382",
+      "bytes": 228454308,
+      "recommendedSettings": {
+        "width": 896,
+        "height": 1152,
+        "prompt": "1girl, solo, full body, standing, idle, grey background",
+        "note": "해당 스타일 제작자 권장. 현대 전투 스타일의 강도·샘플링 권장값은 미명시. 강도 0.6은 로컬 시험값."
+      },
+      "localNativeSettings": {
+        "model": "flanime-xl",
+        "width": 1024,
+        "height": 1536,
+        "steps": 40,
+        "cfg": 5,
+        "strength": 0.6
+      }
+    },
+    {
+      "id": "rpgchara-anima",
+      "name": "RPG 4방향 시트 · Anima 도트풍",
+      "description": "RPG Maker풍 3열×4행 앞·옆·뒤 시트 초안. 8방향이 아니며 발 기준점과 의상 일관성 검수가 필요합니다. 전용 RPG 시트 설정으로 사용하세요.",
+      "family": "anima",
+      "enabled": true,
+      "experimental": true,
+      "verification": "동일 캐릭터 0.7/1.0 실생성 확인 · 정렬 미검증",
+      "filename": "requested/rpgchara-anima-base1-v1.safetensors",
+      "versionId": 2964160,
+      "modelId": 1397312,
+      "creator": "PingkyXD",
+      "source": "https://civitai.com/models/1397312",
+      "triggers": [
+        "rpgchara"
+      ],
+      "strength": 1.0,
+      "previews": [
+        {
+          "url": "assets/rpg-sprite-previews/rpgchara-anima-base-070.webp",
+          "source": "assets/rpg-sprite-previews/rpgchara-anima-base-070.webp",
+          "label": "4방향 시트 · LoRA 0.7"
+        },
+        {
+          "url": "assets/rpg-sprite-previews/rpgchara-anima-base-100.webp",
+          "source": "assets/rpg-sprite-previews/rpgchara-anima-base-100.webp",
+          "label": "4방향 시트 · LoRA 1.0"
+        }
+      ],
+      "license": "제작자 이용 조건 확인 · 공개 API에 Image 상업 이용 허용 미표시",
+      "sha256": "3519de7660dea8c3e231cd5d3f2fa4485b97f0f3e457cead2f94db82e0eaa514",
+      "bytes": 91868905,
+      "sheetPreset": true,
+      "recommendedModel": "anima-base"
+    },
+    {
+      "id": "rpgchara-illustrious",
+      "name": "RPG 4방향 시트 · Illustrious SD풍",
+      "description": "RPG Maker풍 3열×4행 앞·옆·뒤 시트 초안. 8방향이 아니며 발 기준점과 의상 일관성 검수가 필요합니다. 전용 RPG 시트 설정으로 사용하세요.",
+      "family": "illustrious",
+      "enabled": true,
+      "experimental": true,
+      "verification": "동일 캐릭터 0.7/1.0 실생성 확인 · 정렬 미검증",
+      "filename": "requested/rpgchara_v1.safetensors",
+      "versionId": 1579416,
+      "modelId": 1397312,
+      "creator": "PingkyXD",
+      "source": "https://civitai.com/models/1397312",
+      "triggers": [
+        "rpgchara"
+      ],
+      "strength": 0.7,
+      "previews": [
+        {
+          "url": "assets/rpg-sprite-previews/rpgchara-flanime-070.webp",
+          "source": "assets/rpg-sprite-previews/rpgchara-flanime-070.webp",
+          "label": "4방향 시트 · LoRA 0.7"
+        },
+        {
+          "url": "assets/rpg-sprite-previews/rpgchara-flanime-100.webp",
+          "source": "assets/rpg-sprite-previews/rpgchara-flanime-100.webp",
+          "label": "4방향 시트 · LoRA 1.0"
+        }
+      ],
+      "license": "제작자 이용 조건 확인 · 공개 API에 Image 상업 이용 허용 미표시",
+      "sha256": "4aed8bf2ca7819dc1daba5b072f52b72fea35afbe131d4c0e199d7d5254b3fef",
+      "bytes": 228466106,
+      "sheetPreset": true,
+      "recommendedModel": "flanime-xl"
+    }
+  ]
+}

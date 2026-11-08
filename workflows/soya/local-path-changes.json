@@ -1,0 +1,20 @@
+[
+  {
+    "node": "68",
+    "input": "lora_name",
+    "original": "dmd2_sdxl_4step_lora.safetensors",
+    "local": "soya-import\\dmd2_sdxl_4step_lora.safetensors"
+  },
+  {
+    "node": "120",
+    "input": "lora_name",
+    "original": "anima_preview_rdbt_finetuned_cfg_distilled_v0.12.safetensors",
+    "local": "soya-import\\anima_preview_rdbt_finetuned_cfg_distilled_v0.12.safetensors"
+  },
+  {
+    "node": "386",
+    "input": "lora_name",
+    "original": "kieed-anima-lokr-000018.safetensors",
+    "local": "soya-import\\kieed-anima-lokr-000018.safetensors"
+  }
+]

@@ -1,0 +1,78 @@
+{
+  "checkedAgainst": "http://127.0.0.1:8189",
+  "missingNodeTypes": [
+    "JoinStrings",
+    "ScheduledCFGGuidance",
+    "Seed (rgthree)",
+    "WD14Tagger|pysssss"
+  ],
+  "models": [
+    {
+      "node": "39",
+      "input": "clip_name",
+      "upstreamFilename": "qwen_3_06b_base.safetensors",
+      "localMatches": [
+        "text_encoders\\qwen_3_06b_base.safetensors"
+      ]
+    },
+    {
+      "node": "40",
+      "input": "vae_name",
+      "upstreamFilename": "qwen_image_vae.safetensors",
+      "localMatches": [
+        "vae\\qwen_image_vae.safetensors"
+      ]
+    },
+    {
+      "node": "46",
+      "input": "unet_name",
+      "upstreamFilename": "anima-preview.safetensors",
+      "localMatches": []
+    },
+    {
+      "node": "67",
+      "input": "ckpt_name",
+      "upstreamFilename": "rinFlanimeIllustrious_v30.safetensors",
+      "localMatches": [
+        "checkpoints\\rinFlanimeIllustrious_v30.safetensors"
+      ]
+    },
+    {
+      "node": "68",
+      "input": "lora_name",
+      "upstreamFilename": "dmd2_sdxl_4step_lora.safetensors",
+      "localMatches": [
+        "loras\\soya-import\\dmd2_sdxl_4step_lora.safetensors"
+      ]
+    },
+    {
+      "node": "95",
+      "input": "model_name",
+      "upstreamFilename": "2x-AnimeSharpV4_Fast_RCAN_PU.safetensors",
+      "localMatches": []
+    },
+    {
+      "node": "120",
+      "input": "lora_name",
+      "upstreamFilename": "anima_preview_rdbt_finetuned_cfg_distilled_v0.12.safetensors",
+      "localMatches": [
+        "loras\\soya-import\\anima_preview_rdbt_finetuned_cfg_distilled_v0.12.safetensors"
+      ]
+    },
+    {
+      "node": "184",
+      "input": "lora_name",
+      "upstreamFilename": "Detailed anime style.safetensors",
+      "localMatches": []
+    },
+    {
+      "node": "386",
+      "input": "lora_name",
+      "upstreamFilename": "kieed-anima-lokr-000018.safetensors",
+      "localMatches": [
+        "loras\\soya-import\\kieed-anima-lokr-000018.safetensors"
+      ]
+    }
+  ],
+  "ready": false
+}

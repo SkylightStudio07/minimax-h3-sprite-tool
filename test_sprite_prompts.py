@@ -3,6 +3,36 @@ import idle_tool as engine
 
 
 class PromptTests(unittest.TestCase):
+    def test_walk_run_have_distinct_full_body_continuous_motion(self):
+        for action in ('walk','run'):
+            for loop in (False,True):
+                for detail in ('',engine.LEGACY_GAIT_PROMPTS[action]):
+                    text=engine.animation_prompt(detail,action,loop)
+                    self.assertIn(engine.ANIMATION_DEFAULTS[action],text)
+                    self.assertIn('shoulders',text);self.assertIn('pelvis',text)
+                    self.assertIn('already in progress',text)
+                    self.assertNotIn('settles back',text);self.assertNotIn('settled final pose',text)
+                    self.assertEqual('<Picture 2>' in text,loop)
+        self.assertIn('one support foot',engine.animation_prompt('','walk',True))
+        self.assertIn('airborne phase',engine.animation_prompt('','run',True))
+        self.assertIn('carry the rifle in both hands',engine.animation_prompt('carry the rifle in both hands','run',True))
+
+    def test_fasth3_workflow(self):
+        from unittest.mock import patch
+        import sprite_workflows
+        graph=engine.build_workflow('test.png','idle',3,512,512,7,workflow_id='fasth3-sprite')
+        self.assertEqual(graph['2']['inputs']['unet_name'],sprite_workflows.FAST_FILENAME)
+        self.assertEqual(graph['10']['inputs']['steps'],8)
+        self.assertEqual(graph['11']['inputs']['model'],['18',0])
+        self.assertEqual(graph['18']['inputs']['shift_video'],10)
+        self.assertNotIn('7',graph)
+        self.assertIn('last_frame',graph['6']['inputs'])
+        for options in [dict(workflow_id='bad'),dict(workflow_id='fasth3-sprite',negative_enabled=True)]:
+            with self.assertRaises(ValueError):engine.build_workflow('test.png','',3,512,512,7,**options)
+        with self.assertRaises(ValueError):engine.build_workflow('test.png','',3,352,608,7,workflow_id='fasth3-sprite')
+        with patch.object(sprite_workflows,'status',return_value=[{},dict(ready=False)]):
+            with self.assertRaises(ValueError):sprite_workflows.validate(dict(workflowId='fasth3-sprite',width=512,height=512),engine.COMFY_ROOT)
+
     def test_subject_types(self):
         for subject in engine.SUBJECT_DEFAULTS:
             self.assertEqual(set(engine.SUBJECT_DEFAULTS[subject]), set(engine.ANIMATION_DEFAULTS))
@@ -64,8 +94,18 @@ class PromptTests(unittest.TestCase):
         self.assertNotIn('<Picture 2>',p)
         self.assertNotIn('last_frame',w['6']['inputs'])
         self.assertNotIn('medium-gray',p)
-        self.assertIn('screen-right',p)
+        self.assertIn('nose and gaze stay directed to screen right',p)
         self.assertIn('one weapon recoil',p)
+
+    def test_fasth3_idle_preserves_torso_volume(self):
+        for prompt in ('', engine.ANIMATION_DEFAULTS['idle'], *engine.LEGACY_IDLE_PROMPTS):
+            w=engine.build_workflow('test.png',prompt,3,512,512,42,workflow_id='fasth3-sprite')
+            p=w['6']['inputs']['prompt']
+            self.assertNotIn('breathing',p)
+            self.assertIn('same volume, width and contour',p)
+            self.assertIn('hair tips',p)
+        p=engine.animation_prompt('wave one hand','idle',True,rigid_idle=True)
+        self.assertIn('wave one hand',p)
 
     def test_blink_option(self):
         p=engine.animation_prompt('', 'idle', True, blink_mode='once')

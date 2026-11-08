@@ -1,0 +1,110 @@
+{
+  "version": 1,
+  "note": "Same original character description; independent text generation, no identity reference.",
+  "examples": [
+    {
+      "id": "soya-anima-flanime",
+      "title": "기본 일러스트",
+      "description": "부드러운 채색과 섬세한 디테일",
+      "badge": "추천",
+      "preview": "assets/image-model-examples/soya-anima-flanime.webp",
+      "pixel": false,
+      "originalCharacter": true,
+      "sampleSize": [
+        1536,
+        2048
+      ]
+    },
+    {
+      "id": "anima-base",
+      "title": "담백한 애니메이션",
+      "description": "가벼운 선과 깔끔한 색면",
+      "badge": "",
+      "preview": "assets/image-model-examples/anima-base.webp",
+      "pixel": false,
+      "originalCharacter": true,
+      "sampleSize": [
+        512,
+        1024
+      ]
+    },
+    {
+      "id": "anima-turbo",
+      "title": "빠른 시안",
+      "description": "외형과 의상 아이디어를 먼저 확인",
+      "badge": "",
+      "preview": "assets/image-model-examples/anima-turbo.webp",
+      "pixel": false,
+      "originalCharacter": true,
+      "sampleSize": [
+        832,
+        1216
+      ]
+    },
+    {
+      "id": "animagine-xl",
+      "title": "선명한 애니메이션",
+      "description": "또렷한 윤곽과 밝은 셀 채색",
+      "badge": "",
+      "preview": "assets/image-model-examples/animagine-xl.webp",
+      "pixel": false,
+      "originalCharacter": true,
+      "sampleSize": [
+        832,
+        1216
+      ]
+    },
+    {
+      "id": "illustrious-xl",
+      "title": "섬세한 일러스트",
+      "description": "얼굴과 의상의 작은 디테일",
+      "badge": "",
+      "preview": "assets/image-model-examples/illustrious-xl.webp",
+      "pixel": false,
+      "originalCharacter": true,
+      "sampleSize": [
+        896,
+        1152
+      ]
+    },
+    {
+      "id": "flanime-xl",
+      "title": "선명한 게임 일러스트",
+      "description": "깔끔한 선과 깊이 있는 명암",
+      "badge": "",
+      "preview": "assets/image-model-examples/flanime-xl.webp",
+      "pixel": false,
+      "originalCharacter": true,
+      "sampleSize": [
+        1024,
+        1536
+      ]
+    },
+    {
+      "id": "wai-cutscene-counter",
+      "title": "셀 채색 · 전투 캐릭터",
+      "description": "전투 원화와 측면 스프라이트에 사용",
+      "badge": "",
+      "preview": "assets/image-model-examples/wai-cutscene-counter.webp",
+      "pixel": false,
+      "originalCharacter": true,
+      "sampleSize": [
+        832,
+        1216
+      ]
+    },
+    {
+      "id": "pixel-art-xl",
+      "title": "픽셀 아트",
+      "description": "픽셀 격자와 제한된 색의 도트 초안",
+      "badge": "도트",
+      "preview": "assets/image-model-examples/pixel-art-xl.webp",
+      "pixel": true,
+      "originalCharacter": true,
+      "sampleSize": [
+        128,
+        128
+      ]
+    }
+  ]
+}

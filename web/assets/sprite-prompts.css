@@ -1,0 +1,11 @@
+.sprite-ai{margin:18px 0;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2,#151a25);min-width:0}
+.sprite-ai h3{font-size:14px;line-height:1.5;margin:0 0 6px}
+.sprite-ai p{overflow-wrap:anywhere;white-space:pre-line}
+.sprite-ai .notice{margin:7px 0}
+.sprite-ai button{margin-top:10px;font-size:12px;padding:10px 12px;min-height:40px}
+.sprite-ai details{margin-top:10px}
+.sprite-ai summary{cursor:pointer;font-size:12px;color:var(--text-2,#b6bdce)}
+html.creation-layout .sprite-ai textarea{min-height:86px;line-height:1.6}
+html.creation-layout #spriteDescription{min-height:170px}
+html.creation-layout #spriteDraftPrompt{min-height:210px;font-size:11px}
+.sprite-ai [hidden]{display:none!important}

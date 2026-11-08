@@ -1,0 +1,189 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "reference.png"
+    }
+  },
+  "2": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "fastvideo_fasth3_8step_v2_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    }
+  },
+  "3": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "type": "minimax",
+      "device": "default"
+    }
+  },
+  "4": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "minimax_h3_video_vae_fp16.safetensors"
+    }
+  },
+  "5": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "minimax_h3_audio_vae_fp32.safetensors"
+    }
+  },
+  "6": {
+    "class_type": "MiniMaxH3ImageToVideo",
+    "inputs": {
+      "clip": [
+        "3",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ],
+      "first_frame": [
+        "1",
+        0
+      ],
+      "prompt": "<Picture 1> supplies the complete opening image of [Shot 1] at 0.00 seconds. <Picture 2> supplies its closing image at 3.04 seconds; both images show the same composition.\n\nintegrated_multimodal_description: [Shot 1] A single continuous game-sprite animation retaining the exact illustration style of the input. The opening character size, screen placement, head-to-body proportions, costume, equipment, linework and painted shading are retained. The camera holds a static shot throughout: identical framing and magnification, with the full character remaining inside the original canvas. The background already visible in the opening image stays unchanged in layout, colors and brightness; only the character animates. The colors and shading painted on the character remain stable; illumination does not change. Maintain the exact facing direction, head angle, torso orientation and camera-relative view from <Picture 1> throughout every frame. Never rotate toward or away from the camera. The eyelids and visible eye shapes stay exactly as drawn in the opening image throughout the clip; gaze stays fixed. No blinking or repeated facial expressions. The mouth keeps its original shape without speaking. Subject movement only: gentle idle breathing. Use clearly visible, natural movement readable at game-sprite scale, with moderate joint excursions and delayed follow-through of hair tips and clothing hems. This is a continuous idle motion already in progress at 0.00 seconds and still in progress at 3.04 seconds. Maintain an even breathing rhythm and consistent motion amplitude throughout the entire clip, including its final two seconds. Motion flows through the ending without a finishing gesture, slowdown, or held resting pose. The closing pose matches <Picture 2> at the same phase of the ongoing motion as the opening; movement direction and speed connect smoothly across the loop boundary. The closing character scale and placement match the opening for a seamless loop.\n\noverall_soundscape: N/A\n\nnon_diegetic_music: N/A",
+      "width": 512,
+      "height": 512,
+      "length": 73,
+      "last_frame": [
+        "1",
+        0
+      ]
+    }
+  },
+  "8": {
+    "class_type": "RandomNoise",
+    "inputs": {
+      "noise_seed": 42
+    }
+  },
+  "9": {
+    "class_type": "KSamplerSelect",
+    "inputs": {
+      "sampler_name": "res_multistep"
+    }
+  },
+  "10": {
+    "class_type": "BasicScheduler",
+    "inputs": {
+      "model": [
+        "18",
+        0
+      ],
+      "scheduler": "simple",
+      "steps": 8,
+      "denoise": 1.0
+    }
+  },
+  "11": {
+    "class_type": "BasicGuider",
+    "inputs": {
+      "model": [
+        "18",
+        0
+      ],
+      "conditioning": [
+        "6",
+        0
+      ]
+    }
+  },
+  "12": {
+    "class_type": "SamplerCustomAdvanced",
+    "inputs": {
+      "noise": [
+        "8",
+        0
+      ],
+      "guider": [
+        "11",
+        0
+      ],
+      "sampler": [
+        "9",
+        0
+      ],
+      "sigmas": [
+        "10",
+        0
+      ],
+      "latent_image": [
+        "6",
+        1
+      ]
+    }
+  },
+  "13": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "12",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ]
+    }
+  },
+  "14": {
+    "class_type": "VAEDecodeAudio",
+    "inputs": {
+      "samples": [
+        "12",
+        0
+      ],
+      "vae": [
+        "5",
+        0
+      ]
+    }
+  },
+  "15": {
+    "class_type": "CreateVideo",
+    "inputs": {
+      "images": [
+        "13",
+        0
+      ],
+      "audio": [
+        "14",
+        0
+      ],
+      "fps": 24.0,
+      "bit_depth": 8,
+      "color_space": "sRGB"
+    }
+  },
+  "16": {
+    "class_type": "SaveVideo",
+    "inputs": {
+      "video": [
+        "15",
+        0
+      ],
+      "filename_prefix": "fasth3_sprite/sprite",
+      "format": "mp4",
+      "codec": {
+        "codec": "h264"
+      }
+    }
+  },
+  "18": {
+    "class_type": "MiniMaxH3SigmaShift",
+    "inputs": {
+      "model": [
+        "2",
+        0
+      ],
+      "shift_video": 10.0,
+      "shift_audio": 3.0
+    }
+  }
+}

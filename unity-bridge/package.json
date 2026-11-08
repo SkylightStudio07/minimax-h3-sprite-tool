@@ -1,0 +1,14 @@
+{
+  "name": "com.skylight.sprite-lab",
+  "version": "0.4.0",
+  "displayName": "Sprite Lab Unity Importer",
+  "description": "Imports Sprite Lab V1/V2 character ZIPs and handles spritelab-unity one-click links.",
+  "unity": "2022.3",
+  "dependencies": {
+    "com.unity.2d.animation": "9.0.4",
+    "com.unity.ugui": "1.0.0"
+  },
+  "author": {
+    "name": "Skylight Studio"
+  }
+}

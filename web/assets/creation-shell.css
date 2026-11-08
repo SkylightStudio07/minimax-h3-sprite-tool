@@ -1,0 +1,11 @@
+/* The creation workspace uses all space to the right of the navigation. */
+.workspace{max-width:none}
+body.creation-route{overflow:hidden}
+body.creation-route .shell{height:100dvh;min-height:0}
+body.creation-route .shell-main{min-height:0}
+body.creation-route .shell-bar{flex:none;position:relative;padding-inline:20px}
+body.creation-route .workspace{display:flex;flex-direction:column;flex:1;min-height:0;max-width:none;padding:0;gap:0;overflow:hidden}
+body.creation-route #pageHead,body.creation-route :is(#generatePane,#riggingPane)>.ui-alert{display:none}
+body.creation-route .workspace>.pane:not([hidden]){flex:1;display:flex;min-height:0;gap:0}
+body.creation-route .workspace .studio-frame{display:block;width:100%;height:100%!important;min-height:0!important;flex:1;border:0}
+@media(max-width:900px){body.creation-route .workspace{padding-bottom:calc(64px + env(safe-area-inset-bottom))}body.creation-route .shell-bar{padding-inline:12px}body.creation-route .shell{height:100dvh}}

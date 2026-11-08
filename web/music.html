@@ -36,4 +36,14 @@ $('refinePrompt').onclick=async()=>{const source=$('prompt').value.trim();if(sou
 $('markdownFile').onchange=async()=>{const file=$('markdownFile').files[0];if(!file)return;if(file.size>fileLimit){$('markdownNote').textContent='Markdown 파일은 '+(fileLimit/1000000).toLocaleString()+'MB 이하여야 합니다.';$('markdownFile').value='';return}try{const text=await file.text();if(text.length>documentLimit){$('markdownNote').textContent='기획서 텍스트는 '+documentLimit.toLocaleString()+'자 이하여야 합니다.';return}$('gameDocument').value=text;$('markdownNote').textContent=file.name+' · '+text.length.toLocaleString()+'자 불러옴'}catch(error){$('markdownNote').textContent='Markdown 파일을 읽지 못했습니다.'}};
 $('form').onsubmit=async event=>{event.preventDefault();$('generate').disabled=true;$('result').hidden=true;$('decision').hidden=true;try{const seed=$('seed').value.trim(),body={title:$('title').value.trim(),promptMode:mode(),cot:$('cot').value,seed:seed===''?null:Number(seed),notes:$('notes').value.trim(),gameDocument:$('gameDocument').value.trim(),preset:$('preset').value,prompt:$('prompt').value.trim(),vocalMode:$('vocalMode').value,lyrics:$('lyrics').value.trim()};const response=await api('api/music/generate',body);$('reason').textContent=response.promptReason;$('resolved').textContent=response.resolvedPrompt;$('decision').hidden=false;$('status').textContent='팀 GPU 대기열에 등록했습니다. 페이지를 닫아도 계속됩니다.';poll(response.jobId)}catch(error){$('status').textContent=error.message;$('generate').disabled=false}};
 updateMode();updateVocalMode();check();
-</script></body></html>
+</script><script>
+/* "이 설정으로 다시 만들기" from team.html. */
+window.applyRecreatePreset=function(s){
+  const presetField=(id,value)=>{const el=$(id);if(!el||value===undefined||value===null)return false;if(el.type==='checkbox'){el.checked=!!value;return true}if(el.tagName==='SELECT'&&![...el.options].some(option=>option.value===String(value)&&!option.disabled))return false;el.value=String(value);return true};
+  const radio=document.querySelector(`[name=mode][value="${s.promptMode}"]`);if(radio&&!radio.disabled){radio.checked=true;updateMode()}
+  for(const id of ['title','cot','gameDocument','preset','prompt','notes','lyrics','seed'])presetField(id,s[id]);
+  if(presetField('vocalMode',s.vocalMode))updateVocalMode();
+  return '이전 BGM 설정을 불러왔어요. 확인한 뒤 생성하세요.';
+};
+</script>
+</body></html>
