@@ -13,6 +13,7 @@ namespace SpriteLab.RiggingV1.Editor
     public static class RiggingV1Importer
     {
         private static float PixelsPerUnit = 100f;
+        private const float MaxSlideOfFaceWidth = 0.05f;
 
         [Serializable] private sealed class Manifest
         {
@@ -25,7 +26,7 @@ namespace SpriteLab.RiggingV1.Editor
         }
 
         [Serializable] private sealed class CanvasInfo { public int width; public int height; }
-        [Serializable] private sealed class FaceAnchor { public float cx; public float cy; }
+        [Serializable] private sealed class FaceAnchor { public float cx; public float cy; public float x0; public float x1; }
         [Serializable] private sealed class Anchors { public FaceAnchor face; public FaceAnchor neckPivot; public FaceAnchor bodyPivot; public float hairRootY; }
 
         [Serializable] private class LayerRecord
@@ -275,6 +276,23 @@ namespace SpriteLab.RiggingV1.Editor
             return id.Contains("hair") || id.Contains("headwear") || new[] { "face", "nose", "ear", "eye", "iris", "irides", "mouth" }.Any(id.StartsWith);
         }
 
+        // How far a head layer slides when the head turns, as a share of the largest slide. Negative layers sit behind the face.
+        // Named by role because the depth map's medians put ears and hair in inconsistent orders between characters.
+        private static float LayerDepth(string id, bool bakedEyes)
+        {
+            if (id.Contains("back_hair")) return -0.55f;
+            if (id.StartsWith("ear")) return -0.25f;
+            if (id.StartsWith("face")) return 0.15f;
+            if (id.Contains("front_hair")) return 0.85f;
+            if (id.Contains("hair")) return 0.3f;
+            if (id.Contains("headwear")) return 0.45f;
+            if (id.StartsWith("irides")) return bakedEyes ? 0.55f : 1.05f;  // the eyes lead the head, unless a flat eye layer would double them
+            if (id.StartsWith("nose")) return 0.75f;
+            if (id.StartsWith("eyebrow")) return 0.65f;
+            if (id.StartsWith("mouth")) return 0.6f;
+            return id.StartsWith("eye") ? 0.55f : 0.3f;
+        }
+
         private static Transform Group(Transform parent, string name, FaceAnchor anchor)
         {
             var group = new GameObject(name).transform;
@@ -343,8 +361,27 @@ namespace SpriteLab.RiggingV1.Editor
                 variants.Add(new ExpressionVariant { name = VariantName(expression), slot = expression.variantOf, renderer = renderer, slotRenderer = slot });
             }
 
+            var depthLayers = new List<Transform>();
+            var depthShifts = new List<float>();
+            if (hasBody)
+            {
+                var bakedEyes = expressions.Any(item => item.id == "eye_open_original");
+                var face = anchors.face != null && anchors.face.x1 > anchors.face.x0 ? anchors.face.x1 - anchors.face.x0 : canvas.width * 0.12f;
+                var slide = face * MaxSlideOfFaceWidth / PixelsPerUnit;
+                foreach (var pair in slots.Where(item => item.Value.transform.parent == headGroup))
+                {
+                    depthLayers.Add(pair.Value.transform);
+                    depthShifts.Add(LayerDepth(pair.Key.Substring(pair.Key.IndexOf(':') + 1), bakedEyes) * slide);
+                }
+                foreach (var variant in variants.Where(item => item.renderer.transform.parent == headGroup))
+                {
+                    depthLayers.Add(variant.renderer.transform);
+                    depthShifts.Add(LayerDepth(variant.slot.Substring(variant.slot.IndexOf(':') + 1), bakedEyes) * slide);
+                }
+            }
+
             controller.Configure(eyesOpen.ToArray(), eyesClosed.ToArray(), mouthOpen, mouthClosed, hair.ToArray(), equipment.ToArray(), cloth.ToArray(),
-                hasBody ? headGroup : null, hasBody ? bodyGroup : null, variants.ToArray());
+                hasBody ? headGroup : null, hasBody ? bodyGroup : null, variants.ToArray(), depthLayers.ToArray(), depthShifts.ToArray());
             var prefabPath = assetRoot + "/RiggingV1Avatar.prefab";
             PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
             UnityEngine.Object.DestroyImmediate(root);

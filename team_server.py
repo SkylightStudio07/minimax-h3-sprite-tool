@@ -72,6 +72,7 @@ def unity_importer_archive():
         ROOT/'unity-package'/'Editor'/'RiggingV1Importer.cs': 'Editor/RiggingV1Importer.cs',
         ROOT/'unity-v2'/'Editor'/'RiggingV2Importer.cs': 'Editor/RiggingV2Importer.cs',
         ROOT/'unity-v2'/'Editor'/'RiggingV2AnimationBuilder.cs': 'Editor/RiggingV2AnimationBuilder.cs',
+        ROOT/'unity-bridge'/'Editor'/'SpriteSheetImporter.cs': 'Editor/SpriteSheetImporter.cs',
     }
     output = io.BytesIO()
     with zipfile.ZipFile(output, 'w', compression=zipfile.ZIP_DEFLATED) as archive:

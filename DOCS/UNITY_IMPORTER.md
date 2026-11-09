@@ -47,7 +47,21 @@ Play 모드에서 값을 바꾸면 숨겨진 실제 아바타 인스턴스에 �
 - 표정: `SetExpression("이름")`, `ClearExpression()`, `ExpressionNames`. 사이트에서 보관한 차분 이름을 그대로 씁니다.
 - 갱신: 폴더를 선택하고 **Reimport Selected Rigging V1 Folder**를 실행하거나, 새 ZIP으로 **Update Selected Rigging V1 Folder From ZIP**을 실행합니다. 같은 자리에 프리팹을 다시 저장하므로 씬 연결이 유지됩니다.
 
+- 시선과 입체감: 고개를 돌리면 앞머리·이목구비는 그쪽으로, 뒷머리와 귀는 반대로 움직여 깊이가 생깁니다. Inspector의 `Look Target`에 오브젝트를 넣으면 따라보고, 코드에서는 `SetLook(방향)`, `LookAt(월드 좌표)`, `ClearLook()`을 씁니다. 세기는 `Parallax`, 대기 중 시선 흔들림은 `Idle Look`으로 조절합니다.
+
 이전에 가져온 폴더는 임포터를 받아 교체한 뒤 위 Reimport를 한 번 실행해야 새 구조가 적용됩니다. 목 기준점이 없는 오래된 패키지는 예전처럼 평평한 구조로 만들어집니다.
+
+## 스프라이트 시트
+
+사이트의 게임용 시트나 `sprite_sheet_cli`, `sprite_pack_cli` 결과(PNG + JSON)를 슬라이스, 애니메이션 클립, Animator Controller, 프리팹으로 만듭니다. 결과는 `Assets/SpriteLab/Sheets/<이름>/`에 생깁니다.
+
+- **Tools > Sprite Lab > Import Sprite Sheet JSON**: 시트 하나를 가져옵니다.
+- **Tools > Sprite Lab > Import Sprite Sheet Folder (One Character)**: 폴더의 시트를 한 캐릭터의 동작들로 묶습니다. 같은 동작이 여러 개면 파일 이름순으로 앞의 것만 씁니다.
+- 프리팹의 위치가 곧 JSON의 발 기준점입니다. 시작 상태는 `idle`이고, 없으면 첫 반복 동작입니다.
+- 동작 이름이 Animator 트리거입니다. `GetComponent<Animator>().SetTrigger("attack")`. 반복하지 않는 동작은 끝나면 시작 상태로 돌아갑니다.
+- JSON에 fps가 있으면 그 프레임 번호로, 없으면 프레임별 시간으로 클립을 만듭니다.
+- 다시 가져오면 텍스처, 스프라이트, 클립, 컨트롤러의 참조가 유지됩니다. 이미 있는 프리팹은 덮어쓰지 않으므로 게임에서 붙인 컴포넌트가 남습니다.
+- 압축 설정은 건드리지 않습니다. 큰 시트의 메모리와 화질은 프로젝트의 텍스처 설정에서 정합니다.
 
 ## 보안과 문제 해결
 

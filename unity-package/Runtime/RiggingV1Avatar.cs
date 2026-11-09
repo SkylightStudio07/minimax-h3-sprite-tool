@@ -49,6 +49,17 @@ namespace SpriteLab.RiggingV1
         [SerializeField, Range(0f, 0.02f)] private float breathScale = 0.004f;
         [SerializeField] private float breathSeconds = 3.4f;
 
+        [Header("Look and depth")]
+        [Tooltip("Follow this object with the eyes and head. Leave empty to use SetLook or idle only.")]
+        [SerializeField] private Transform lookTarget;
+        [Tooltip("World distance from the head at which the look reaches its limit.")]
+        [SerializeField] private float lookRange = 3f;
+        [SerializeField] private float lookSpeed = 6f;
+        [SerializeField, Range(0f, 1f)] private float idleLook = 0.18f;
+        [SerializeField, Range(0f, 2f)] private float parallax = 1f;
+        [SerializeField] private Transform[] depthParts = new Transform[0];
+        [SerializeField] private float[] depthAmounts = new float[0];
+
         [Header("Crowds")]
         [Tooltip("Start each character's idle at a different point so a group does not sway in unison.")]
         [SerializeField] private bool randomizePhase = true;
@@ -66,6 +77,10 @@ namespace SpriteLab.RiggingV1
         private Quaternion[] hairRest = new Quaternion[0];
         private Quaternion[] equipmentRest = new Quaternion[0];
         private Quaternion[] clothRest = new Quaternion[0];
+        private Vector3[] depthRest = new Vector3[0];
+        private Vector2 look;
+        private Vector2 manualLook;
+        private bool hasManualLook;
         private Coroutine blinkRoutine;
 
         public void Configure(
@@ -78,8 +93,12 @@ namespace SpriteLab.RiggingV1
             Transform[] cloth = null,
             Transform head = null,
             Transform body = null,
-            ExpressionVariant[] expressionVariants = null)
+            ExpressionVariant[] expressionVariants = null,
+            Transform[] depthLayers = null,
+            float[] depthShifts = null)
         {
+            depthParts = depthLayers ?? new Transform[0];
+            depthAmounts = depthShifts ?? new float[0];
             openEyes = eyesOpen ?? new SpriteRenderer[0];
             closedEyes = eyesClosed ?? new SpriteRenderer[0];
             mouthOpen = openMouth;
@@ -143,7 +162,41 @@ namespace SpriteLab.RiggingV1
             var time = Time.time + phase;
             if (automaticLipSync)
                 SetMouthOpen(Mathf.SmoothStep(0f, 1f, (Mathf.Sin(time * 7f) + 1f) * 0.5f));
-            if (PartMotionEnabled) ApplyIdle(time);
+            if (!PartMotionEnabled) return;
+            ApplyIdle(time);
+            var wander = idleLook * new Vector2(0.7f * Mathf.Sin(time * 0.37f + 0.9f) + 0.3f * Mathf.Sin(time * 0.83f), 0.5f * Mathf.Sin(time * 0.29f + 2f));
+            var wanted = Vector2.ClampMagnitude((lookTarget ? LookDirection(lookTarget.position) : hasManualLook ? manualLook : Vector2.zero) + wander, 1f);
+            ApplyLook(Vector2.Lerp(look, wanted, 1f - Mathf.Exp(-lookSpeed * Time.deltaTime)));
+        }
+
+        /// <summary>Look in a direction, -1 to 1 on each axis: +x is the screen right, +y is up. Eases there.</summary>
+        public void SetLook(Vector2 direction)
+        {
+            manualLook = Vector2.ClampMagnitude(direction, 1f);
+            hasManualLook = true;
+        }
+
+        /// <summary>Look once toward a world position. Assign lookTarget instead to keep following something.</summary>
+        public void LookAt(Vector3 worldPoint) => SetLook(LookDirection(worldPoint));
+
+        /// <summary>Return to facing forward.</summary>
+        public void ClearLook() => hasManualLook = false;
+
+        /// <summary>Pose the head layers for a look direction at once. Update calls this; it is public for previews and tests.</summary>
+        public void ApplyLook(Vector2 direction)
+        {
+            if (!restCached) CacheRestPose();
+            look = direction;
+            var shift = new Vector3(direction.x, direction.y * 0.6f, 0f) * parallax;
+            for (var i = 0; i < depthParts.Length && i < depthRest.Length && i < depthAmounts.Length; i++)
+                if (depthParts[i]) depthParts[i].localPosition = depthRest[i] + shift * depthAmounts[i];
+        }
+
+        private Vector2 LookDirection(Vector3 worldPoint)
+        {
+            var offset = worldPoint - (headRoot ? headRoot.position : transform.position);
+            // A sprite flipped with a negative scale mirrors its layers, so the look has to mirror back.
+            return Vector2.ClampMagnitude(new Vector2(offset.x * Mathf.Sign(transform.lossyScale.x), offset.y) / Mathf.Max(0.01f, lookRange), 1f);
         }
 
         /// <summary>Pose the idle at a given time. Update calls this; it is public for previews and tests.</summary>
@@ -280,6 +333,7 @@ namespace SpriteLab.RiggingV1
                 hairRest[i] = hairParts[i] ? hairParts[i].localRotation : Quaternion.identity;
             equipmentRest = CacheRotations(equipmentParts);
             clothRest = CacheRotations(clothParts);
+            depthRest = depthParts.Select(part => part ? part.localPosition : Vector3.zero).ToArray();
             if (headRoot) { headRestRotation = headRoot.localRotation; headRestPosition = headRoot.localPosition; }
             if (bodyRoot) { bodyRestRotation = bodyRoot.localRotation; bodyRestScale = bodyRoot.localScale; }
             restCached = true;

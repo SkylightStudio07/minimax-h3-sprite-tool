@@ -962,6 +962,7 @@ class TeamTests(unittest.TestCase):
         self.assertIn('com.skylight.sprite-lab/package.json',names)
         self.assertIn('com.skylight.sprite-lab/Editor/SpriteLabUnityLink.cs',names)
         self.assertIn('com.skylight.sprite-lab/Editor/RiggingV2Importer.cs',names)
+        self.assertIn('com.skylight.sprite-lab/Editor/SpriteSheetImporter.cs',names)
         self.assertIn('com.skylight.sprite-lab/Runtime/RiggingV2Portrait.cs',names)
         self.assertEqual(self.guest.get('/unity-importer.zip').status_code,401)
 
