@@ -1,3 +1,4 @@
+import io
 import unittest
 from unittest.mock import patch
 
@@ -107,7 +108,66 @@ class SoftMatte(unittest.TestCase):
         self.assertEqual(out[5, 5, 3], 0)
 
 
+KEY = (0, 243, 0)
+
+
+def green_scene(size=200):
+    a = np.full((size, size, 3), KEY, np.float32)
+    a[60:160, 70:130] = (130, 128, 126)
+    return a
+
+
+def green_cut(rgb):
+    return np.asarray(image_background.remove_green_key(Image.fromarray(np.uint8(rgb.round()))), np.float32)
+
+
+class GreenKey(unittest.TestCase):
+    def test_gray_armor_stays_solid_and_the_backdrop_goes(self):
+        out = green_cut(green_scene())
+        self.assertEqual(out[5, 5, 3], 0)
+        self.assertTrue((out[70:150, 80:120, 3] == 255).all())
+        self.assertLess(abs(out[100, 100, :3] - (130, 128, 126)).max(), 3)
+
+    def test_keeps_a_hole_through_the_body(self):
+        rgb = green_scene()
+        rgb[100:120, 90:110] = KEY
+        self.assertEqual(green_cut(rgb)[110, 100, 3], 0)
+
+    def test_lit_backdrop_around_a_blast_is_not_left_green(self):
+        rgb = green_scene()
+        rgb[20:50, 20:90] = (150, 250, 20)
+        out = green_cut(rgb)
+        self.assertLess(out[35, 55, 3], 200)
+        self.assertLessEqual(out[35, 55, 1], max(out[35, 55, 0], out[35, 55, 2]) + 1)
+
+    def test_a_video_on_another_backdrop_is_refused(self):
+        with self.assertRaises(ValueError):
+            green_cut(scene())
+
+    def test_measures_bright_green_on_the_character_only(self):
+        image = Image.new('RGBA', (10, 10), (0, 255, 0, 0))
+        image.paste((200, 40, 40, 255), (0, 0, 10, 5))
+        self.assertEqual(image_background.green_share(image), 0)
+        image.paste((0, 255, 0, 255), (0, 0, 5, 5))
+        self.assertEqual(image_background.green_share(image), .5)
+
+    def test_transparent_source_goes_on_the_requested_backdrop(self):
+        image = Image.new('RGBA', (64, 64), (0, 0, 0, 0))
+        buffer = io.BytesIO()
+        image.save(buffer, format='PNG')
+        out = idle_tool.prepare_reference_image(buffer.getvalue(), 256, 256, backdrop=(0, 255, 0))
+        self.assertEqual(Image.open(io.BytesIO(out)).convert('RGB').getpixel((3, 3)), (0, 255, 0))
+
+
 class Options(unittest.TestCase):
+    def test_green_needs_no_cutout_model(self):
+        with patch.object(image_background, 'status', return_value=dict(ready=False)):
+            self.assertEqual(idle_tool.background_options(dict(removeBackground=True, backgroundRemoval='green')), 'green')
+
+    def test_generated_effect_setting_cannot_use_green(self):
+        with self.assertRaises(ValueError):
+            sprite_combat.options(dict(combatEffect='fire', removeBackground=True, backgroundRemoval='green'))
+
     def test_mode_is_accepted(self):
         with patch.object(image_background, 'status', return_value=dict(ready=True)):
             self.assertEqual(idle_tool.background_options(dict(removeBackground=True, backgroundRemoval='ai-soft')), 'ai-soft')

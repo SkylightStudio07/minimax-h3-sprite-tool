@@ -251,6 +251,7 @@ function resultCard(j,{guest=false}={}){
     if(sheet){actions.append(linkButton('시트',sheet,{download:true,iconName:'download'}));actions.append(linkButton('GIF', 'api/jobs/'+encodeURIComponent(j.id)+'/sheet.gif'+(j.loopSheet?'?source=loopSheet':'?source=spriteSheet'),{download:true,iconName:'download'}))}
     actions.append(node('span',undefined,'ui-spacer'),moreMenu([
       {label:'자세히 보기',icon:'eye',href:detail},
+      sheet&&{label:'프레임별로 보기',icon:'eye',href:'sprite-viewer?job='+encodeURIComponent(j.id)},
       j.video&&{label:'영상 저장 (MP4)',icon:'download',href:j.video,download:true},
       j.transparentSheet&&{label:'투명 시트 저장',icon:'download',href:j.transparentSheet,download:true},
       j.gameSheet&&{label:'게임용 시트 저장',icon:'download',href:j.gameSheet,download:true},
@@ -437,6 +438,7 @@ function renderSpriteDetail(j,main,side){
     const viewer=detailSection('스프라이트 시트','시트를 누르면 원본 크기로 새 탭에서 열립니다.'),box=node('a',undefined,'sheet-box ui-checker'),img=node('img');
     img.alt='스프라이트 시트';box.target='_blank';box.rel='noopener';box.append(img);
     const show=path=>{img.src=url(path);box.href=url(path)};show(sheets[0][1]);
+    viewer.querySelector('.detail-section__head').append(linkButton('프레임별로 보기','sprite-viewer?job='+encodeURIComponent(j.id),{cls:'ui-btn ui-btn--soft ui-btn--sm',iconName:'eye'}));
     if(sheets.length>1)viewer.append(segmented(sheets,show,'시트 선택'));
     viewer.append(box);main.append(viewer);
   }
@@ -461,7 +463,7 @@ function renderSpriteDetail(j,main,side){
       tools.append(detailRow('루프 보정본 만들기','시작과 끝이 매끄럽게 이어지는 구간을 찾아 별도 영상과 시트를 만듭니다.',fix));
     }
     const count=node('input',undefined,'ui-input extract-count');count.type='number';count.min='2';count.max='128';count.step='1';count.value='64';count.setAttribute('aria-label','재추출 프레임 수');
-    const matte=node('select',undefined,'ui-input');matte.setAttribute('aria-label','재추출 배경 제거');for(const [value,label] of [['none','배경 유지'],['ai','AI 배경 제거'],['ai-soft','AI · 폭발과 연기 남기기'],['ai-smooth','AI · 윤곽 다듬기 (실험적)'],['flat','단색 배경 제거']])matte.add(new Option(label,value));
+    const matte=node('select',undefined,'ui-input');matte.setAttribute('aria-label','재추출 배경 제거');for(const [value,label] of [['none','배경 유지'],['ai','AI 배경 제거'],['ai-soft','AI · 폭발과 연기 남기기'],['ai-smooth','AI · 윤곽 다듬기 (실험적)'],['green','초록 배경 제거 · 초록 배경 영상 전용'],['flat','단색 배경 제거']])matte.add(new Option(label,value));
     const extract=actionButton('추출','ui-btn ui-btn--sm');
     const numeric=(label,min,max,hint)=>{const f=node('input',undefined,'ui-input extract-count');f.type='number';f.min=String(min);f.max=String(max);f.step='1';f.placeholder=hint;f.setAttribute('aria-label',label);return f};
     const fps=numeric('시트 FPS',1,60,'FPS'),columns=numeric('시트 열 수',1,128,'열');
@@ -564,7 +566,7 @@ function renderImageDetail(j,main,side){
  for(const image of j.images||[]){
   const stage=node('div',undefined,'detail-stage ui-checker'),img=node('img');img.src=url(image.url);img.alt=image.pixelArt?'생성한 도트 초안':'생성한 캐릭터 원화';if(image.pixelArt)img.style.imageRendering='pixelated';stage.append(img);main.append(stage);
   const actions=node('div',undefined,'detail-actions');actions.append(node('span','Seed '+image.seed,'ui-badge'),linkButton('PNG 저장',image.url,{download:true}));
-  if(j.sheetLayout)actions.append(linkButton('GIF · 인계용','api/jobs/'+encodeURIComponent(j.id)+'/sheet.gif?source='+encodeURIComponent('image:'+(j.images||[]).indexOf(image)),{download:true}));
+  if(j.sheetLayout){actions.append(linkButton('GIF · 인계용','api/jobs/'+encodeURIComponent(j.id)+'/sheet.gif?source='+encodeURIComponent('image:'+(j.images||[]).indexOf(image)),{download:true}));actions.append(linkButton('프레임별로 보기','sprite-viewer?job='+encodeURIComponent(j.id)+'&source='+encodeURIComponent('image:'+(j.images||[]).indexOf(image))))}
   const edit=actionButton('부분 수정');edit.onclick=()=>withBusy(edit,()=>window.transferGeneratedImage(image.url,'image'));actions.append(edit);
   const next=[];
   if(!j.sheetLayout){

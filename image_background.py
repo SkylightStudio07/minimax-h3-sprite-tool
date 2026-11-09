@@ -123,6 +123,48 @@ def remove_sprite_with_sparks(image):
     return Image.fromarray(rgba)
 
 
+def green_share(image):
+    """How much of a transparent source is close enough to the key colour to be erased with it."""
+    a=np.asarray(image.convert('RGBA'),dtype=np.float32)
+    visible=a[...,3]>=128
+    return float(((a[...,1]-a[...,[0,2]].max(axis=2)>96)&visible).sum())/max(int(visible.sum()),1)
+
+
+def remove_green_key(image):
+    """Cut a frame generated on a green backdrop, judging each pixel by how far green exceeds red and blue.
+
+    H3 lights the backdrop around a blast, so that glow is no longer the key colour.
+    The body gets a strict matte, and only large lit regions get a soft one, which
+    keeps armor solid while glow and smoke fade out.
+    """
+    import cv2
+    rgb=np.asarray(image.convert('RGB'),dtype=np.float32)
+    border=np.concatenate((rgb[:6].reshape(-1,3),rgb[-6:].reshape(-1,3),rgb[:,:6].reshape(-1,3),rgb[:,-6:].reshape(-1,3)))
+    key=np.median(border,axis=0)
+    span=float(key[1]-max(key[0],key[2]))
+    if span<120:raise ValueError('초록 배경 영상이 아닙니다.')
+    excess=rgb[...,1]-rgb[...,[0,2]].max(axis=2)
+    def fade(low):
+        t=np.clip((excess-span*low)/(span*(.8-low)),0,1)
+        return 1-t*t*(3-2*t)
+    lit=((excess>span*.16)&(excess<span*.72)).astype(np.uint8)
+    size=max(5,round(15*min(rgb.shape[:2])/1024)|1)
+    blob=cv2.morphologyEx(lit,cv2.MORPH_OPEN,cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(size,size)))
+    glow=cv2.GaussianBlur(cv2.dilate(blob,np.ones((7,7),np.uint8)).astype(np.float32),(0,0),3)
+    alpha=fade(.4)*(1-glow)+fade(.16)*glow
+    count,labels,stats,_=cv2.connectedComponentsWithStats((alpha>=.06).astype(np.uint8),connectivity=8)
+    # H3 scatters specks across the frame after a shot, and one far from the body would stretch every game cell.
+    speck=max(12,round(400*(min(rgb.shape[:2])/1024)**2))
+    alpha[np.isin(labels,[i for i in range(1,count) if stats[i,cv2.CC_STAT_AREA]<speck])]=0
+    color=np.clip((rgb-(1-alpha[...,None])*key)/np.maximum(alpha,.08)[...,None],0,255)
+    # Unmixing leaves green or magenta casts where H3's blend was not linear, so green has to sit between the other two.
+    near=cv2.dilate((alpha<.98).astype(np.uint8),np.ones((9,9),np.uint8)).astype(bool)|(glow>.02)
+    color[...,1]=np.where(near,np.clip(color[...,1],color[...,[0,2]].min(axis=2),color[...,[0,2]].max(axis=2)),color[...,1])
+    out=np.dstack((color,alpha*255))
+    out[alpha<=.004]=0
+    return Image.fromarray(out.round().astype('uint8'),'RGBA')
+
+
 def sprite_floor(image):
     """Row where the legs begin to meet the floor. Use a frame without a blast, whose light can confuse the cutout."""
     rows=np.nonzero((np.asarray(remove_sprite(image).getchannel('A'))>=128).any(axis=1))[0]

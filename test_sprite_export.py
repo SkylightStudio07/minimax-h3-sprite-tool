@@ -168,6 +168,26 @@ class Route(CharacterTests):
         chosen = next(s for s in sources if s['key'].endswith('_game'))
         self.assertEqual((chosen['columns'], chosen['count']), (5, 20))
 
+    def test_viewer_lists_sheets_with_their_grid_and_atlas(self):
+        self.assertEqual(self.extract(frameCount=20, removeBackground=True, backgroundRemoval='flat', sheetFps=36, sheetColumns=5).status_code, 200)
+        data = self.admin.get('/api/jobs/done/sheets').json
+        self.assertEqual(data['title'], 'attack')
+        game = next(s for s in data['sheets'] if s['key'].endswith('_game'))
+        self.assertEqual((game['columns'], game['rows'], game['count']), (5, 4, 20))
+        self.assertTrue(game['label'].startswith('20프레임 게임용'))
+        atlas = self.admin.get(game['atlas'])
+        self.assertEqual(len(atlas.json['frames']), 20)
+        plain = next(s for s in data['sheets'] if s['key'].endswith('_transparent'))
+        self.assertEqual((plain['columns'], plain['rows']), (8, 3))
+        self.assertNotIn('atlas', plain)
+        self.assertEqual(self.admin.get(plain['url']).status_code, 200)
+
+    def test_viewer_needs_a_login_and_a_finished_job(self):
+        self.assertEqual(self.guest.get('/sprite-viewer').status_code, 401)
+        self.assertEqual(self.guest.get('/api/jobs/done/sheets').status_code, 401)
+        self.assertEqual(self.admin.get('/sprite-viewer').status_code, 200)
+        self.assertEqual(self.admin.get('/api/jobs/missing/sheets').status_code, 400)
+
     def test_more_than_64_frames_is_allowed(self):
         self.assertEqual(self.extract(frameCount=129).status_code, 400)
         self.assertEqual(self.extract(frameCount=80).status_code, 200)

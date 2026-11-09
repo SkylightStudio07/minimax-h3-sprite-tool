@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>스프라이트 뷰어 · Sprite Lab</title>
+<script src="/assets/ui.js"></script>
+<link rel="stylesheet" href="/assets/ui.css">
+<link rel="stylesheet" href="/assets/sprite-viewer.css">
+</head>
+<body>
+<header class="sv-head">
+  <a id="svBack" class="ui-btn ui-btn--ghost ui-btn--sm" href="/#/my">돌아가기</a>
+  <h1 id="svTitle">스프라이트 뷰어</h1>
+  <select id="svSheet" class="ui-input" aria-label="시트 선택" hidden></select>
+  <span class="sv-spacer"></span>
+  <button id="svOpen" class="ui-btn ui-btn--sm" type="button">파일 열기</button>
+  <input id="svFiles" type="file" accept=".png,.webp,.json" multiple hidden>
+</header>
+
+<main id="svStage" class="sv-stage" tabindex="-1">
+  <canvas id="svCanvas" data-bg="checker" hidden></canvas>
+  <div id="svEmpty" class="sv-empty">
+    <b>시트를 여기에 끌어다 놓으세요</b>
+    <span>PNG와 같은 이름의 JSON을 함께 넣거나, 폴더째로 넣으면 동작별로 볼 수 있어요. 파일은 서버에 올라가지 않습니다.</span>
+  </div>
+</main>
+
+<p id="svStatus" class="sv-status" role="status" aria-live="polite" hidden></p>
+
+<section id="svControls" class="sv-controls" hidden>
+  <div class="sv-row">
+    <button id="svFirst" class="ui-btn ui-btn--sm ui-btn--icon" type="button" aria-label="첫 프레임" title="첫 프레임 (Home)">|&lt;</button>
+    <button id="svPrev" class="ui-btn ui-btn--sm ui-btn--icon" type="button" aria-label="이전 프레임" title="이전 프레임 (←)">&lt;</button>
+    <button id="svPlay" class="ui-btn ui-btn--sm ui-btn--primary sv-play" type="button" title="재생·일시정지 (Space)">재생</button>
+    <button id="svNext" class="ui-btn ui-btn--sm ui-btn--icon" type="button" aria-label="다음 프레임" title="다음 프레임 (→)">&gt;</button>
+    <button id="svLast" class="ui-btn ui-btn--sm ui-btn--icon" type="button" aria-label="마지막 프레임" title="마지막 프레임 (End)">&gt;|</button>
+    <input id="svScrub" class="ui-range sv-scrub" type="range" min="1" max="1" value="1" step="1" aria-label="프레임 위치">
+    <output id="svCount" class="sv-count">0 / 0</output>
+  </div>
+  <div class="sv-row">
+    <label class="sv-field">속도
+      <select id="svSpeed" class="ui-input">
+        <option value="0.1">0.1배</option><option value="0.25">0.25배</option><option value="0.5">0.5배</option><option value="1" selected>1배</option><option value="2">2배</option>
+      </select>
+    </label>
+    <label id="svFpsField" class="sv-field" hidden>FPS <input id="svFps" class="ui-input sv-num" type="number" min="1" max="60" value="8"></label>
+    <span id="svGrid" class="sv-grid" hidden>
+      <label class="sv-field">열 <input id="svColumns" class="ui-input sv-num" type="number" min="1" max="256"></label>
+      <label class="sv-field">행 <input id="svRows" class="ui-input sv-num" type="number" min="1" max="256"></label>
+      <label class="sv-field">프레임 <input id="svFrames" class="ui-input sv-num" type="number" min="1" max="4096"></label>
+    </span>
+    <div class="ui-seg" id="svBg" role="group" aria-label="배경">
+      <button type="button" data-bg="checker" aria-pressed="true">체커</button>
+      <button type="button" data-bg="black" aria-pressed="false">검정</button>
+      <button type="button" data-bg="white" aria-pressed="false">흰색</button>
+      <button type="button" data-bg="magenta" aria-pressed="false">마젠타</button>
+    </div>
+    <div class="ui-seg" id="svMode" role="group" aria-label="보기 방식">
+      <button type="button" data-mode="color" aria-pressed="true">색상</button>
+      <button type="button" data-mode="alpha" aria-pressed="false" title="불투명한 곳은 희게, 투명한 곳은 검게 보여 줍니다. 몸에 뚫린 구멍을 찾기 좋아요.">투명도</button>
+    </div>
+    <span class="sv-zoom">
+      <button id="svZoomOut" class="ui-btn ui-btn--sm ui-btn--icon" type="button" aria-label="축소">−</button>
+      <output id="svZoom">100%</output>
+      <button id="svZoomIn" class="ui-btn ui-btn--sm ui-btn--icon" type="button" aria-label="확대">+</button>
+      <button id="svFit" class="ui-btn ui-btn--sm" type="button">맞춤</button>
+      <button id="svActual" class="ui-btn ui-btn--sm" type="button">1:1</button>
+    </span>
+    <output id="svInfo" class="sv-info"></output>
+  </div>
+</section>
+
+<nav id="svStrip" class="sv-strip" aria-label="프레임 목록" hidden></nav>
+<div id="svDrop" class="sv-drop" hidden>놓으면 시트를 엽니다</div>
+
+<script src="/assets/studio-ui.js"></script>
+<script src="/assets/sprite-viewer.js"></script>
+</body>
+</html>

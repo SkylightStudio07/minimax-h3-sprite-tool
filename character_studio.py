@@ -95,6 +95,10 @@ def register(app,db,auth,data,payload):
     @auth()
     def frame_page():return send_file(Path(__file__).parent/'web/frame-editor.html',max_age=0)
 
+    @app.get('/sprite-viewer')
+    @auth()
+    def sprite_viewer_page():return send_file(Path(__file__).parent/'web/sprite-viewer.html',max_age=0)
+
     @app.route('/api/characters',methods=['GET','POST'])
     @auth()
     def characters():
@@ -196,12 +200,32 @@ def register(app,db,auth,data,payload):
                 if key.endswith('_atlas'):continue
                 info=r.get('exportSheetInfo',{}).get(key,{})
                 match=re.match(r'sheet_(\d+)_',key)
-                out.append(dict(key='export:'+key,label='재추출 · '+key,url=url,count=info.get('frameCount',int(match[1]) if match else 8),**{k:info[k] for k in ('columns','rows') if k in info}))
+                count=info.get('frameCount',int(match[1]) if match else 8)
+                kind_label='투명' if key.endswith('_transparent') else '게임용' if key.endswith('_game') else '재추출'
+                out.append(dict(key='export:'+key,label=f'{count}프레임 {kind_label} · {key.split("_")[2][:4] if match else key}',url=url,count=count,**{k:info[k] for k in ('columns','rows') if k in info}))
         elif kind=='image' and p.get('sheetLayout'):
             layout=p['sheetLayout']
             for i,item in enumerate(r.get('images',[])):
                 out.append(dict(key='image:'+str(i),label='시트 후보 '+str(i+1),url=item['url'],count=layout['columns']*layout['rows'],columns=layout['columns'],rows=layout['rows']))
         return out
+
+    @app.get('/api/jobs/<jid>/sheets')
+    @auth()
+    def job_sheets(jid):
+        # Read-only listing for the viewer, for the same team-visible jobs as the result page.
+        with db() as con:row=con.execute('SELECT * FROM jobs WHERE id=?',(jid,)).fetchone()
+        if not row or row['state']!='complete':raise ValueError('완료된 결과를 선택하세요.')
+        p=json.loads(row['payload']);r=json.loads(row['result'] or '{}')
+        timing=(r.get('pixelExport') or {}).get('durationMs') or r.get('sheetTimingMs')
+        sheets=[]
+        for choice in sheet_choices(row):
+            key=choice['key'];count=int(choice['count']);columns=choice.get('columns',min(count,8))
+            sheet=dict(choice,columns=columns,rows=choice.get('rows',math.ceil(count/columns)))
+            atlas=r.get('gameAtlas') if key=='gameSheet' else r.get('exportSheets',{}).get(key[len('export:'):-len('_game')]+'_atlas') if key.startswith('export:') and key.endswith('_game') else None
+            if atlas:sheet['atlas']=atlas
+            if key in ('gameSheet','spriteSheet','transparentSheet') and isinstance(timing,list) and len(timing)==count:sheet['durationMs']=timing
+            sheets.append(sheet)
+        return jsonify(title=p.get('resultTitle') or p.get('title') or p.get('animationType') or '스프라이트',sheets=sheets)
 
     @app.get('/api/jobs/<jid>/sheet.gif')
     @auth()

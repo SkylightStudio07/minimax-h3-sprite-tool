@@ -159,7 +159,7 @@ def effect_room_offset(resized: Image.Image, left: int, top: int, width: int, he
 
 
 def prepare_reference_image(image_bytes: bytes, width: int, height: int, motion_padding: int = 0, pixel_art: bool = False,
-                            effect_room: bool = False) -> bytes:
+                            effect_room: bool = False, backdrop: tuple[int, int, int] = (128, 128, 128)) -> bytes:
     """Fit the source without distortion onto the exact H3 canvas size."""
     source = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
     if type(motion_padding) is not int or motion_padding not in (0,10,20,30,40,50,58):
@@ -175,7 +175,7 @@ def prepare_reference_image(image_bytes: bytes, width: int, height: int, motion_
     if source.getchannel("A").getextrema()[0] < 255:
         # H3 encodes RGB and otherwise interprets transparent pixels as black.
         # A deliberate neutral matte is more stable and easier to remove later.
-        canvas = Image.new("RGBA", (width, height), (128, 128, 128, 255))
+        canvas = Image.new("RGBA", (width, height), (*backdrop, 255))
         left, top = (width - resized.width) // 2, (height - resized.height) // 2
         if effect_room and not pixel_art:
             dx, dy = effect_room_offset(resized, left, top, width, height)
@@ -479,7 +479,7 @@ def background_options(payload):
     enabled=payload.get('removeBackground',False)
     if type(enabled) is not bool:raise ValueError('배경 제거 옵션을 확인하세요.')
     method=payload.get('backgroundRemoval','flat')
-    if method not in ('ai','ai-sparks','ai-smooth','ai-soft','flat'):raise ValueError('배경 제거 방식을 확인하세요.')
+    if method not in ('ai','ai-sparks','ai-smooth','ai-soft','flat','green'):raise ValueError('배경 제거 방식을 확인하세요.')
     needs_character_mask=payload.get('combatEffect')=='subtle' and not payload.get('pixelOutput',False)
     if enabled and (method in ('ai','ai-sparks','ai-smooth','ai-soft') or needs_character_mask) and not image_background.status()['ready']:
         if needs_character_mask:raise ValueError('작은 검기용 배경 정리가 아직 준비되지 않았습니다. 잠시 후 다시 시도하세요.')
@@ -523,7 +523,7 @@ def make_sprite_sheet(video_path: Path, output_path: Path, count: int, loop: boo
                       action: str | None = None, game_paths: tuple[Path, Path] | None = None,
                       sheet_fps: int | None = None, game_columns: int | None = None, drop: list[int] | None = None) -> dict:
     """Pack a sheet. With `action`, picks frames by motion; with `game_paths`, also writes the game sheet."""
-    if background_mode not in ('ai','ai-sparks','ai-smooth','ai-soft','flat','subtle'):raise ValueError('배경 제거 방식을 확인하세요.')
+    if background_mode not in ('ai','ai-sparks','ai-smooth','ai-soft','flat','green','subtle'):raise ValueError('배경 제거 방식을 확인하세요.')
     if transparent_path is not None and background_mode in ('ai','ai-sparks','ai-smooth','ai-soft','subtle') and not image_background.status()['ready']:
         raise ValueError('AI 배경 제거 모델이 준비되지 않았습니다.')
     container = av.open(str(video_path))
@@ -570,6 +570,8 @@ def make_sprite_sheet(video_path: Path, output_path: Path, count: int, loop: boo
             elif background_mode=='subtle':
                 import sprite_vfx_matte
                 cutout,_=sprite_vfx_matte.remove(image)
+            elif background_mode=='green':
+                cutout=image_background.remove_green_key(image)
             elif background_mode=='ai-soft':
                 cutout=image_background.remove_sprite_soft(image,floor)
             elif background_mode=='ai-sparks':
@@ -709,18 +711,23 @@ def run_job(job_id: str, payload: dict) -> None:
         source_image = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
         had_transparency = source_image.getchannel("A").getextrema()[0] < 255
         subtle=combat['combatEffect']=='subtle' and not combat['pixelOutput']
-        if subtle and payload.get('removeBackground',False) and not had_transparency:
+        green_key=payload.get('removeBackground',False) and payload.get('backgroundRemoval')=='green'
+        if (subtle or green_key) and payload.get('removeBackground',False) and not had_transparency:
+            if green_key and not image_background.status()['ready']:raise ValueError('초록 배경을 쓰려면 배경이 투명한 PNG를 올려 주세요.')
             update_job(job_id,state='uploading',message='캐릭터의 배경을 먼저 정리하는 중')
             cut=image_background.remove_sprite(source_image)
             buffer=io.BytesIO();cut.save(buffer,format='PNG');image_bytes=buffer.getvalue()
             had_transparency=True
+        if green_key and image_background.green_share(Image.open(io.BytesIO(image_bytes)))>.02:
+            raise ValueError('캐릭터에 밝은 초록색이 많아 초록 배경과 함께 지워집니다. 다른 배경 제거 방식을 선택하세요.')
         width = int(payload.get("width", 864))
         height = int(payload.get("height", 480))
         if width % 32 or height % 32 or width < 256 or height < 256:
             raise ValueError("해상도의 가로·세로는 256 이상이며 32의 배수여야 합니다.")
         motion_padding = payload.get('motionPadding',10)
         prepared_bytes = prepare_reference_image(image_bytes, width, height, motion_padding, pixel_art=combat['pixelOutput'],
-                                                 effect_room=payload.get('animationType', 'idle') in ('attack', 'cast'))
+                                                 effect_room=payload.get('animationType', 'idle') in ('attack', 'cast'),
+                                                 backdrop=(0, 255, 0) if green_key else (128, 128, 128))
         result_dir = RESULT_ROOT / job_id
         result_dir.mkdir(parents=True, exist_ok=True)
         (result_dir / "reference_prepared.png").write_bytes(prepared_bytes)
@@ -749,7 +756,7 @@ def run_job(job_id: str, payload: dict) -> None:
             animation_type,
             loop,
             facing,
-            flat_background=had_transparency,
+            flat_background=had_transparency and not green_key,
             blink_mode=payload.get('blinkMode','none'),
             motion_strength=payload.get('motionStrength','normal'),
             subject_type=payload.get('subjectType','human'),
@@ -768,7 +775,7 @@ def run_job(job_id: str, payload: dict) -> None:
             'revision': PROMPT_REVISION, 'seed': seed, 'prompt': workflow['6']['inputs']['prompt'],
             'motionPromptMode': payload.get('motionPromptMode','manual'),
             'width': width, 'height': height, 'length': workflow['6']['inputs']['length'],
-            'flatBackground': had_transparency, 'blinkMode': payload.get('blinkMode','none'),
+            'flatBackground': had_transparency and not green_key, 'blinkMode': payload.get('blinkMode','none'),
             'motionPadding': motion_padding,
             'motionStrength': payload.get('motionStrength','normal'),
             'subjectType': payload.get('subjectType','human'),

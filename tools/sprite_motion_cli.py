@@ -41,8 +41,9 @@ def parse_args(argv=None):
     p.add_argument('--frames', type=int, default=8, help='sprite sheet frames, 2 to 128')
     p.add_argument('--fps', type=int, help='fixed sheet frame rate, 1 to 60; uses consecutive frames instead of picking by motion')
     p.add_argument('--columns', type=int, help='game sheet columns; default keeps every side within 8192 pixels')
-    p.add_argument('--background', choices=['ai', 'ai-smooth', 'ai-sparks', 'ai-soft', 'flat', 'none'],
-                   help='default: ai-soft for attack and cast, which keeps blasts and smoke; ai otherwise')
+    p.add_argument('--background', choices=['ai', 'ai-smooth', 'ai-sparks', 'ai-soft', 'flat', 'green', 'none'],
+                   help='default: ai-soft for attack and cast, which keeps blasts and smoke; ai otherwise. '
+                        'green generates on a green backdrop, for characters without bright green')
     p.add_argument('--subject', default='human', choices=['human', *engine.SUBJECT_DEFAULTS])
     p.add_argument('--strength', default='normal', choices=sorted(engine.MOTION_PROMPTS))
     p.add_argument('--facing', default='preserve', choices=sorted(engine.FACING_PROMPTS))

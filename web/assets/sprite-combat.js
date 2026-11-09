@@ -15,14 +15,14 @@
   el('effectDescription').previousElementSibling.textContent=el('effectDescription').required?'이펙트 설명 · 필수':'이펙트 추가 설명 · 선택';
   if(effect||pixel){
    el('backgroundRemoval').value='flat';
-   for(const option of el('backgroundRemoval').querySelectorAll('[value^="ai"]'))option.disabled=true;
+   for(const option of el('backgroundRemoval').querySelectorAll('[value^="ai"],[value="green"]'))option.disabled=true;
    el('flatBackgroundControls').hidden=!el('removeBackground').checked;
    el('spriteBackgroundNote').textContent=subtle&&!pixel?'입력 배경을 먼저 정리하고, 캐릭터의 옷과 옅은 검기를 함께 보호합니다. 원본 영상과 시트도 보관합니다.':'단색 배경을 제거해 검기·불꽃도 함께 남깁니다. 복잡한 배경의 입력은 먼저 배경을 제거해 주세요. 작은 틈이나 옅은 효과는 직접 확인하세요.';
   }else{
    // Leaving a pixel/effect preset must release its temporary AI lock.
    // Engine availability is recorded by check(), separately from this lock.
-   for(const option of el('backgroundRemoval').querySelectorAll('[value^="ai"]'))option.disabled=option.dataset?.ready==='false';
-   el('spriteBackgroundNote').textContent=el('backgroundRemoval').value==='ai-soft'?'AI로 캐릭터를 남기고, 단색 배경 위의 폭발과 연기는 가장자리가 부드럽게 남습니다. 배경이 단색이 아니면 일반 AI 제거로 처리됩니다.':el('backgroundRemoval').value==='ai-sparks'?'AI로 캐릭터를 남기고 단색 배경 위 작은 금빛 불꽃도 함께 보존합니다. 복잡한 배경이나 다른 색 효과는 결과를 확인하세요.':el('backgroundRemoval').value==='ai'?'AI가 프레임별 배경을 제거합니다. 원본 영상과 시트는 함께 보존합니다. 머리카락·반투명 소품은 결과를 확인하세요.':'가장자리에서 이어지는 단색 배경을 제거합니다. 원본 영상과 시트는 함께 보존합니다.';
+   for(const option of el('backgroundRemoval').querySelectorAll('[value^="ai"],[value="green"]'))option.disabled=option.dataset?.ready==='false';
+   el('spriteBackgroundNote').textContent=el('backgroundRemoval').value==='green'?'초록 배경 위에서 영상을 만든 뒤 초록만 지웁니다. 회색 몸체가 덜 비치고 폭발과 연기도 남습니다. 밝은 초록색이 많은 캐릭터에는 쓸 수 없고, 폭발 가장자리에 노란 초록빛이 조금 남을 수 있습니다.':el('backgroundRemoval').value==='ai-soft'?'AI로 캐릭터를 남기고, 단색 배경 위의 폭발과 연기는 가장자리가 부드럽게 남습니다. 배경이 단색이 아니면 일반 AI 제거로 처리됩니다.':el('backgroundRemoval').value==='ai-sparks'?'AI로 캐릭터를 남기고 단색 배경 위 작은 금빛 불꽃도 함께 보존합니다. 복잡한 배경이나 다른 색 효과는 결과를 확인하세요.':el('backgroundRemoval').value==='ai'?'AI가 프레임별 배경을 제거합니다. 원본 영상과 시트는 함께 보존합니다. 머리카락·반투명 소품은 결과를 확인하세요.':'가장자리에서 이어지는 단색 배경을 제거합니다. 원본 영상과 시트는 함께 보존합니다.';
   }
   if(pixel){const [w,h]=calculatedSize();el('pixelExportSize').textContent=`시트 한 칸 ${w/4}×${h/4}px · PNG와 인계용 GIF로 받기`}
  };

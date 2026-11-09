@@ -24,7 +24,7 @@ def parse_args(argv=None):
     p.add_argument('--frames', type=int, required=True, help='2 to 128; a shorter clip gives fewer')
     p.add_argument('--fps', type=int, required=True, help='1 to 60')
     p.add_argument('--columns', type=int, help='default keeps every side within 8192 pixels')
-    p.add_argument('--background', choices=['ai', 'ai-smooth', 'ai-sparks', 'ai-soft', 'flat'],
+    p.add_argument('--background', choices=['ai', 'ai-smooth', 'ai-sparks', 'ai-soft', 'flat', 'green'],
                    help='default: ai-soft for attack and cast, otherwise ai')
     p.add_argument('--loop', action=argparse.BooleanOptionalAction, default=None, help='default depends on the action')
     p.add_argument('--drop', type=lambda s: [int(x) for x in s.split(',')], default=[],
