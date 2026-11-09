@@ -27,6 +27,8 @@ def parse_args(argv=None):
     p.add_argument('--background', choices=['ai', 'ai-smooth', 'ai-sparks', 'ai-soft', 'flat'],
                    help='default: ai-soft for attack and cast, otherwise ai')
     p.add_argument('--loop', action=argparse.BooleanOptionalAction, default=None, help='default depends on the action')
+    p.add_argument('--drop', type=lambda s: [int(x) for x in s.split(',')], default=[],
+                   help='sheet frames to remove, counted from 1, such as 19,28; their time goes to the frame before')
     return p.parse_args(argv)
 
 
@@ -45,7 +47,7 @@ def main(argv=None):
     with tempfile.TemporaryDirectory() as folder:
         scratch = Path(folder)
         packed = engine.make_sprite_sheet(args.video, scratch / 'sheet.png', args.frames, loop, scratch / 'cut.png', 24, mode,
-                                          args.action, paths, args.fps, args.columns)
+                                          args.action, paths, args.fps, args.columns, args.drop)
     game = packed['game']
     if not game:
         raise SystemExit('could not build a game sheet from this video')

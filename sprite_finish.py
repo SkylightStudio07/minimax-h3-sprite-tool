@@ -17,6 +17,8 @@ ALPHA_SOLID = 128
 MAX_GROUND_SHIFT = .05   # of character height; beyond this the frame is treated as a real leap
 TIME_WEIGHT = .012       # keeps a long hold from leaving a gap in the timeline
 MAX_TEXTURE_SIDE = 8192  # common GPU and WebGL limit
+SOLID_BODY = 240
+MIN_BODY_MATCH = .6      # recoil alone reaches about .75; below this the cutout lost the body
 MIN_STRIDE = 8           # frames; anything shorter is a half stride with the legs swapped
 
 
@@ -209,6 +211,96 @@ def atlas(image_name, action, loop, layout, durations, fps=None):
                 meta=dict(app='Sprite Lab', version=str(VERSION), image=image_name, format='RGBA8888', scale='1', loop=bool(loop),
                           frameCount=len(names), **({'fps': fps} if fps else {}),
                           size=dict(w=w * layout['columns'], h=h * layout['rows']), pivotPixels=dict(x=layout['pivotX'], y=layout['pivotY'])))
+
+
+def drop_frames(indices, durations, drop):
+    """Remove 1-based sheet positions; each removed frame's time goes to the frame before it."""
+    drop = set(drop or ())
+    if not drop:
+        return list(indices), list(durations)
+    if any(not 1 <= d <= len(indices) for d in drop) or len(drop) >= len(indices):
+        raise ValueError(f'프레임 번호는 1~{len(indices)} 안에서, 최소 1장은 남겨야 합니다.')
+    kept, times = [], []
+    for position, (index, duration) in enumerate(zip(indices, durations), 1):
+        if position in drop:
+            if times:
+                times[-1] += duration
+        else:
+            kept.append(index)
+            times.append(duration)
+    return kept, times
+
+
+def repair_body(raw_frames, cutouts, floor=None):
+    """Refill a body the cutout lost under a bright flash, using the shape of the nearest sound frame.
+
+    Only whole-frame source pixels are restored, so a lit body stays lit. Clips whose body
+    keeps changing shape are left alone, because there is no reliable frame to borrow from.
+    """
+    if len(cutouts) < 3:
+        return cutouts
+    alphas = np.stack([np.asarray(c.getchannel('A')) for c in cutouts])
+    solid = alphas >= SOLID_BODY
+    usual = np.median(solid.astype(np.uint8), axis=0) > 0
+    area = int(usual.sum())
+    if not area:
+        return cutouts
+    bad = (solid & usual).sum(axis=(1, 2)) / area < MIN_BODY_MATCH
+    if not bad.any() or bad.mean() > .25:
+        return cutouts
+    sound = np.nonzero(~bad)[0]
+    kernel = np.ones((7, 7), np.uint8)
+    repaired = list(cutouts)
+    for i in np.nonzero(bad)[0]:
+        donor = solid[int(sound[np.argmin(np.abs(sound - i - .5))])]
+        wanted = cv2.erode(donor.astype(np.uint8), kernel).astype(bool)
+        if floor is not None:
+            wanted[floor:] |= donor[floor:]   # feet are thin, so erosion would lose them
+        patch = wanted & (alphas[i] < SOLID_BODY)
+        rgba = np.array(cutouts[i])
+        rgba[patch, :3] = np.asarray(raw_frames[i].convert('RGB'))[patch]
+        rgba[patch, 3] = 255
+        repaired[i] = Image.fromarray(rgba, 'RGBA')
+    return repaired
+
+
+def pack_actions(actions, columns=None):
+    """Give one unit's actions the same cell and foot anchor, so switching between them does not jump.
+
+    `actions` is a list of (name, sheet image, atlas dict). Returns [(name, sheet, atlas)] and a manifest.
+    """
+    if not actions:
+        raise ValueError('묶을 동작이 없습니다.')
+    placed = []
+    for name, sheet, data in actions:
+        frames = list(data['frames'].values())
+        w, h = frames[0]['frame']['w'], frames[0]['frame']['h']
+        placed.append((name, sheet, data, frames, w, h, data['meta']['pivotPixels']['x'], data['meta']['pivotPixels']['y']))
+    left, top = max(p[6] for p in placed), max(p[7] for p in placed)
+    right, bottom = max(p[4] - p[6] for p in placed), max(p[5] - p[7] for p in placed)
+    width, height = left + right, top + bottom
+    width += width % 2
+    height += height % 2
+    results, listing = [], {}
+    for name, sheet, data, frames, w, h, px, py in placed:
+        count = len(frames)
+        grid = fit_columns(count, width, height, columns)
+        rows = (count + grid - 1) // grid
+        out = Image.new('RGBA', (width * grid, height * rows), (0, 0, 0, 0))
+        for i, frame in enumerate(frames):
+            q = frame['frame']
+            out.paste(sheet.crop((q['x'], q['y'], q['x'] + w, q['y'] + h)), ((i % grid) * width + left - px, (i // grid) * height + top - py))
+        layout = dict(columns=grid, rows=rows, cellWidth=width, cellHeight=height, pivotX=left, pivotY=top)
+        times = [f['duration'] for f in frames]
+        fps = data['meta'].get('fps')
+        loop = data['meta']['loop']
+        made = atlas(f'{name}.png', name, loop, layout, times, fps)
+        results.append((name, out, made))
+        listing[name] = dict(image=f'{name}.png', atlas=f'{name}.json', frameCount=count, columns=grid, rows=rows, loop=loop,
+                             durationMs=sum(times), oversize=max(out.size) > MAX_TEXTURE_SIDE, **({'fps': fps} if fps else {}))
+    manifest = dict(cellWidth=width, cellHeight=height, pivotPixels=dict(x=left, y=top),
+                    anchor=dict(x=round(left / width, 4), y=round(top / height, 4)), actions=listing)
+    return results, manifest
 
 
 def write(frames, action, loop, durations, png_path, json_path, columns=None, fps=None):

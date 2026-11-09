@@ -521,7 +521,7 @@ def video_thumbnail(video_path: Path) -> bytes:
 def make_sprite_sheet(video_path: Path, output_path: Path, count: int, loop: bool = True,
                       transparent_path: Path | None = None, tolerance: int = 24, background_mode: str = 'flat',
                       action: str | None = None, game_paths: tuple[Path, Path] | None = None,
-                      sheet_fps: int | None = None, game_columns: int | None = None) -> dict:
+                      sheet_fps: int | None = None, game_columns: int | None = None, drop: list[int] | None = None) -> dict:
     """Pack a sheet. With `action`, picks frames by motion; with `game_paths`, also writes the game sheet."""
     if background_mode not in ('ai','ai-sparks','ai-smooth','ai-soft','flat','subtle'):raise ValueError('배경 제거 방식을 확인하세요.')
     if transparent_path is not None and background_mode in ('ai','ai-sparks','ai-smooth','ai-soft','subtle') and not image_background.status()['ready']:
@@ -541,6 +541,8 @@ def make_sprite_sheet(video_path: Path, output_path: Path, count: int, loop: boo
     indices = pick['indices']
     count = len(indices)
     timing = sprite_finish.uniform_ms(count, sheet_fps) if sheet_fps else sprite_finish.durations_ms(indices, pick['end'], fps)
+    indices, timing = sprite_finish.drop_frames(indices, timing, drop)
+    count = len(indices)
     selected = [frames[index] for index in indices]
     cell_w = max(image.width for image in selected)
     cell_h = max(image.height for image in selected)
@@ -578,6 +580,8 @@ def make_sprite_sheet(video_path: Path, output_path: Path, count: int, loop: boo
             transparent.paste(cutout,((index % columns)*cell_w+(cell_w-image.width)//2,(index//columns)*cell_h+(cell_h-image.height)//2))
         transparent.save(transparent_path, optimize=True)
         if game_paths:
+            if background_mode == 'ai-soft':
+                cutouts = sprite_finish.repair_body(selected, cutouts, floor)
             game = write_game_sheet(cutouts, action, loop, timing, game_paths, game_columns, sheet_fps)
     return dict(indices=[int(i) for i in indices], method=pick['method'], durationMs=timing, game=game)
 
