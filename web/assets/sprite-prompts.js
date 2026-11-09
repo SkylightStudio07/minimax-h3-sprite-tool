@@ -4,7 +4,7 @@
  const $=id=>document.getElementById(id);
  if(!$('spriteAnalyze'))return;
  let source='',revision=0,configured=false,profile=null,draft=null,applied=null,restored=null;
- let analyzing=false,planning=false,analysisRequest=null,planRequest=null;
+ let analyzing=false,planning=false,analysisRequest=null,planRequest=null,analysisRun=null;
  const watched=['action','duration','loop','facing','subjectType','motionStrength','blink','combatEffect','effectStrength','effectDescription'];
  const names={human:'인간형',creature:'생물 / 괴물',hover_machine:'부유 기계',ground_machine:'지상 기계',left:'왼쪽',right:'오른쪽',front:'정면',back:'후면',preserve:'원본 유지'};
  function settings(){return {description:$('spriteDescription').value,notes:$('spriteMotionNotes').value,
@@ -44,8 +44,11 @@
   $('spritePlanStatus').textContent='이미지의 특징을 먼저 분석해 주세요.';
   if(configured&&$('spriteAnalyzeAuto').checked)analyze();
  }
- async function analyze(){
-  if(!configured||!source||analyzing)return;
+ function analyze(){
+  if(!analyzing&&configured&&source)analysisRun=runAnalysis();
+  return analysisRun;
+ }
+ async function runAnalysis(){
   const token=revision,original=source,controller=new AbortController();analysisRequest=controller;
   invalidate();analyzing=true;controls();$('spriteAnalysisStatus').textContent='얼굴·복장·무기와 잡고 있는 손을 확인하고 있어요…';
   try{
@@ -84,17 +87,35 @@
   $('facing').value=profile.facing;invalidate();
   $('spriteAnalysisStatus').textContent='분석한 대상 유형과 방향을 생성 설정에 반영했어요.';
  };
- $('spriteApplyPrompt').onclick=()=>{
-  if(!draft)return;
-  if(draft.revision!==revision||draft.signature!==signature()){invalidate();$('spritePlanStatus').textContent='이미지나 설정이 바뀌었어요. 현재 설정으로 다시 만들어 주세요.';return;}
-  const prompt=$('spriteDraftPrompt').value.trim();if(prompt.length<100||prompt.length>3800){$('spritePlanStatus').textContent='자세한 설명은 100~3800자로 입력해 주세요.';return;}
+ function applyDraft(){
+  if(!draft)return false;
+  if(draft.revision!==revision||draft.signature!==signature()){invalidate();$('spritePlanStatus').textContent='이미지나 설정이 바뀌었어요. 현재 설정으로 다시 만들어 주세요.';return false;}
+  const prompt=$('spriteDraftPrompt').value.trim();if(prompt.length<100||prompt.length>3800){$('spritePlanStatus').textContent='자세한 설명은 100~3800자로 입력해 주세요.';return false;}
   $('prompt').value=prompt;restored=null;applied={prompt,revision,signature:signature()};
   $('spritePlanStatus').textContent='생성에 적용했어요. 아래 만들기 버튼으로 시작하세요.';
- };
+  return true;
+ }
+ $('spriteApplyPrompt').onclick=applyDraft;
+ const drafts=()=>configured&&!!source&&$('spriteAnalyzeAuto').checked;
+ /* A hand-written or example prompt is the user's choice; only the default text or an out-of-date draft is replaced. */
+ async function prepare(){
+  if(!drafts())return '';
+  const text=$('prompt').value,ownDraft=applied?.prompt===text;
+  if(ownDraft&&applied.revision===revision&&applied.signature===signature())return '';
+  if(!ownDraft&&text!==selectedPreset())return '';
+  if(ownDraft){applied=null;$('prompt').value=selectedPreset();}
+  $('message').textContent='AI가 내 캐릭터에 맞게 동작을 설계하고 있어요…';
+  if(!profile)await analyze();
+  if(profile){
+   if(!draft||draft.revision!==revision||draft.signature!==signature())await plan();
+   if(applyDraft())return '';
+  }
+  return 'AI 설계에 실패해 기본 동작으로 만듭니다';
+ }
  for(const id of ['spriteDescription','spriteMotionNotes'])$(id).addEventListener('input',invalidate);
  document.addEventListener('change',event=>{if(watched.includes(event.target.id))invalidate();});
  $('effectDescription').addEventListener('input',invalidate);
- window.spritePromptAssistant={setImage,
+ window.spritePromptAssistant={setImage,prepare,drafts,
   validate(){
    if(applied&&(applied.revision!==revision||applied.signature!==signature())&&$('prompt').value===applied.prompt){
     $('spritePlanStatus').textContent='AI 설명을 적용한 뒤 설정이 바뀌었어요. 현재 설정으로 설명을 다시 만들고 적용해 주세요.';
@@ -105,7 +126,8 @@
   restore(saved){applied=null;restored=saved.motionPromptMode==='image-guided'?saved.prompt:null;invalidate();}
  };
  fetch('/api/sprite-prompts/status').then(async response=>{const result=await response.json();if(!response.ok)throw Error(result.error||'AI 연결 확인 실패');configured=!!result.configured;
-  $('spriteAnalysisStatus').textContent=configured?'이미지를 넣으면 캐릭터 특징을 분석합니다.':'서버의 Gemini 연결이 필요합니다. 기존 동작 템플릿은 그대로 사용할 수 있어요.';
+  $('spriteAutoBlock').hidden=!configured;
+  $('spriteAnalysisStatus').textContent=configured?'이미지를 넣으면 캐릭터 특징을 분석합니다.':'AI 설계를 사용할 수 없어 기본 동작으로 만들어요.';
   controls();if(configured&&source&&$('spriteAnalyzeAuto').checked)analyze();
  }).catch(()=>{$('spriteAnalysisStatus').textContent='AI 연결을 확인하지 못했습니다. 새로고침 후 다시 시도해 주세요.';controls();});
  if(typeof imageData==='string'&&imageData)setImage(imageData);

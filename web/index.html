@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>MiniMax H3 Sprite Motion Tool</title>
+  <title>스프라이트 만들기</title>
   <style>
     :root { color-scheme: dark; --bg:#0b0d12; --panel:#141821; --line:#2a3140; --text:#f1f3f7; --muted:#949db0; --accent:#8b7cff; --ok:#59d49b; --warn:#ffca63; }
     * { box-sizing:border-box } body { margin:0; min-height:100vh; background:radial-gradient(circle at 20% 0,#20203c 0,transparent 38%),var(--bg); color:var(--text); font:15px/1.5 system-ui,sans-serif }
@@ -20,114 +20,150 @@
     @media(max-width:800px){.grid{grid-template-columns:1fr}.row{grid-template-columns:1fr}}
   #sheet{background-color:#ddd!important;background-image:repeating-conic-gradient(#ddd 0% 25%,#fff 0% 50%)!important;background-size:20px 20px!important}
 </style>
-<link rel="stylesheet" href="assets/asset-start.css"><script src="assets/ui.js"></script><link rel="stylesheet" href="assets/ui.css"><link rel="stylesheet" href="assets/embed-legacy.css"><link rel="stylesheet" href="assets/creation-workspace.css"><link rel="stylesheet" href="assets/sprite-examples.css"><link rel="stylesheet" href="assets/sprite-prompts.css"></head>
+<script src="assets/ui.js"></script><link rel="stylesheet" href="assets/ui.css"><link rel="stylesheet" href="assets/embed-legacy.css"><link rel="stylesheet" href="assets/creation-workspace.css"><link rel="stylesheet" href="assets/sprite-examples.css"><link rel="stylesheet" href="assets/sprite-prompts.css"><link rel="stylesheet" href="assets/sprite-simple.css"></head>
 <body data-asset-studio="sprite"><main>
   <h1>Sprite Motion Lab</h1>
   <p class="sub">기준 이미지 한 장에서 원하는 캐릭터 동작 영상과 게임용 스프라이트 시트를 만듭니다.</p>
   <div id="status" class="status"><span class="dot"></span><span>환경 확인 중...</span></div>
   <div class="grid">
     <section class="panel source-panel">
-      <h2>01 <span style="color:#a1b2a7;font-weight:500;margin-left:9px">원본 이미지</span></h2>
+      <h2 class="simple-step"><span>1</span>캐릭터 이미지</h2>
       <input id="file" type="file" accept="image/png,image/jpeg,image/webp" hidden>
-      <div id="drop" class="drop" role="button" tabindex="0" aria-label="원본 이미지 선택">이미지를 클릭하거나 여기로 끌어오세요<br>전신·고정 구도 이미지 권장</div>
-      <div class="source-note"><strong>좋은 움직임은 좋은 원본에서.</strong>캐릭터가 잘리지 않은 이미지와 단순한 배경을 준비하세요. 오른쪽에서 원하는 동작 예시를 고른 뒤, 내 캐릭터에 적용해 보세요.</div>
-      <section class="sprite-ai" aria-labelledby="spriteAnalysisTitle">
-        <h3 id="spriteAnalysisTitle">AI가 캐릭터 특징 파악하기</h3>
-        <p class="notice">얼굴·의상·무기와 잡고 있는 손을 확인해서, 내 캐릭터에 맞는 움직임을 설계합니다. 분석할 이미지는 Gemini로 전송됩니다.</p>
-        <label class="option"><input id="spriteAnalyzeAuto" type="checkbox" checked>이미지를 넣으면 자동으로 분석</label>
-        <button id="spriteAnalyze" type="button" disabled>캐릭터 특징 분석하기</button>
-        <p id="spriteAnalysisStatus" class="notice" role="status" aria-live="polite">AI 연결 확인 중…</p>
-        <div id="spriteProfile" hidden>
-          <label for="spriteDescription">보존할 특징 · 틀린 부분은 수정하세요</label>
-          <textarea id="spriteDescription" maxlength="2400" rows="6"></textarea>
-          <p id="spriteUncertainty" class="notice"></p>
-          <p id="spriteSuggestedSettings" class="notice"></p>
-          <button id="spriteUseSuggested" type="button">분석한 대상 유형·방향 반영</button>
-        </div>
-      </section>
+      <div id="drop" class="drop" role="button" tabindex="0" aria-label="캐릭터 이미지 선택">이미지를 클릭하거나 여기로 끌어오세요<br>전신이 잘리지 않은 그림이 좋아요</div>
+      <p class="source-note">배경이 단순할수록 깔끔하게 나와요. <a id="spriteMakeArt" href="./image-studio">그림이 없다면 이미지부터 만들기</a></p>
     </section>
     <section class="panel">
-      <h2 class="settings-title">02 <span style="color:#a1b2a7;font-weight:500;margin-left:9px">움직임 설정</span></h2>
-      <label for="workflowId">움직임 생성 방식</label><select id="workflowId"><option value="standard">기본 생성 · 동작과 이펙트</option><option value="fasth3-sprite" disabled>FastH3 스프라이트 · 설치·검증 중</option></select><p id="workflowNote" class="notice">기존 H3 동작 생성 및 시트 내보내기</p>
-      <label for="samplingMode">만들기 속도</label><select id="samplingMode"><option value="turbo-v4" selected>Turbo v4 · 8스텝 (기본)</option><option value="quality">고화질 · 20스텝 · 약 2배 오래 걸려요</option><option value="turbo">이전 Turbo · 4스텝 · 동작만 확인</option></select><p class="notice">Turbo v4는 고화질 모드보다 약 2배 빠릅니다. 프롬프트에 없는 소품이 생기거나 동작이 커지면 고화질 모드와 비교해 보세요.</p>
-      <label for="action">애니메이션 종류</label>
-      <select id="action">
-        <option value="idle" selected>Idle · 대기</option><option value="walk">Walk · 걷기</option>
-        <option value="run">Run · 달리기</option><option value="attack">Attack · 공격</option>
-        <option value="cast">Cast · 스킬/마법</option><option value="hit">Hit · 피격</option>
-        <option value="death">Death · 사망</option><option value="jump">Jump · 점프</option>
-        <option value="custom">Custom · 직접 입력</option>
+      <h2 class="simple-step settings-title"><span>2</span>어떤 동작을 만들까요?</h2>
+      <div id="spriteActionPicker" class="action-picker" role="group" aria-label="동작 선택"></div>
+      <label for="action" hidden>동작 종류</label>
+      <select id="action" hidden>
+        <option value="idle" selected>대기</option><option value="walk">걷기</option>
+        <option value="run">달리기</option><option value="attack">공격</option>
+        <option value="cast">스킬</option><option value="hit">피격</option>
+        <option value="death">쓰러짐</option><option value="jump">점프</option>
+        <option value="custom">직접 입력</option>
       </select>
-      <section class="sprite-ai" aria-labelledby="spritePlanTitle">
-        <h3 id="spritePlanTitle">내 캐릭터에 맞게 동작 설명 만들기</h3>
-        <p class="notice">위에서 동작을 고른 뒤 눌러 주세요. 준비 → 실행 → 반동 → 복귀까지 구체적으로 설계합니다.</p>
-        <label for="spriteMotionNotes">원하는 움직임 · 선택사항</label>
-        <textarea id="spriteMotionNotes" maxlength="1200" rows="3" placeholder="예: 가방은 계속 들고, 소음 권총을 왼쪽으로 두 발 쏘고 다시 조준"></textarea>
-        <button id="spritePlan" type="button" disabled>선택한 동작 설명 만들기</button>
-        <p id="spritePlanStatus" class="notice" role="status" aria-live="polite">이미지의 특징을 먼저 분석해 주세요.</p>
-        <div id="spriteDraft" hidden>
-          <p id="spritePlanSummary"></p>
-          <details><summary>생성에 사용할 자세한 설명 보기 · 영어</summary><textarea id="spriteDraftPrompt" maxlength="3800" rows="8" aria-label="AI가 만든 동작 설명"></textarea></details>
-          <button id="spriteApplyPrompt" type="button">이 설명을 생성에 적용</button>
-        </div>
-      </section>
-      <section class="sprite-combat-options" aria-labelledby="combatTitle">
-        <h3 id="combatTitle">공격 이펙트 · AI 생성</h3>
-        <p class="notice">동작과 검기·섬광을 AI가 함께 만듭니다. 캐릭터와 효과는 하나의 시트로 저장됩니다.</p>
+      <div id="spriteAutoBlock" hidden>
+        <label for="spriteMotionNotes">어떻게 움직일까요? <small>선택</small></label>
+        <textarea id="spriteMotionNotes" maxlength="1200" rows="2" placeholder="예: 가방은 계속 들고, 권총을 왼쪽으로 두 발 쏘고 다시 조준"></textarea>
+        <label class="option"><input id="spriteAnalyzeAuto" type="checkbox" checked>AI가 내 캐릭터에 맞춰 동작 설계</label>
+        <p class="notice">이미지와 설명이 Gemini로 전송돼요. 끄면 기본 동작으로 만들어요.</p>
+      </div>
+
+      <h2 class="simple-step"><span>3</span>결과물 종류</h2>
+      <div id="spriteOutputKind" class="kind-picker" role="group" aria-label="결과물 종류">
+        <button type="button" data-kind="normal" aria-pressed="true"><strong>일반</strong><small>그림체 그대로</small></button>
+        <button type="button" data-kind="pixel" aria-pressed="false"><strong>도트</strong><small>픽셀 시트로 정리</small></button>
+      </div>
+      <label class="option" hidden><input id="pixelOutput" type="checkbox">도트 시트로 정리</label>
+      <div id="pixelExportFields" hidden><p id="pixelExportSize" class="notice"></p><p class="notice">단색 배경 이미지에 알맞아요. 작은 명암은 단순해질 수 있어요.</p><label class="option"><input id="pixelColorLock" type="checkbox" checked>프레임 간 색 흔들림 줄이기</label></div>
+      <section id="spriteCombat" class="sprite-combat-options" aria-labelledby="combatTitle" hidden>
+        <h3 id="combatTitle">공격 이펙트</h3>
         <button id="applyChibiCombat" type="button">도트 검 공격 추천 설정</button>
         <label for="combatEffect">이펙트 종류</label>
-        <select id="combatEffect"><option value="none">추가 안 함 · 기존 동작</option><option value="subtle">작은 검기 · 짧고 옅은 칼 궤적</option><option value="blue_slash">푸른 검기 + 금빛 타격</option><option value="fire">불꽃 궤적</option><option value="impact">타격 섬광</option><option value="magic">마법 에너지</option><option value="custom">설명으로 직접 만들기</option></select>
+        <select id="combatEffect"><option value="none">없음</option><option value="subtle">작은 검기 · 짧고 옅은 칼 궤적</option><option value="blue_slash">푸른 검기 + 금빛 타격</option><option value="fire">불꽃 궤적</option><option value="impact">타격 섬광</option><option value="magic">마법 에너지</option><option value="custom">설명으로 직접 만들기</option></select>
         <div id="combatEffectFields" hidden>
-          <label for="effectStrength">이펙트 강도</label><select id="effectStrength"><option value="low">작게 · 동작이 잘 보이게</option><option value="normal" selected>보통 · 선명한 효과</option><option value="high">화려하게 · 잘림 가능성 증가</option></select>
+          <label for="effectStrength">이펙트 강도</label><select id="effectStrength"><option value="low">작게 · 동작이 잘 보이게</option><option value="normal" selected>보통</option><option value="high">화려하게 · 잘릴 수 있어요</option></select>
           <label for="effectDescription">이펙트 추가 설명 · 선택</label><textarea id="effectDescription" maxlength="1800" placeholder="예: 검을 내리칠 때 푸른 초승달 검기, 끝에서 금빛 불꽃이 짧게 흩어지게"></textarea>
-          <p id="combatEffectHint" class="notice">효과의 색·모양·등장 시점을 적어 주세요. 큰 효과는 잘릴 수 있어 동작 여백 30%를 권장합니다. 투명 시트는 단색 배경 제거를 사용하며, 입력도 단순한 배경으로 준비해 주세요.</p>
+          <p id="combatEffectHint" class="notice">큰 효과는 잘릴 수 있어요. 잘리면 고급 설정에서 동작 여백을 30%로 올려 보세요. 단순한 배경의 이미지를 쓰세요.</p>
         </div>
-        <label class="option"><input id="pixelOutput" type="checkbox">도트 시트로 정리하기 · 생성 크기의 1/4</label>
-        <div id="pixelExportFields" hidden><label class="option"><input id="pixelColorLock" type="checkbox" checked>색 흔들림 줄이기 · 시간축 보정</label><p id="pixelExportSize" class="notice"></p><p class="notice">배경 윤곽을 정리하고, 캐릭터 색에 새 효과색을 더한 공통 팔레트(최대 48색)를 사용합니다. 단색 배경용 후처리이며 작은 명암이 단순해질 수 있습니다. 원본 영상도 함께 보존합니다.</p></div>
       </section>
-      <label for="settingCollection">세팅 모음</label>
-      <select id="settingCollection"><option value="" selected>사용 안 함 · 기본 동작 템플릿</option><option value="aim_idle">조준 대기 · 인간형</option><option value="walk_video">걷기 · 영상 테스트 세팅</option><option value="run_video">달리기 · 영상 테스트 세팅</option></select>
-      <button id="applySetting" type="button">선택한 세팅 불러오기</button>
-      <p class="notice">선택 후 불러오기를 눌러 적용합니다. ‘사용 안 함’을 불러오면 현재 유형·동작의 기본 설명으로 돌아가며 다른 옵션은 유지합니다. 걷기·달리기는 팔·몸통·코트가 움직이는 영상 테스트 설정입니다. FastH3 / 512×512 / 3초 / 12프레임 / 강함 / 오른쪽 / 여백 10% / 루프 켜짐 / 자동 정규화·루프 구간 자동 선택 꺼짐을 적용합니다. 배경 제거 선택은 유지합니다. 조준 대기는 작은 좌우 체중 이동과 다리의 교대 보정을 허용하면서 조준선을 유지합니다. 인간형 / Idle / 약함 / 원본 방향 / 깜박임 없음 / 루프 켜짐 적용. 생성 모드·길이·해상도는 유지합니다.</p>
-      <label for="facing">캐릭터 방향 고정</label>
-      <select id="facing">
-        <option value="preserve" selected>입력 이미지 방향 그대로</option>
-        <option value="right">화면 오른쪽을 계속 봄 →</option>
-        <option value="left">← 화면 왼쪽을 계속 봄</option>
-        <option value="front">정면을 계속 봄</option>
-        <option value="back">후면을 계속 봄</option>
-      </select>
-      <label for="subjectType">대상 유형</label><select id="subjectType"><option value="human" selected>인간형 (기존)</option><option value="creature">생물 / 괴물</option><option value="hover_machine">부유 기계</option><option value="ground_machine">지상 기계</option></select><p class="notice">유형 변경 시 동작 템플릿도 교체됩니다. 기계에는 눈 깜박임이 적용되지 않습니다.</p><label for="motionStrength">움직임 강도</label><select id="motionStrength"><option value="low">약함 · 작은 움직임</option><option value="normal" selected>보통 · 눈에 보이는 자연스러운 움직임</option><option value="high">강함 · 큰 움직임 (변형 위험 증가)</option></select><p class="notice">선택한 동작 템플릿에 강도 지시를 추가합니다. 직접 쓴 동작 설명은 유지됩니다. 스텝·해상도는 바꾸지 않습니다.</p><label for="motionSpeed">동작 속도</label><select id="motionSpeed"><option value="1" selected>기본 · 1배</option><option value="1.25">조금 빠르게 · 1.25배</option><option value="1.5">빠르게 · 1.5배</option><option value="2">매우 빠르게 · 2배</option><option value="3">순간 동작 · 3배</option></select><label class="option"><input id="trimAction" type="checkbox"> 공격 앞뒤의 멈춘 구간 줄이기</label><p class="notice">생성 후 재생 시간을 조정합니다. 멈춤 정리는 반복하지 않는 공격에서 사용할 수 있으며, 원본 영상은 함께 보존됩니다.</p><button id="resetPrompt" type="button">선택한 동작 템플릿 불러오기</button><label for="blink">눈 깜박임</label><select id="blink"><option value="none" selected>없음 · 원본 눈 모양 유지</option><option value="once">최대 한 번 · 중간에 짧게</option></select><p class="notice">투명 입력은 단색 배경 고정 지시를 자동 적용합니다. 프롬프트 제어이며 투명 출력이나 정확한 깜박임 횟수를 보장하지 않습니다. 동작 설명에 상충하는 배경·깜박임 지시를 넣지 마세요.</p>
 
-      <label for="prompt">생성에 사용할 동작 설명 · 직접 수정 가능</label>
-      <textarea id="prompt" maxlength="4000">continuous rhythmic breathing with a visible rise and fall of the shoulders and chest, ongoing small lateral weight shifts through the hips, hair tips and clothing hems follow the body with a slight delay throughout the clip, both feet remain planted at their original screen coordinates</textarea>
-      <div class="row">
-        <div><label for="duration">길이</label><select id="duration"><option value="3">3초</option><option value="5" selected>5초</option></select></div>
-        <div><label for="size">해상도</label><select id="size">
-          <option value="auto_original" selected>원본 비율 · 원본급 (최대 1MP, 느림)</option>
-          <option value="auto_quality">원본 비율 · 고화질 (약 0.6MP)</option>
-          <option value="auto_safe">원본 비율 · 표준 (약 0.45MP)</option>
-          <option value="auto_fast">원본 비율 · 빠른 테스트 (약 0.25MP)</option>
-          <option value="352x608">직접 지정 · 352×608</option><option value="480x864">직접 지정 · 480×864</option>
-          <option value="608x352">직접 지정 · 608×352</option><option value="864x480">직접 지정 · 864×480</option>
-          <option value="512x512">직접 지정 · 512×512</option><option value="608x608">직접 지정 · 608×608</option><option value="768x768">직접 지정 · 768×768</option>
-          <option value="768x512">가로 전투형 · 768×512 (도트 192×128)</option><option value="768x640">공격 여백형 · 768×640 (도트 192×160)</option>
-        </select><p id="resolution" class="notice">이미지를 넣으면 실제 크기를 계산합니다.</p></div>
-        <div><label for="frames">시트 프레임</label><input id="frames" type="number" min="2" max="64" step="1" value="8" required><small>직접 입력 · 2~64프레임</small></div>
-      </div>
-      <label for="motionPadding">동작 여백</label><select id="motionPadding"><option value="0">없음</option><option value="10" selected>10% (기본)</option><option value="20">20%</option><option value="30">30%</option><option value="40">40% · 큰 동작</option><option value="50">50% · 넓은 검격</option><option value="58">58% · 전투 동작 예시</option></select><p class="notice">입력 이미지를 비율 유지 축소하여 중앙 배치합니다. 10%는 좌우·상하 각각 약 5% 여유입니다. 출력 해상도는 유지되며 캐릭터 픽셀 크기는 줄어듭니다. 이미 잘린 부분은 복구되지 않습니다.</p>
-      <label class="option"><input id="loop" type="checkbox" checked> 처음과 끝이 이어지는 루프 동작</label>
-      <label class="option"><input id="optimizeLoop" type="checkbox" checked> 자연스러운 루프 구간 자동 선택</label><p class="notice">루프 동작을 선택했을 때 적용합니다. 자세와 이동 방향이 이어지는 구간을 찾아 원래 길이의 65% 이상을 유지합니다. 연결이 개선되는 경우에만 길이가 짧아집니다.</p>
-      <label class="option"><input id="stabilize" type="checkbox" checked> 캐릭터 크기·프레이밍 자동 정규화</label>
-      <label class="option"><input id="removeBackground" type="checkbox" checked> 투명 PNG 시트도 만들기</label><label for="backgroundRemoval">배경 제거 방식</label><select id="backgroundRemoval"><option value="ai" selected>AI · 캐릭터를 남기고 배경 제거 (추천)</option><option value="ai-smooth">AI · 윤곽 다듬기 (실험적 · 더 느림)</option><option value="ai-sparks">AI · 캐릭터와 작은 금빛 불꽃 보존</option><option value="flat">단색 배경 · 색으로 제거 (빠름)</option></select><p id="spriteBackgroundNote" class="notice">AI가 프레임별 배경을 제거합니다. 원본 영상과 시트는 함께 보존하며 영상 자체는 투명해지지 않습니다. 머리카락·반투명 소품은 결과를 확인하세요.</p><div id="flatBackgroundControls" hidden><label for="backgroundTolerance">색 제거 강도</label><input id="backgroundTolerance" type="number" min="4" max="64" step="1" value="24"></div>
-      <details><summary>실험 · 별도 네거티브 프롬프트</summary><label class="option"><input id="negativeEnabled" type="checkbox"> CFG 네거티브 사용 (기본 꺼짐)</label><p class="notice">추가 계산으로 느려지고 메모리 부담이 늘 수 있습니다. 4스텝 Turbo에서는 색·형태가 손상될 수 있는 실험 기능입니다. 동일 시드로 꺼짐/켜짐을 비교하세요.</p><label for="negativePrompt">억제할 내용</label><textarea id="negativePrompt" maxlength="2000">scenery, textured background, changing background</textarea><label for="cfgScale">CFG 강도 · 낮게 시작</label><input id="cfgScale" type="number" min="1.1" max="2" step="0.1" value="1.5"></details><label for="seed">Seed (비우면 무작위)</label><input id="seed" type="number" min="0" placeholder="random">
-      <button id="generate" disabled>5초 Idle 만들기</button>
+      <details id="spriteAdvanced" class="simple-advanced">
+        <summary>고급 설정 <small>길이 · 크기 · 품질 · 배경 · 직접 설명</small></summary>
+
+        <h3>길이와 크기</h3>
+        <div class="row">
+          <div><label for="duration">길이</label><select id="duration"><option value="3" selected>3초</option><option value="5">5초</option></select></div>
+          <div><label for="frames">시트 프레임 수</label><input id="frames" type="number" min="2" max="64" step="1" value="8" required></div>
+        </div>
+        <label for="size">영상 크기</label><select id="size">
+          <option value="auto_quality" selected>자동 · 추천</option>
+          <option value="auto_original">자동 · 최대한 크게 (느림)</option>
+          <option value="auto_safe">자동 · 조금 작게</option>
+          <option value="auto_fast">자동 · 작게 (빠른 테스트)</option>
+          <option value="352x608">세로 352×608</option><option value="480x864">세로 480×864</option>
+          <option value="608x352">가로 608×352</option><option value="864x480">가로 864×480</option>
+          <option value="512x512">정사각 512×512</option><option value="608x608">정사각 608×608</option><option value="768x768">정사각 768×768</option>
+          <option value="768x512">전투 가로 768×512</option><option value="768x640">공격 여백 768×640</option>
+        </select><p id="resolution" class="notice">이미지를 넣으면 실제 크기를 계산해요.</p>
+        <label for="motionPadding">캐릭터 주변 여백</label><select id="motionPadding"><option value="0">없음</option><option value="10" selected>10% (기본)</option><option value="20">20%</option><option value="30">30%</option><option value="40">40% · 큰 동작</option><option value="50">50% · 넓은 검격</option><option value="58">58% · 전투 동작</option></select><p class="notice">팔이나 무기가 화면 밖으로 잘리면 올려 보세요.</p>
+
+        <h3>움직임</h3>
+        <label for="facing">캐릭터 방향</label>
+        <select id="facing">
+          <option value="preserve" selected>이미지 방향 그대로</option>
+          <option value="right">화면 오른쪽을 계속 봄 →</option>
+          <option value="left">← 화면 왼쪽을 계속 봄</option>
+          <option value="front">정면을 계속 봄</option>
+          <option value="back">뒤를 계속 봄</option>
+        </select>
+        <label for="motionStrength">움직임 크기</label><select id="motionStrength"><option value="low">작게</option><option value="normal" selected>보통</option><option value="high">크게 · 형태가 흐트러질 수 있어요</option></select>
+        <label for="motionSpeed">재생 속도</label><select id="motionSpeed"><option value="1" selected>기본</option><option value="1.25">조금 빠르게 · 1.25배</option><option value="1.5">빠르게 · 1.5배</option><option value="2">매우 빠르게 · 2배</option><option value="3">순간 동작 · 3배</option></select>
+        <label for="subjectType">캐릭터 종류</label><select id="subjectType"><option value="human" selected>사람 모양</option><option value="creature">생물 / 괴물</option><option value="hover_machine">떠 있는 기계</option><option value="ground_machine">지상 기계</option></select>
+        <label for="blink">눈 깜박임</label><select id="blink"><option value="none" selected>없음</option><option value="once">한 번 정도</option></select>
+        <label class="option"><input id="loop" type="checkbox" checked>처음과 끝이 이어지게 반복</label>
+        <label class="option"><input id="optimizeLoop" type="checkbox" checked>자연스럽게 이어지는 구간 자동 선택</label>
+        <label class="option"><input id="stabilize" type="checkbox" checked>캐릭터 크기·위치 흔들림 보정</label>
+        <label class="option"><input id="trimAction" type="checkbox">공격 앞뒤의 멈춘 구간 줄이기</label>
+        <label for="assetView">게임 시점</label><select id="assetView"><option value="" selected>지정 안 함 · 이미지 그대로</option><option value="side">측면 전투</option><option value="topdown">탑다운</option><option value="isometric">아이소메트릭</option></select>
+
+        <h3>품질</h3>
+        <label for="samplingMode">만드는 방식</label><select id="samplingMode"><option value="turbo-v4" selected>빠르게 · 추천</option><option value="quality">꼼꼼하게 · 약 2배 오래 걸려요</option><option value="turbo">미리보기 · 움직임만 빠르게 확인</option></select><p class="notice">없던 소품이 생기거나 동작이 너무 크면 ‘꼼꼼하게’로 비교해 보세요.</p>
+        <label for="workflowId">생성 엔진</label><select id="workflowId"><option value="standard">기본</option><option value="fasth3-sprite" disabled>걷기·달리기 전용 · 준비 중</option></select><p id="workflowNote" class="notice"></p>
+
+        <h3>배경</h3>
+        <label class="option"><input id="removeBackground" type="checkbox" checked>배경이 투명한 시트도 만들기</label>
+        <label for="backgroundRemoval">배경 지우는 방법</label><select id="backgroundRemoval"><option value="ai" selected>AI · 추천</option><option value="ai-smooth">AI · 윤곽 다듬기 (실험적, 더 느림)</option><option value="ai-sparks">AI · 작은 금빛 불꽃도 남기기</option><option value="flat">단색 배경 · 색으로 지우기 (빠름)</option></select><p id="spriteBackgroundNote" class="notice">프레임마다 배경을 지워요. 머리카락과 반투명한 부분은 결과를 확인하세요.</p><div id="flatBackgroundControls" hidden><label for="backgroundTolerance">색 지우는 강도</label><input id="backgroundTolerance" type="number" min="4" max="64" step="1" value="24"></div>
+
+        <h3>AI가 쓴 설명 확인</h3>
+        <section class="sprite-ai" aria-labelledby="spriteAnalysisTitle">
+          <h3 id="spriteAnalysisTitle">캐릭터 특징</h3>
+          <button id="spriteAnalyze" type="button" disabled>캐릭터 특징 분석하기</button>
+          <p id="spriteAnalysisStatus" class="notice" role="status" aria-live="polite">AI 연결 확인 중…</p>
+          <div id="spriteProfile" hidden>
+            <label for="spriteDescription">유지할 특징 · 틀린 부분은 고치세요</label>
+            <textarea id="spriteDescription" maxlength="2400" rows="6"></textarea>
+            <p id="spriteUncertainty" class="notice"></p>
+            <p id="spriteSuggestedSettings" class="notice"></p>
+            <button id="spriteUseSuggested" type="button">분석한 종류·방향 적용</button>
+          </div>
+        </section>
+        <section class="sprite-ai" aria-labelledby="spritePlanTitle">
+          <h3 id="spritePlanTitle">동작 설명</h3>
+          <p class="notice">만들기를 누르면 자동으로 작성돼요. 미리 보고 고치고 싶을 때만 쓰세요.</p>
+          <button id="spritePlan" type="button" disabled>동작 설명 미리 만들기</button>
+          <p id="spritePlanStatus" class="notice" role="status" aria-live="polite">이미지의 특징을 먼저 분석해 주세요.</p>
+          <div id="spriteDraft" hidden>
+            <p id="spritePlanSummary"></p>
+            <details><summary>자세한 설명 보기 · 영어</summary><textarea id="spriteDraftPrompt" maxlength="3800" rows="8" aria-label="AI가 만든 동작 설명"></textarea></details>
+            <button id="spriteApplyPrompt" type="button">이 설명 사용하기</button>
+          </div>
+        </section>
+
+        <h3>동작 설명 직접 쓰기</h3>
+        <label for="prompt">동작 설명 · 영어 권장</label>
+        <textarea id="prompt" maxlength="4000">restrained living idle motion carried by small relaxed movements of the wrists, elbows and head, hair tips and clothing hems follow with a slight delay, any held equipment sways gently with the hands, the torso stays calm, both feet remain planted at their original screen coordinates</textarea>
+        <p class="notice">직접 고치면 AI 설계 없이 이 문장 그대로 만들어요.</p>
+        <button id="resetPrompt" type="button">기본 설명으로 되돌리기</button>
+        <label for="settingCollection">저장된 세팅</label>
+        <select id="settingCollection"><option value="" selected>사용 안 함</option><option value="aim_idle">조준 대기 · 사람</option><option value="walk_video">걷기 · 테스트 세팅</option><option value="run_video">달리기 · 테스트 세팅</option></select>
+        <button id="applySetting" type="button">세팅 불러오기</button>
+
+        <details class="simple-expert"><summary>전문가 옵션</summary>
+          <label class="option"><input id="negativeEnabled" type="checkbox"> CFG 네거티브 사용</label><p class="notice">느려지고 메모리를 더 씁니다. 같은 Seed로 켜고 끈 결과를 비교하세요.</p>
+          <label for="negativePrompt">억제할 내용</label><textarea id="negativePrompt" maxlength="2000">scenery, textured background, changing background</textarea>
+          <label for="cfgScale">CFG 강도</label><input id="cfgScale" type="number" min="1.1" max="2" step="0.1" value="1.5">
+          <label for="seed">Seed · 비우면 무작위</label><input id="seed" type="number" min="0" placeholder="무작위">
+        </details>
+      </details>
+      <button id="generate" disabled>3초 대기 만들기</button>
       <p id="message" class="notice">모델 준비 상태를 확인하고 있습니다.</p>
       <div id="result" class="result">
         <a id="chooseLoop" href="#" target="_top" style="display:block;margin-bottom:16px">반복 구간 고르기 → 시작·끝 지정하고 시트 받기</a><h3>생성 영상</h3><video id="video" controls loop muted playsinline></video><button type="button" id="videoFullscreen">영상 전체화면</button>
         <p id="loopReport" class="notice"></p>
         <h3>스프라이트 시트</h3><img id="sheet" alt="sprite sheet">
-        <div class="links"><a id="videoLink" download>정규화 영상</a><a id="rawLink" download>H3 원본</a><a id="sheetLink" download>원본 시트 저장</a><a id="transparentLink" download hidden>투명 시트 저장</a><a id="gifLink" download>GIF 저장 · 인계용</a><a id="transparentGifLink" download hidden>투명 GIF 저장</a></div>
+        <div class="links"><a id="videoLink" download>영상 저장</a><a id="rawLink" download>보정 전 영상</a><a id="sheetLink" download>시트 저장</a><a id="transparentLink" download hidden>투명 시트 저장</a><a id="gifLink" download>GIF 저장</a><a id="transparentGifLink" download hidden>투명 GIF 저장</a></div>
       </div>
     </section>
   </div>
@@ -153,7 +189,7 @@
 const $=id=>document.getElementById(id); let imageData='', filename='reference.png', sourceWidth=0, sourceHeight=0;
 $('drop').addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();$('file').click()}});
 const subjectPresets={"creature":{"idle":"continuous subtle body expansion and contraction, small balance adjustments and delayed motion of existing appendages throughout the clip","walk":"a steady locomotion cycle in place using only the existing limbs or body structure, preserving the original anatomy","run":"a fast locomotion cycle in place using only the existing limbs or body structure, with a clear repeating rhythm","attack":"one forward attack using an existing attacking appendage or the body, followed by recovery","cast":"one energy release from an existing visible feature, retaining the original anatomy","hit":"one brief body recoil opposite the impact followed by recovery","death":"the body loses support and settles into a defeated pose appropriate to its existing anatomy","jump":"the body compresses, rises slightly, and returns to its starting location using existing anatomy","custom":"one readable action using only the anatomy visible in the reference"},"hover_machine":{"idle":"continuous small rhythmic vertical hovering with subtle corrections at existing articulated mounts throughout the clip, rigid hull and barrels","walk":"a slow hovering travel cycle in place with small vertical oscillation, fixed viewing direction","run":"a brisk hovering travel cycle in place with controlled vertical oscillation, fixed viewing direction","attack":"one firing action along the original axis of an existing weapon, localized mechanical recoil of its mount and return","cast":"one energy discharge from an existing emitter or weapon opening, with localized mechanical recoil","hit":"one brief rigid-body displacement opposite the impact, then recover hovering position","death":"the rigid vehicle loses hover support and descends into a disabled position within the canvas","jump":"one short vertical hover boost and return to the starting altitude","custom":"one readable mechanical action using only existing components"},"ground_machine":{"idle":"continuous small mechanical suspension or existing joint adjustments throughout the clip, stable chassis and ground contact","walk":"a slow in-place travel cycle using existing wheels, tracks or articulated supports, stable rigid chassis","run":"a fast in-place travel cycle using existing wheels, tracks or articulated supports, controlled chassis vibration","attack":"one firing action along the original axis of an existing weapon, localized recoil and recovery, ground contact maintained","cast":"one energy discharge from an existing emitter or weapon opening, chassis remains supported","hit":"one brief mechanical recoil through existing suspension or joints, then recover stable support","death":"existing supports settle into a disabled position, the rigid chassis comes to rest","jump":"one small chassis lift and landing only if the visible supports permit it; otherwise a suspension compression and recovery","custom":"one readable mechanical action using only existing components with stable ground contact"}};
-const presets={idle:'continuous rhythmic breathing with a visible rise and fall of the shoulders and chest, ongoing small lateral weight shifts through the hips, hair tips and clothing hems follow the body with a slight delay throughout the clip, both feet remain planted at their original screen coordinates',walk:'continuous relaxed walking in place, alternating heel-to-toe steps with one support foot always on the ground, visible opposite arm swing past the hips with mildly bent elbows, shoulders counter-rotate against the pelvis, gentle rise and fall of the whole torso, coat hem follows each step with a delay',run:'continuous running in place, forward-leaning torso, alternating high knees and folded trailing legs with a clear airborne phase, elbows bent about 90 degrees and arms pumping strongly opposite the legs, shoulders and pelvis counter-rotate, rhythmic whole-body rise and fall, coat hem trails the stride',attack:'one clear weapon attack, readable anticipation, strike and follow-through',cast:'one clear magic casting action, hands gather energy and release it forward',hit:'brief impact reaction, recoil backward and regain balance',death:'lose balance and fall into a clearly readable defeated pose',jump:'crouch, jump upward and land back in the starting position',custom:''};
+const presets={idle:'restrained living idle motion carried by small relaxed movements of the wrists, elbows and head, hair tips and clothing hems follow with a slight delay, any held equipment sways gently with the hands, the torso stays calm, both feet remain planted at their original screen coordinates',walk:'continuous relaxed walking in place, alternating heel-to-toe steps with one support foot always on the ground, visible opposite arm swing past the hips with mildly bent elbows, shoulders counter-rotate against the pelvis, gentle rise and fall of the whole torso, coat hem follows each step with a delay',run:'continuous running in place, forward-leaning torso, alternating high knees and folded trailing legs with a clear airborne phase, elbows bent about 90 degrees and arms pumping strongly opposite the legs, shoulders and pelvis counter-rotate, rhythmic whole-body rise and fall, coat hem trails the stride',attack:'one clear weapon attack, readable anticipation, strike and follow-through',cast:'one clear magic casting action, hands gather energy and release it forward',hit:'brief impact reaction, recoil backward and regain balance',death:'lose balance and fall into a clearly readable defeated pose',jump:'crouch, jump upward and land back in the starting position',custom:''};
 function selectedPreset(){return $('subjectType').value==='human'?presets[$('action').value]:subjectPresets[$('subjectType').value][$('action').value]}
 let currentSubject='human';
 const gaitSetting={subject:'human',strength:'high',facing:'right',blink:'none',loop:true,workflowId:'fasth3-sprite',duration:'3',frames:12,motionPadding:'10',stabilize:false,optimizeLoop:false};
@@ -188,8 +224,8 @@ $('applySetting').onclick=()=>{
 $('subjectType').onchange=()=>{const prev=currentSubject==='human'?presets[$('action').value]:subjectPresets[currentSubject][$('action').value];if($('prompt').value.trim()&&$('prompt').value!==prev&&!confirm('작성한 설명을 새 유형 템플릿으로 교체할까요?')){$('subjectType').value=currentSubject;return}currentSubject=$('subjectType').value;$('prompt').value=selectedPreset();$('blink').disabled=currentSubject.endsWith('machine')};
 const actionNames={idle:'대기',walk:'걷기',run:'달리기',attack:'공격',cast:'스킬',hit:'피격',death:'사망',jump:'점프',custom:'내 동작'};
 function updateButtonText(){$('generate').textContent=`${$('duration').value}초 ${actionNames[$('action').value]} 만들기`}
-function calculatedSize(){if($('workflowId').value==='fasth3-sprite')return[512,512];const mode=$('size').value;if(mode.includes('x'))return mode.split('x').map(Number);if(!sourceWidth||!sourceHeight)return[608,608];const budgets={auto_fast:250000,auto_safe:450000,auto_quality:600000,auto_original:1000000};let scale=Math.sqrt(budgets[mode]/(sourceWidth*sourceHeight));if(mode==='auto_original')scale=Math.min(1,scale);let width=Math.max(256,Math.round(sourceWidth*scale/32)*32);let height=Math.max(256,Math.round(sourceHeight*scale/32)*32);return[width,height]}
-function updateResolution(){if(!sourceWidth){$('resolution').textContent='이미지를 넣으면 실제 크기를 계산합니다.';return}const [width,height]=calculatedSize();$('resolution').textContent=`원본 ${sourceWidth}×${sourceHeight} → 생성 ${width}×${height} · 비율 유지 전처리`}
+function calculatedSize(){if($('workflowId').value==='fasth3-sprite')return[512,512];const mode=$('size').value;if(mode.includes('x'))return mode.split('x').map(Number);if(!sourceWidth||!sourceHeight)return[608,608];const budgets={auto_fast:250000,auto_safe:450000,auto_quality:600000,auto_original:1000000};let scale=Math.sqrt(budgets[mode]/(sourceWidth*sourceHeight));if(mode==='auto_original')scale=Math.min(1,scale);if(mode==='auto_quality'&&$('pixelOutput').checked&&!(sourceWidth%8)&&!(sourceHeight%8)&&sourceWidth*sourceHeight*16<=1100000)return[Math.max(256,sourceWidth*4),Math.max(256,sourceHeight*4)];let width=Math.max(256,Math.round(sourceWidth*scale/32)*32);let height=Math.max(256,Math.round(sourceHeight*scale/32)*32);return[width,height]}
+function updateResolution(){if(!sourceWidth){$('resolution').textContent='이미지를 넣으면 실제 크기를 계산해요.';return}const [width,height]=calculatedSize();$('resolution').textContent=`이미지 ${sourceWidth}×${sourceHeight} → 영상 ${width}×${height}`}
 async function setImage(file){
  if(!file)return;
  try{
@@ -205,12 +241,14 @@ async function setImage(file){
 }
 $('drop').onclick=()=>$('file').click(); $('file').onchange=e=>setImage(e.target.files[0]).catch(()=>{});
 $('drop').ondragover=e=>e.preventDefault(); $('drop').ondrop=e=>{e.preventDefault();setImage(e.dataTransfer.files[0]).catch(()=>{})};
-let ready=false,busy=false,workflowStates=[];
+let ready=false,busy=false,workflowStates=[],generationNote='';
+function reportInvalid(id){const field=$(id);if(field.checkValidity())return false;for(let d=field.closest('details');d;d=d.parentElement.closest('details'))d.open=true;field.reportValidity();return true}
 function workflowReady(){return $('workflowId').value==='standard'||workflowStates.some(w=>w.id===$('workflowId').value&&w.ready)}
-function workflowControls(){const fast=$('workflowId').value==='fasth3-sprite';$('samplingMode').hidden=fast;document.querySelector('label[for=samplingMode]').hidden=fast;$('size').disabled=fast;$('negativeEnabled').disabled=fast;$('negativePrompt').disabled=fast;$('cfgScale').disabled=fast;if(fast){$('size').value='512x512';$('negativeEnabled').checked=false}$('workflowNote').textContent=fast?'FastH3 전용 8스텝 · 512×512 · CFG 1 고정. 동작·루프·시트·배경 제거 옵션은 그대로 사용합니다. 걷기·달리기 영상 테스트 세팅에서 사용합니다. 생성 후 루프 구간은 직접 검토하세요.':'기존 H3 동작 생성 및 시트 내보내기';updateResolution();refreshButton()}
+function workflowControls(){const fast=$('workflowId').value==='fasth3-sprite';$('samplingMode').hidden=fast;document.querySelector('label[for=samplingMode]').hidden=fast;$('size').disabled=fast;$('negativeEnabled').disabled=fast;$('negativePrompt').disabled=fast;$('cfgScale').disabled=fast;if(fast){$('size').value='512x512';$('negativeEnabled').checked=false}$('workflowNote').textContent=fast?'크기가 512×512로 고정돼요. 반복 구간은 결과를 보고 직접 고르세요.':'';updateResolution();refreshButton()}
 $('workflowId').onchange=workflowControls; function refreshButton(){$('generate').disabled=busy||!(ready&&imageData&&workflowReady())}
-async function check(){try{const s=await fetch('/api/status').then(r=>r.json());ready=s.comfy&&s.modelsReady&&s.licenseConfirmed;workflowStates=s.spriteWorkflows||[];if(s.turboV4===false){const v4=$('samplingMode').querySelector('[value="turbo-v4"]');v4.disabled=true;if($('samplingMode').value==='turbo-v4')$('samplingMode').value='quality'}if(s.spriteBackground){for(const option of $('backgroundRemoval').querySelectorAll('[value^="ai"]')){option.dataset.ready=String(s.spriteBackground.ready);option.disabled=!s.spriteBackground.ready;}if(!s.spriteBackground.ready&&['ai','ai-sparks'].includes($('backgroundRemoval').value)){$('removeBackground').checked=false;$('spriteBackgroundNote').textContent='AI 배경 제거 준비 중입니다. 단색 제거를 선택하거나 준비 후 다시 시도하세요.'}backgroundControls()}const fast=workflowStates.find(w=>w.id==='fasth3-sprite');$('workflowId').options[1].disabled=!fast?.ready;$('workflowId').options[1].textContent=fast?.ready?'FastH3 스프라이트 · 8스텝 · 실험적':'FastH3 스프라이트 · 설치·검증 중';$('status').className='status '+(ready?'ready':'');let text=s.comfy?'ComfyUI 연결됨':'ComfyUI 연결 안 됨';if(!s.licenseConfirmed)text+=' · MiniMax 별도 라이선스 확인 필요';else if(!s.modelsReady)text+=' · 모델 다운로드 필요';else text+=' · H3 모델 준비 완료';$('status').querySelector('span:last-child').textContent=text;if(!busy)$('message').textContent=ready?'이미지를 넣고 생성을 시작하세요.':'생성 엔진이 아직 준비되지 않았습니다.'}catch(e){ready=false;$('status').querySelector('span:last-child').textContent='서버 연결이 끊겼습니다. 재연결 대기 중…'}refreshButton()}
-$('generate').onclick=async()=>{if(window.spritePromptAssistant&&!window.spritePromptAssistant.validate())return;if(!$('effectDescription').reportValidity())return;if(!$('frames').reportValidity()||($('removeBackground').checked&&$('backgroundRemoval').value==='flat'&&!$('backgroundTolerance').reportValidity()))return;if($('negativeEnabled').checked&&!$('cfgScale').reportValidity())return;const [width,height]=calculatedSize();busy=true;refreshButton();$('result').style.display='none';$('message').textContent='작업 등록 중...';try{const body={...window.assetStart?.payload(),...window.spritePromptAssistant?.payload(),...window.spriteCombatPayload?.(),imageData,filename,workflowId:$('workflowId').value,motionPadding:Number($('motionPadding').value),motionSpeed:Number($('motionSpeed').value),trimAction:$('trimAction').checked,removeBackground:$('removeBackground').checked,backgroundRemoval:$('backgroundRemoval').value,backgroundTolerance:$('backgroundRemoval').value==='flat'?Number($('backgroundTolerance').value):24,animationType:$('action').value,facing:$('facing').value,blinkMode:$('blink').value,motionStrength:$('motionStrength').value,subjectType:$('subjectType').value,samplingMode:$('samplingMode').value,negativeEnabled:$('negativeEnabled').checked,negativePrompt:$('negativePrompt').value,cfgScale:Number($('cfgScale').value),prompt:$('prompt').value,loop:$('loop').checked,optimizeLoop:$('optimizeLoop').checked,duration:Number($('duration').value),width,height,frameCount:Number($('frames').value),seed:$('seed').value,stabilize:$('stabilize').checked};const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw Error(data.error||'등록 실패');poll(data.jobId)}catch(e){$('message').textContent=e.message;busy=false;refreshButton()}};
+async function check(){try{const s=await fetch('/api/status').then(r=>r.json());ready=s.comfy&&s.modelsReady&&s.licenseConfirmed;workflowStates=s.spriteWorkflows||[];if(s.turboV4===false){const v4=$('samplingMode').querySelector('[value="turbo-v4"]');v4.disabled=true;if($('samplingMode').value==='turbo-v4')$('samplingMode').value='quality'}if(s.spriteBackground){for(const option of $('backgroundRemoval').querySelectorAll('[value^="ai"]')){option.dataset.ready=String(s.spriteBackground.ready);option.disabled=!s.spriteBackground.ready;}if(!s.spriteBackground.ready&&['ai','ai-sparks'].includes($('backgroundRemoval').value)){$('removeBackground').checked=false;$('spriteBackgroundNote').textContent='AI 배경 제거 준비 중입니다. 단색 제거를 선택하거나 준비 후 다시 시도하세요.'}backgroundControls()}const fast=workflowStates.find(w=>w.id==='fasth3-sprite');$('workflowId').options[1].disabled=!fast?.ready;$('workflowId').options[1].textContent=fast?.ready?'걷기·달리기 전용 · 실험 중':'걷기·달리기 전용 · 준비 중';$('status').className='status '+(ready?'ready':'');const text=!s.comfy?'생성 엔진이 꺼져 있어요':!s.licenseConfirmed?'관리자의 라이선스 확인이 필요해요':!s.modelsReady?'모델을 준비하고 있어요':'생성 준비 완료';$('status').querySelector('span:last-child').textContent=text;if(!busy)$('message').textContent=ready?'이미지를 넣고 생성을 시작하세요.':'생성 엔진이 아직 준비되지 않았습니다.'}catch(e){ready=false;$('status').querySelector('span:last-child').textContent='서버 연결이 끊겼습니다. 재연결 대기 중…'}refreshButton()}
+function customMotionMissing(){if($('action').value!=='custom'||$('prompt').value.trim())return false;const assistant=window.spritePromptAssistant;if(assistant?.drafts()){if($('spriteMotionNotes').value.trim())return false;$('spriteMotionNotes').focus();$('message').textContent='어떻게 움직일지 적어 주세요.';return true}$('spriteAdvanced').open=true;$('prompt').focus();$('message').textContent='고급 설정의 동작 설명을 적어 주세요.';return true}
+$('generate').onclick=async()=>{if(busy||reportInvalid('effectDescription')||reportInvalid('frames')||($('removeBackground').checked&&$('backgroundRemoval').value==='flat'&&reportInvalid('backgroundTolerance'))||($('negativeEnabled').checked&&reportInvalid('cfgScale'))||customMotionMissing())return;busy=true;generationNote='';refreshButton();$('result').style.display='none';try{generationNote=await window.spritePromptAssistant?.prepare()||'';if(window.spritePromptAssistant&&!window.spritePromptAssistant.validate()){busy=false;refreshButton();return}const [width,height]=calculatedSize();$('message').textContent='작업 등록 중...';const body={...window.assetStart?.payload(),...window.spritePromptAssistant?.payload(),...window.spriteCombatPayload?.(),imageData,filename,workflowId:$('workflowId').value,motionPadding:Number($('motionPadding').value),motionSpeed:Number($('motionSpeed').value),trimAction:$('trimAction').checked,removeBackground:$('removeBackground').checked,backgroundRemoval:$('backgroundRemoval').value,backgroundTolerance:$('backgroundRemoval').value==='flat'?Number($('backgroundTolerance').value):24,animationType:$('action').value,facing:$('facing').value,blinkMode:$('blink').value,motionStrength:$('motionStrength').value,subjectType:$('subjectType').value,samplingMode:$('samplingMode').value,negativeEnabled:$('negativeEnabled').checked,negativePrompt:$('negativePrompt').value,cfgScale:Number($('cfgScale').value),prompt:$('prompt').value,loop:$('loop').checked,optimizeLoop:$('optimizeLoop').checked,duration:Number($('duration').value),width,height,frameCount:Number($('frames').value),seed:$('seed').value,stabilize:$('stabilize').checked};const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw Error(data.error||'등록 실패');poll(data.jobId)}catch(e){$('message').textContent=e.message;busy=false;refreshButton()}};
 $('duration').onchange=updateButtonText;
 $('size').onchange=updateResolution;
 $('resetPrompt').onclick=()=>{if(confirm('작성한 동작 설명을 선택한 동작의 기본 템플릿으로 바꿀까요?'))$('prompt').value=selectedPreset()};
@@ -219,9 +257,9 @@ function motionTimingControls(){const enabled=$('action').value==='attack'&&!$('
 $('loop').addEventListener('change',motionTimingControls);motionTimingControls();
 function backgroundControls(){const enabled=$('removeBackground').checked;$('backgroundRemoval').disabled=!enabled;$('flatBackgroundControls').hidden=!enabled||$('backgroundRemoval').value!=='flat';window.spriteCombatControls?.()}
 $('backgroundRemoval').onchange=backgroundControls;$('removeBackground').onchange=backgroundControls;backgroundControls();
-async function poll(id){try{const r=await fetch('/api/jobs/'+id);const j=await r.json();if(!r.ok){busy=false;$('message').textContent=j.error||'작업 조회 실패';refreshButton();return}$('message').textContent=j.state==='cancelled'?'취소되었습니다.':j.message||j.state;if(j.state==='complete'){$('chooseLoop').href='/loop-editor?job='+encodeURIComponent(id);$('video').src=j.video;$('video').loop=j.loop;$('loopReport').textContent=j.loopReport?('루프 연결 추정: '+({good:'좋음',fair:'보통',needs_review:'직접 확인 필요'}[j.loopReport.quality]||'직접 확인 필요')+(j.loopReport.method==='trim'?' · '+j.loopReport.inputSeconds+'초 → '+j.loopReport.outputSeconds+'초':' · 원래 길이 유지')):'';$('sheet').src=j.transparentSheet||j.spriteSheet;$('sheet').style.imageRendering=j.pixelExport?'pixelated':'auto';if(j.warning)$('message').textContent+=' · '+j.warning;$('transparentLink').hidden=!j.transparentSheet;if(j.transparentSheet)$('transparentLink').href=j.transparentSheet;$('videoLink').href=j.video;$('rawLink').href=j.rawVideo;$('sheetLink').href=j.spriteSheet;$('gifLink').href='/api/jobs/'+encodeURIComponent(id)+'/sheet.gif?source=spriteSheet';$('transparentGifLink').hidden=!j.transparentSheet;if(j.transparentSheet)$('transparentGifLink').href='/api/jobs/'+encodeURIComponent(id)+'/sheet.gif?source=transparentSheet';$('result').style.display='block';busy=false;refreshButton();return}if(['error','cancelled'].includes(j.state)){busy=false;refreshButton();return}}catch(e){$('message').textContent='상태 조회 연결 끊김 · 재시도 중…'}setTimeout(()=>poll(id),3000)}
+async function poll(id){try{const r=await fetch('/api/jobs/'+id);const j=await r.json();if(!r.ok){busy=false;$('message').textContent=j.error||'작업 조회 실패';refreshButton();return}$('message').textContent=j.state==='cancelled'?'취소되었습니다.':(generationNote?generationNote+' · ':'')+(j.message||j.state);if(j.state==='complete'){$('chooseLoop').href='/loop-editor?job='+encodeURIComponent(id);$('video').src=j.video;$('video').loop=j.loop;$('loopReport').textContent=j.loopReport?('루프 연결 추정: '+({good:'좋음',fair:'보통',needs_review:'직접 확인 필요'}[j.loopReport.quality]||'직접 확인 필요')+(j.loopReport.method==='trim'?' · '+j.loopReport.inputSeconds+'초 → '+j.loopReport.outputSeconds+'초':' · 원래 길이 유지')):'';$('sheet').src=j.transparentSheet||j.spriteSheet;$('sheet').style.imageRendering=j.pixelExport?'pixelated':'auto';if(j.warning)$('message').textContent+=' · '+j.warning;$('transparentLink').hidden=!j.transparentSheet;if(j.transparentSheet)$('transparentLink').href=j.transparentSheet;$('videoLink').href=j.video;$('rawLink').href=j.rawVideo;$('sheetLink').href=j.spriteSheet;$('gifLink').href='/api/jobs/'+encodeURIComponent(id)+'/sheet.gif?source=spriteSheet';$('transparentGifLink').hidden=!j.transparentSheet;if(j.transparentSheet)$('transparentGifLink').href='/api/jobs/'+encodeURIComponent(id)+'/sheet.gif?source=transparentSheet';$('result').style.display='block';busy=false;refreshButton();return}if(['error','cancelled'].includes(j.state)){busy=false;refreshButton();return}}catch(e){$('message').textContent='상태 조회 연결 끊김 · 재시도 중…'}setTimeout(()=>poll(id),3000)}
 $('videoFullscreen').onclick=async()=>{const v=$('video');try{if(v.requestFullscreen)await v.requestFullscreen();else if(v.webkitEnterFullscreen)v.webkitEnterFullscreen();else window.open(v.src,'_blank','noopener')}catch(e){$('message').textContent='전체화면을 사용할 수 없습니다. 영상 링크를 새 탭에서 열어 주세요.'}};
-check();setInterval(check,15000);
+updateButtonText();check();setInterval(check,15000);
 </script><script>
 /* "이 설정으로 다시 만들기" from team.html. Finished jobs no longer keep the source image, so only settings return.
  * Subject and action are set directly: their change handlers would replace the prompt and ask for confirmation. */
@@ -241,4 +279,4 @@ window.applyRecreatePreset=function(s){
   return '이전 작업의 설정을 불러왔어요. 원본 이미지를 다시 넣어 주세요.';
 };
 </script>
-<script>window.receiveGeneratedImage=file=>setImage(file);</script><script src="assets/sprite-combat.js"></script><script src="assets/sprite-prompts.js"></script><script src="assets/asset-start.js"></script><script src="/assets/character-context.js"></script><script src="assets/creation-workspace.js"></script><script src="assets/sprite-examples.js"></script></body></html>
+<script>window.receiveGeneratedImage=file=>setImage(file);</script><script src="assets/sprite-combat.js"></script><script src="assets/sprite-prompts.js"></script><script src="assets/asset-start.js"></script><script src="/assets/character-context.js"></script><script src="assets/creation-workspace.js"></script><script src="assets/sprite-examples.js"></script><script src="assets/sprite-simple.js"></script></body></html>

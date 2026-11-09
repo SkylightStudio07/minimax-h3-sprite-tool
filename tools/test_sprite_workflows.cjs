@@ -17,9 +17,8 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
    return route.fulfill({status:404,body:''});
   });
   await page.goto('http://sprite.test/studio');
-  await page.locator('input[name=assetType][value=side]').check();
-  await page.locator('#assetDirections').selectOption('4');
-  await page.locator('#assetContinue').click();
+  assert.equal(await page.locator('#assetEntry').count(),0,'Images go in without a type gate');
+  await page.locator('#spriteAdvanced').evaluate(d=>{d.open=true});
   await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('준비 완료'));
   assert(await page.locator('#workflowId option[value="fasth3-sprite"]').isDisabled());
   await page.locator('#settingCollection').selectOption('walk_video');await page.locator('#applySetting').click();assert((await page.locator('#message').textContent()).includes('준비되지'));assert.equal(await page.locator('#workflowId').inputValue(),'standard');
@@ -41,7 +40,7 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
   await page.locator('#generate').click();
   await page.waitForFunction(()=>document.querySelector('#message').textContent.includes('취소'));
   assert.equal(submitted.removeBackground,true);assert.equal(submitted.backgroundRemoval,'ai');
-  assert.equal(submitted.assetSpec.type,'side');assert.equal(submitted.assetSpec.directionCount,4);
+  assert.equal(submitted.assetSpec,undefined,'No game view is sent unless chosen');
   assert.equal(submitted.animationType,'run');assert.equal(submitted.frameCount,12);assert.equal(submitted.motionStrength,'high');assert.equal(submitted.stabilize,false);assert.equal(submitted.optimizeLoop,false);assert(submitted.prompt.includes('airborne phase'));
   assert.equal(submitted.workflowId,'fasth3-sprite');assert.equal(submitted.width,512);assert.equal(submitted.height,512);assert.equal(submitted.negativeEnabled,false);
   await page.locator('#workflowId').selectOption('standard');assert(await page.locator('#samplingMode').isVisible());assert(await page.locator('#size').isEnabled());

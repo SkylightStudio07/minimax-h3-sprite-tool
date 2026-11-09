@@ -18,20 +18,17 @@ const tick=()=>new Promise(r=>setTimeout(r,20));
  await new Promise(resolve=>dom.window.addEventListener('load',resolve));await tick();
  const w=dom.window,d=w.document,$=id=>d.getElementById(id);
  assert.deepEqual(errors,[]);assert.equal(d.body.dataset.creationWorkspace,'ready');
- assert.equal($('spriteExampleDetail').hidden,true);assert.equal($('spriteExampleCards').hidden,true);assert.equal($('spriteTypeGuide').hidden,false);assert.equal($('spriteExampleHero').hasAttribute('src'),false);
- const typeCards=[...d.querySelectorAll('.asset-type-card')];assert.equal(typeCards.length,5);
- for(const card of typeCards){assert(card.querySelector('input[type=radio]'));assert(card.querySelector('.asset-type-copy strong').textContent);const img=card.querySelector('.asset-type-preview img');assert(img);assert.equal(img.alt,'');assert(fs.existsSync(path.join(root,'web',img.getAttribute('src'))));}
- assert(typeCards.find(c=>c.querySelector('input').value==='topdown').textContent.includes('시점 가이드'));
- assert(typeCards.find(c=>c.querySelector('input').value==='isometric').textContent.includes('시점 가이드'));
- const sideRadio=d.querySelector('input[name=assetType][value=side]');sideRadio.click();assert.equal($('assetFacing').value,'right');assert.equal($('assetContinue').disabled,false);
- d.querySelector('input[name=assetType][value=live2d]').click();assert.equal($('assetFacing').value,'front');assert.equal($('assetFacing').disabled,true);assert.equal($('assetDirections').value,'1');
- for(const type of ['illustration','live2d','topdown','isometric']){
-  d.querySelector(`input[name=assetType][value=${type}]`).click();
+ assert.equal($('assetEntry'),null,'Images go in without a type gate');
+ const pickView=value=>{$('assetView').value=value;$('assetView').dispatchEvent(new w.Event('change',{bubbles:true}))};
+ assert.equal($('spriteExampleDetail').hidden,false);assert.equal($('spriteExampleCards').hidden,false);assert.equal($('spriteTypeGuide').hidden,true);assert.equal(Object.keys(w.assetStart.payload()).length,0,'No game view is sent unless chosen');
+ for(const type of ['topdown','isometric']){
+  pickView(type);
   assert.equal($('spriteExampleDetail').hidden,true);assert.equal($('spriteExampleCards').hidden,true);assert.equal($('applyChibiCombat').hidden,true);assert.equal($('spriteTypeGuide').hidden,false);
-  assert.equal($('spriteExampleHero').hasAttribute('src'),false);assert(!$('spriteTypeGuide').textContent.includes('푸른 검기'));
+  assert.equal($('spriteExampleHero').hasAttribute('src'),false);assert(!$('spriteTypeGuide').textContent.includes('푸른 검기'));assert.equal(w.assetStart.payload().assetSpec.type,type);
   const action=$('action').value;$('spriteExampleApply').click();assert.equal($('action').value,action,'Mismatched sample must not apply');
+  $('facing').value='preserve';
  }
- sideRadio.click();assert.equal($('spriteExampleDetail').hidden,false);assert.equal($('spriteExampleCards').hidden,false);assert.equal($('spriteTypeGuide').hidden,true);
+ pickView('');assert.equal($('spriteExampleDetail').hidden,false);assert.equal($('spriteExampleCards').hidden,false);assert.equal($('spriteTypeGuide').hidden,true);
  assert.equal($('spriteExampleCards').children.length,catalog.examples.length);assert.equal($('spriteExampleLoading').hidden,true);
  assert.equal($('spriteExamples').closest('[data-page]').dataset.page,'examples');assert.equal($('spriteExamples').closest('[data-page]').hidden,false);
  assert.equal($('spriteExampleHero').getAttribute('src'),catalog.examples.find(x=>x.id==='pixel-energy').poster,'Reduced motion must use a still');
@@ -101,7 +98,7 @@ const tick=()=>new Promise(r=>setTimeout(r,20));
  for(const item of catalog.examples)for(const key of ['animation','poster','sheet','source'])assert(fs.existsSync(path.join(root,'web',item[key])),item[key]);
  w.assetStart.restore({type:'topdown',directionCount:4,facing:'front'});assert.equal($('spriteExampleDetail').hidden,true);assert.equal($('spriteExampleCards').hidden,true);assert($('spriteTypeGuide').textContent.includes('탑다운'));
  w.assetStart.restore({type:'side',directionCount:1,facing:'right'});assert.equal($('spriteExampleDetail').hidden,false);
- w.assetStart.open();d.querySelector('input[name=assetType][value=isometric]').click();assert.equal($('spriteExampleDetail').hidden,true);assert($('spriteTypeGuide').textContent.includes('아이소메트릭'));
- console.log('PASS 5 asset-type image cards, direction selection, reviewed real-media examples, workspace default, reduced motion, play/pause, sheet view, background, filters, recipe apply, engine gate, existing input preservation, no generation side effects');
+ pickView('isometric');assert.equal($('spriteExampleDetail').hidden,true);assert($('spriteTypeGuide').textContent.includes('아이소메트릭'));
+ console.log('PASS game view choice, reviewed real-media examples, workspace default, reduced motion, play/pause, sheet view, background, filters, recipe apply, engine gate, existing input preservation, no generation side effects');
  dom.window.close();
 })().catch(error=>{console.error(error);dom.window.close();process.exitCode=1});

@@ -26,10 +26,17 @@
   }
   if(pixel){const [w,h]=calculatedSize();el('pixelExportSize').textContent=`시트 한 칸 ${w/4}×${h/4}px · PNG와 인계용 GIF로 받기`}
  };
+ let beforeLock=null;
  function changed(){
   const active=el('combatEffect').value!=='none'||el('pixelOutput').checked;
-  if(active){el('stabilize').checked=false;el('optimizeLoop').checked=false}
-  else check();
+  if(active){
+   beforeLock??={stabilize:el('stabilize').checked,optimizeLoop:el('optimizeLoop').checked,backgroundRemoval:el('backgroundRemoval').value};
+   el('stabilize').checked=false;el('optimizeLoop').checked=false;
+  }else{
+   const previous=beforeLock||{stabilize:true,optimizeLoop:true,backgroundRemoval:'ai'};beforeLock=null;
+   el('stabilize').checked=previous.stabilize;el('optimizeLoop').checked=previous.optimizeLoop;el('backgroundRemoval').value=previous.backgroundRemoval;
+   check();
+  }
   window.spriteCombatControls();
  }
  for(const id of ['combatEffect','pixelOutput'])el(id).addEventListener('change',changed);

@@ -22,8 +22,7 @@ const drafted='Preserve the exact black mask and green visor, dark suit, existin
   await page.route('**/api/jobs/mock-ai-prompt',r=>json(r,{state:'cancelled',message:'UI test only'}));
   const base='http://127.0.0.1:'+port;
   const login=await page.request.post(base+'/api/login',{data:{username:'fixture',password:'fixture-password'},headers:{'X-Sprite-Request':'1'}});assert.equal(login.status(),200);
-  await page.goto(base+'/studio');await page.locator('input[name=assetType][value=side]').check();
-  await page.locator('#assetSource').selectOption('reference');await page.locator('#assetContinue').click();
+  await page.goto(base+'/studio');await page.locator('#spriteAdvanced').evaluate(d=>{d.open=true});
   const original=await page.locator('#prompt').inputValue();
   const art=await page.request.get(base+'/api/images/art/image-1.png');
   const source={name:'reference.png',mimeType:'image/png',buffer:await art.body()};
@@ -32,7 +31,7 @@ const drafted='Preserve the exact black mask and green visor, dark suit, existin
   assert.equal(await page.locator('#prompt').inputValue(),original,'Analysis must preserve manual prompt');
   assert.equal(analyses.length,1);await page.locator('#spriteUseSuggested').click();
   assert.equal(await page.locator('#facing').inputValue(),'left');
-  await page.locator('#action').selectOption('attack');await page.locator('#duration').selectOption('3');
+  await page.locator('[data-action=attack]').click();await page.locator('#duration').selectOption('3');
   await page.locator('#spriteMotionNotes').fill('가방은 고정하고 권총으로 두 발 쏘기');
   await page.locator('#spritePlan').click();await page.locator('#spriteDraft').waitFor({state:'visible'});
   assert.equal(plans[0].animationType,'attack');assert.equal(plans[0].loop,false);assert.equal(plans[0].duration,3);assert.equal(jobs.length,0);
@@ -40,8 +39,9 @@ const drafted='Preserve the exact black mask and green visor, dark suit, existin
   await page.locator('#spriteApplyPrompt').click();assert.equal(await page.locator('#prompt').inputValue(),drafted);
   await page.locator('#generate').click();await page.waitForFunction(()=>document.querySelector('#message').textContent==='취소되었습니다.');
   assert.equal(jobs.length,1);assert.equal(jobs[0].motionPromptMode,'image-guided');assert.equal(jobs[0].prompt,drafted);
-  await page.locator('#duration').selectOption('5');await page.locator('#generate').click();
-  assert.equal(jobs.length,1,'Changed duration must not submit old AI draft');assert((await page.locator('#message').textContent()).includes('설정이 바뀌었어요'));
+  const submit=async()=>{const before=jobs.length;await page.locator('#generate').click();while(jobs.length===before)await page.waitForTimeout(30);await page.waitForFunction(()=>!document.querySelector('#generate').disabled);return jobs.at(-1)};
+  let planned=plans.length;await page.locator('#duration').selectOption('5');
+  assert.equal((await submit()).motionPromptMode,'image-guided');assert.equal(plans.length,planned+1,'A changed setting redrafts instead of blocking');assert.equal(plans.at(-1).duration,5);
   await page.locator('#spriteDescription').fill(profile.description+' 가방의 색은 파란색이다.');
   failPlan=true;await page.locator('#spritePlan').click();await page.waitForFunction(()=>document.querySelector('#spritePlanStatus').textContent.includes('이용 한도 테스트'));
   assert.equal(await page.locator('#spritePlan').isEnabled(),true,'Retry recovers after provider failure');
@@ -51,6 +51,13 @@ const drafted='Preserve the exact black mask and green visor, dark suit, existin
   await page.setViewportSize({width:390,height:844});await page.locator('#spritePlanTitle').scrollIntoViewIfNeeded();
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.screenshot({path:path.join(out,'mobile.png')});
   await page.setViewportSize({width:1440,height:1000});
+  planned=plans.length;await page.locator('#prompt').fill('my own hand written motion');
+  let job=await submit();assert.equal(job.prompt,'my own hand written motion');assert.equal(job.motionPromptMode,'manual');assert.equal(plans.length,planned,'A hand-written prompt is never redrafted');
+  await page.locator('#resetPrompt').click();await page.locator('#spriteMotionNotes').fill('왼쪽으로 한 발');
+  job=await submit();assert.equal(job.prompt,drafted);assert.equal(job.motionPromptMode,'image-guided');assert.equal(plans.at(-1).notes,'왼쪽으로 한 발');
+  await page.locator('#resetPrompt').click();await page.locator('#spriteMotionNotes').fill('오른쪽으로 한 발');failPlan=true;
+  job=await submit();failPlan=false;assert.notEqual(job.prompt,drafted,'A failed draft falls back to the default');assert.equal(job.motionPromptMode,'manual');
+  await page.locator('#spriteMotionNotes').fill('');
   delayAnalysis=true;
   const otherImages=await page.evaluate(()=>['#a34','#3a4'].map(colour=>{const c=document.createElement('canvas');c.width=32;c.height=48;const x=c.getContext('2d');x.fillStyle=colour;x.fillRect(0,0,32,48);return c.toDataURL('image/png').split(',')[1];}));
   await page.locator('#file').setInputFiles({name:'second.png',mimeType:'image/png',buffer:Buffer.from(otherImages[0],'base64')});

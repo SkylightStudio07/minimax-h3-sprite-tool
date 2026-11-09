@@ -72,11 +72,11 @@ class PromptTests(unittest.TestCase):
     def test_guided_workflow_retains_action_without_generic_idle_pumping(self):
         prompt=idle_tool.animation_prompt('Small head check; both boots planted.','idle',True,'left',3,True,image_guided=True)
         self.assertIn('Small head check',prompt)
-        self.assertNotIn('Maintain an even breathing rhythm',prompt)
+        self.assertNotIn('Maintain an even motion rhythm',prompt)
         self.assertNotIn('Strict screen-left-facing side profile',prompt)
         self.assertIn('Match the opening pose',prompt)
         manual=idle_tool.animation_prompt('Small head check','idle',True)
-        self.assertIn('Maintain an even breathing rhythm',manual)
+        self.assertIn('Maintain an even motion rhythm',manual)
 
 class RouteTests(unittest.TestCase):
     def setUp(self):

@@ -206,9 +206,10 @@ LEGACY_IDLE_PROMPTS = {
     ANIMATION_DEFAULTS['idle'],
     'one very slow shallow breathing cycle, barely perceptible movement of the upper torso, tiny secondary movement at hair tips and clothing hems, feet stay at their original screen coordinates',
     'gentle breathing, subtle blinking, slight hair and clothing sway, feet remain planted',
+    'continuous rhythmic breathing with a visible rise and fall of the shoulders and chest, ongoing small lateral weight shifts through the hips, hair tips and clothing hems follow the body with a slight delay throughout the clip, both feet remain planted at their original screen coordinates',
 }
-ANIMATION_DEFAULTS['idle'] = 'continuous rhythmic breathing with a visible rise and fall of the shoulders and chest, ongoing small lateral weight shifts through the hips, hair tips and clothing hems follow the body with a slight delay throughout the clip, both feet remain planted at their original screen coordinates'
-PROMPT_REVISION = 'sprite-motion-v9-articulated-side-actions'
+ANIMATION_DEFAULTS['idle'] = 'restrained living idle motion carried by small relaxed movements of the wrists, elbows and head, hair tips and clothing hems follow with a slight delay, any held equipment sways gently with the hands, the torso stays calm, both feet remain planted at their original screen coordinates'
+PROMPT_REVISION = 'sprite-motion-v10-restrained-idle'
 LEGACY_GAIT_PROMPTS = {
     'walk': 'walk cycle in place, alternating steps, natural arm swing, consistent rhythm',
     'run': 'run cycle in place, energetic alternating strides and arm swing',
@@ -257,7 +258,7 @@ def animation_prompt(user_prompt: str, animation_type: str, loop: bool, facing: 
              'The action happens once: readable preparation, execution, then a settled final pose. The viewpoint stays unchanged.')
     if animation_type == 'idle':
         cycle = (f'This is a continuous idle motion already in progress at 0.00 seconds and still in progress at {duration:.2f} seconds. '
-                 'Maintain an even breathing rhythm and consistent motion amplitude throughout the entire clip, including its final two seconds. '
+                 'Maintain an even motion rhythm and consistent motion amplitude throughout the entire clip, including its final two seconds. '
                  'Motion flows through the ending without a finishing gesture, slowdown, or held resting pose. ')
         if loop:
             cycle += ('The closing pose matches <Picture 2> at the same phase of the ongoing motion as the opening; '
@@ -300,14 +301,13 @@ def animation_prompt(user_prompt: str, animation_type: str, loop: bool, facing: 
         anatomy += ('The chest and abdomen keep exactly the same volume, width and contour in every frame. '
                     'The jacket front, buttons and seams retain their spacing and move together as one surface. '
                     'No local swelling, inflation, pulsing or stretching of the torso. ')
-        cycle = cycle.replace('breathing rhythm', 'sway rhythm')
+        cycle = cycle.replace('motion rhythm', 'sway rhythm')
         motion = {'low': 'Keep the sway very small.',
                   'normal': 'Keep body displacement small; make the movement readable through loose hair tips and hems.',
                   'high': 'Use more visible hair and hem follow-through while keeping body displacement small.'}[motion_strength]
     if subject_type != 'human':
         anatomy = 'The original subject scale, composition, silhouette, component proportions, linework and painted shading are retained. '
         constraints, motion = subject_constraints(subject_type, facing, motion_strength, blink_mode, animation_type)
-        cycle = cycle.replace('breathing rhythm', 'motion rhythm')
         background = background.replace('moving limbs', 'moving parts')
     if image_guided:
         # The reviewed character-specific plan already describes amplitude and

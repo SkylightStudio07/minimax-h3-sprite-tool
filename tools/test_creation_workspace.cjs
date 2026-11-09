@@ -28,7 +28,7 @@ const source=fs.existsSync(sample)?fs.readFileSync(sample):Buffer.from('iVBORw0K
  for(const [routeName,id,urlName] of [['image','imageStudio','image-studio'],['sprite','studio','/studio'],['rig','riggingStudio','/rigging']]){
   await page.goto('http://workspace.test/#/create/'+routeName);const frame=page.frameLocator('#'+id);
   await frame.locator('body[data-creation-workspace="ready"]').waitFor();const inner=getFrame(urlName);
-  if(routeName==='sprite'){await frame.locator('[name=assetType][value=side]').check();await frame.locator('#assetContinue').click()}
+  if(routeName==='sprite')await frame.locator('#spriteAdvanced').evaluate(d=>{d.open=true});
   const beforeScroll=await layoutState(inner);
   const scroll=await inner.evaluate(()=>{const x=document.querySelector('.creation-settings-scroll');x.scrollTop=x.scrollHeight;return x.scrollTop});assert(scroll>0,'settings actually scroll independently');
   const afterScroll=await layoutState(inner);assert.equal(afterScroll.output.y,beforeScroll.output.y);assert.equal(afterScroll.footer.bottom,beforeScroll.footer.bottom);

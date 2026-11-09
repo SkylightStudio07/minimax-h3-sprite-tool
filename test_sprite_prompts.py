@@ -53,7 +53,7 @@ class PromptTests(unittest.TestCase):
             for loop in (False, True):
                 for detail in ('', *engine.LEGACY_IDLE_PROMPTS):
                     p=engine.animation_prompt(detail,'idle',loop,seconds=seconds)
-                    self.assertIn('continuous rhythmic breathing',p)
+                    self.assertIn('restrained living idle motion',p)
                     self.assertIn('final two seconds',p)
                     self.assertNotIn('settles back',p)
                     self.assertNotIn('settled final pose',p)
@@ -115,7 +115,7 @@ class PromptTests(unittest.TestCase):
     def test_legacy_idle_default(self):
         p=engine.animation_prompt('gentle breathing, subtle blinking, slight hair and clothing sway, feet remain planted','idle',True)
         self.assertNotIn('subtle blinking',p)
-        self.assertIn('visible rise and fall',p)
+        self.assertIn('restrained living idle motion',p)
 
     def test_experimental_negative_layout_and_defaults(self):
         for loop in (False, True):
