@@ -38,6 +38,17 @@ Play 모드에서 값을 바꾸면 숨겨진 실제 아바타 인스턴스에 �
 
 스크립트에서 표정 등을 제어하려면 `RiggingV2Portrait.AvatarInstance`로 렌더링 중인 실제 캐릭터 인스턴스에 접근할 수 있습니다.
 
+## V1 파츠 프리팹
+
+**Tools > Sprite Lab > Import Rigging V1 ZIP**으로 가져오면 `Assets/RiggingV1/Imported/` 아래에 프리팹이 생깁니다. 구조는 `루트(SortingGroup) > Body > Head`이고, 얼굴·머리카락·모자·표정은 Head 아래에 있습니다.
+
+- 대기 동작: 깜박임, 입, 머리카락·장비·치마 흔들림에 더해 고개 기울임, 몸 흔들림, 호흡이 있습니다. 크기는 `RiggingV1Avatar` Inspector에서 조절합니다. 캐릭터마다 시작 시점이 달라 여럿을 세워도 똑같이 움직이지 않습니다.
+- 회전축: 치마는 허리, 장비는 겹치는 손 위치에서 돕니다. 손과 겹치지 않으면 몸에 가장 가까운 지점을 씁니다.
+- 표정: `SetExpression("이름")`, `ClearExpression()`, `ExpressionNames`. 사이트에서 보관한 차분 이름을 그대로 씁니다.
+- 갱신: 폴더를 선택하고 **Reimport Selected Rigging V1 Folder**를 실행하거나, 새 ZIP으로 **Update Selected Rigging V1 Folder From ZIP**을 실행합니다. 같은 자리에 프리팹을 다시 저장하므로 씬 연결이 유지됩니다.
+
+이전에 가져온 폴더는 임포터를 받아 교체한 뒤 위 Reimport를 한 번 실행해야 새 구조가 적용됩니다. 목 기준점이 없는 오래된 패키지는 예전처럼 평평한 구조로 만들어집니다.
+
 ## 보안과 문제 해결
 
 - 다운로드 주소는 5분 뒤 만료되며 현재 V2 버전이 바뀌면 즉시 무효가 됩니다.

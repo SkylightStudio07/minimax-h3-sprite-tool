@@ -1,8 +1,19 @@
+using System;
 using System.Collections;
+using System.Linq;
 using UnityEngine;
 
 namespace SpriteLab.RiggingV1
 {
+    [Serializable]
+    public sealed class ExpressionVariant
+    {
+        public string name;
+        public string slot;
+        public SpriteRenderer renderer;
+        public SpriteRenderer slotRenderer;
+    }
+
     public sealed class RiggingV1Avatar : MonoBehaviour
     {
         [Header("Expression layers")]
@@ -29,6 +40,29 @@ namespace SpriteLab.RiggingV1
         [SerializeField, Range(0f, 2f)] private float equipmentAngle = 0.75f;
         [SerializeField, Range(0f, 2f)] private float clothAngle = 0.55f;
 
+        [Header("Head and body idle")]
+        [SerializeField] private Transform headRoot;
+        [SerializeField] private Transform bodyRoot;
+        [SerializeField, Range(0f, 4f)] private float headAngle = 0.7f;
+        [SerializeField, Range(0f, 0.05f)] private float headShift = 0.008f;
+        [SerializeField, Range(0f, 2f)] private float bodyAngle = 0.2f;
+        [SerializeField, Range(0f, 0.02f)] private float breathScale = 0.004f;
+        [SerializeField] private float breathSeconds = 3.4f;
+
+        [Header("Crowds")]
+        [Tooltip("Start each character's idle at a different point so a group does not sway in unison.")]
+        [SerializeField] private bool randomizePhase = true;
+
+        [Header("Expressions")]
+        [SerializeField] private ExpressionVariant[] variants = new ExpressionVariant[0];
+
+        private bool restCached;
+        private float phase;
+        private float eyeOpenAmount = 1f;
+        private Quaternion headRestRotation = Quaternion.identity;
+        private Quaternion bodyRestRotation = Quaternion.identity;
+        private Vector3 headRestPosition;
+        private Vector3 bodyRestScale = Vector3.one;
         private Quaternion[] hairRest = new Quaternion[0];
         private Quaternion[] equipmentRest = new Quaternion[0];
         private Quaternion[] clothRest = new Quaternion[0];
@@ -41,7 +75,10 @@ namespace SpriteLab.RiggingV1
             SpriteRenderer closedMouth,
             Transform[] hair,
             Transform[] equipment = null,
-            Transform[] cloth = null)
+            Transform[] cloth = null,
+            Transform head = null,
+            Transform body = null,
+            ExpressionVariant[] expressionVariants = null)
         {
             openEyes = eyesOpen ?? new SpriteRenderer[0];
             closedEyes = eyesClosed ?? new SpriteRenderer[0];
@@ -50,6 +87,9 @@ namespace SpriteLab.RiggingV1
             hairParts = hair ?? new Transform[0];
             equipmentParts = equipment ?? new Transform[0];
             clothParts = cloth ?? new Transform[0];
+            headRoot = head;
+            bodyRoot = body;
+            variants = expressionVariants ?? new ExpressionVariant[0];
             CacheRestPose();
             SetEyeOpen(1f);
             SetMouthOpen(0f);
@@ -82,6 +122,7 @@ namespace SpriteLab.RiggingV1
         private void Awake()
         {
             CacheRestPose();
+            phase = randomizePhase ? UnityEngine.Random.value * 100f : 0f;
             SetEyeOpen(1f);
             SetMouthOpen(mouthOpenAmount);
         }
@@ -99,26 +140,95 @@ namespace SpriteLab.RiggingV1
 
         private void Update()
         {
+            var time = Time.time + phase;
             if (automaticLipSync)
-                SetMouthOpen(Mathf.SmoothStep(0f, 1f, (Mathf.Sin(Time.time * 7f) + 1f) * 0.5f));
+                SetMouthOpen(Mathf.SmoothStep(0f, 1f, (Mathf.Sin(time * 7f) + 1f) * 0.5f));
+            if (PartMotionEnabled) ApplyIdle(time);
+        }
 
-            if (!PartMotionEnabled) return;
-
+        /// <summary>Pose the idle at a given time. Update calls this; it is public for previews and tests.</summary>
+        public void ApplyIdle(float time)
+        {
+            if (!restCached) CacheRestPose();
             for (var i = 0; i < hairParts.Length && i < hairRest.Length; i++)
             {
                 if (!hairParts[i]) continue;
-                var sway = Mathf.Sin(Time.time * hairSpeed + i * 0.73f) * hairAngle / (1f + i * 0.12f);
+                var sway = Mathf.Sin(time * hairSpeed + i * 0.73f) * hairAngle / (1f + i * 0.12f);
                 hairParts[i].localRotation = hairRest[i] * Quaternion.Euler(0f, 0f, sway);
             }
             for (var i = 0; i < equipmentParts.Length && i < equipmentRest.Length; i++)
-                if (equipmentParts[i]) equipmentParts[i].localRotation = equipmentRest[i] * Quaternion.Euler(0f, 0f, Mathf.Sin(Time.time * 1.15f + 0.35f + i * 0.2f) * equipmentAngle);
+                if (equipmentParts[i]) equipmentParts[i].localRotation = equipmentRest[i] * Quaternion.Euler(0f, 0f, Mathf.Sin(time * 1.15f + 0.35f + i * 0.2f) * equipmentAngle);
             for (var i = 0; i < clothParts.Length && i < clothRest.Length; i++)
-                if (clothParts[i]) clothParts[i].localRotation = clothRest[i] * Quaternion.Euler(0f, 0f, Mathf.Sin(Time.time * 0.92f + 1.1f + i * 0.31f) * clothAngle);
+                if (clothParts[i]) clothParts[i].localRotation = clothRest[i] * Quaternion.Euler(0f, 0f, Mathf.Sin(time * 0.92f + 1.1f + i * 0.31f) * clothAngle);
+
+            var breath = 0.5f + 0.5f * Mathf.Sin(time * 2f * Mathf.PI / Mathf.Max(0.1f, breathSeconds));
+            if (bodyRoot)
+            {
+                bodyRoot.localRotation = bodyRestRotation * Quaternion.Euler(0f, 0f, Mathf.Sin(time * 0.19f + 2.1f) * bodyAngle);
+                var scale = bodyRestScale;
+                scale.y *= 1f + breath * breathScale;
+                bodyRoot.localScale = scale;
+            }
+            if (headRoot)
+            {
+                var tilt = 0.6f * Mathf.Sin(time * 0.23f + 0.5f) + 0.4f * Mathf.Sin(time * 0.71f + 1.3f);
+                headRoot.localRotation = headRestRotation * Quaternion.Euler(0f, 0f, tilt * headAngle);
+                headRoot.localPosition = headRestPosition + new Vector3(
+                    (0.7f * Mathf.Sin(time * 0.42f) + 0.3f * Mathf.Sin(time * 1.13f)) * headShift,
+                    (0.5f * Mathf.Sin(time * 0.31f + 1.7f) + 0.5f * (breath - 0.5f)) * headShift, 0f);
+            }
+        }
+
+        /// <summary>Saved expression names that SetExpression accepts.</summary>
+        public string[] ExpressionNames => variants.Select(item => item.name).ToArray();
+
+        /// <summary>Show a saved expression in place of its slot. Returns false if the name is unknown.</summary>
+        public bool SetExpression(string expressionName)
+        {
+            var chosen = variants.FirstOrDefault(item => item.name == expressionName);
+            if (chosen == null || !chosen.renderer) return false;
+            foreach (var other in variants.Where(item => item.slot == chosen.slot && item != chosen))
+            {
+                Replace(other.renderer, chosen.slotRenderer);
+                if (other.renderer) other.renderer.enabled = false;
+            }
+            Replace(chosen.slotRenderer, chosen.renderer);
+            Refresh(chosen.slotRenderer, chosen.renderer);
+            return true;
+        }
+
+        /// <summary>Return to the default look, for one slot or, with no argument, for every slot.</summary>
+        public void ClearExpression(string slot = null)
+        {
+            foreach (var item in variants.Where(item => slot == null || item.slot == slot))
+            {
+                if (!item.renderer || !item.slotRenderer) continue;
+                var wasShown = item.renderer.enabled;
+                Replace(item.renderer, item.slotRenderer);
+                if (wasShown) Refresh(item.renderer, item.slotRenderer);
+            }
+        }
+
+        private void Replace(SpriteRenderer from, SpriteRenderer to)
+        {
+            for (var i = 0; i < openEyes.Length; i++) if (openEyes[i] == from) openEyes[i] = to;
+            for (var i = 0; i < closedEyes.Length; i++) if (closedEyes[i] == from) closedEyes[i] = to;
+            if (mouthOpen == from) mouthOpen = to;
+            if (mouthClosed == from) mouthClosed = to;
+        }
+
+        private void Refresh(SpriteRenderer hidden, SpriteRenderer shown)
+        {
+            hidden.enabled = false;
+            shown.enabled = true;
+            SetEyeOpen(eyeOpenAmount);
+            SetMouthOpen(mouthOpenAmount);
         }
 
         public void SetEyeOpen(float amount)
         {
             amount = Mathf.Clamp01(amount);
+            eyeOpenAmount = amount;
             SetAlpha(openEyes, amount);
             SetAlpha(closedEyes, 1f - amount);
         }
@@ -143,7 +253,7 @@ namespace SpriteLab.RiggingV1
         {
             while (isActiveAndEnabled && automaticBlink)
             {
-                yield return new WaitForSeconds(Random.Range(blinkInterval.x, blinkInterval.y));
+                yield return new WaitForSeconds(UnityEngine.Random.Range(blinkInterval.x, blinkInterval.y));
                 SetEyeOpen(0f);
                 yield return new WaitForSeconds(blinkDuration);
                 SetEyeOpen(1f);
@@ -170,6 +280,9 @@ namespace SpriteLab.RiggingV1
                 hairRest[i] = hairParts[i] ? hairParts[i].localRotation : Quaternion.identity;
             equipmentRest = CacheRotations(equipmentParts);
             clothRest = CacheRotations(clothParts);
+            if (headRoot) { headRestRotation = headRoot.localRotation; headRestPosition = headRoot.localPosition; }
+            if (bodyRoot) { bodyRestRotation = bodyRoot.localRotation; bodyRestScale = bodyRoot.localScale; }
+            restCached = true;
         }
 
         private static Quaternion[] CacheRotations(Transform[] parts)

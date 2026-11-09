@@ -663,7 +663,7 @@ def main() -> None:
 3. Pivot은 캔버스 좌상단 기준 `manifest.json`의 `left`, `top`, `width`, `height`를 사용해 맞춥니다.
 4. 자동 배치를 쓰려면 ZIP의 `Unity/Runtime`과 `Unity/Editor`를 프로젝트 `Assets/RiggingV1` 아래에 복사합니다.
 5. Unity 메뉴 `Tools > Sprite Lab > Import Rigging V1 ZIP`에서 원본 ZIP을 선택합니다.
-6. 생성된 Prefab은 눈 깜박임, 입 open/close, 앞·뒤 머리카락 회전을 미리 설정합니다.
+6. 생성된 Prefab은 눈 깜박임, 입 open/close, 머리카락·장비·치마 흔들림, 고개와 몸의 대기 동작을 미리 설정합니다. 파츠는 Body와 Head 아래에 묶여 있습니다.
 7. 더 자연스러운 변형은 Unity 2D Animation의 뼈·메시·웨이트를 수동으로 추가합니다.
 8. `manifest.json`의 `status`가 `needs_review`면 경계, 빈 영역, 누락 파츠를 먼저 확인합니다.
 

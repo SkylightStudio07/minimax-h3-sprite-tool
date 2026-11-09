@@ -23,7 +23,7 @@
 - PSD에는 적용된 슬롯과 숨김 상태의 이름 있는 차분 레이어가 포함됩니다. 차분 보관 레이어는 합성·웹 리거·Unity 프리팹에 중복 표시되지 않습니다.
 - 편집기에서는 감은 눈·반대 입 상태가 기본 미리보기에서 숨겨집니다. PSD의 애니메이션 슬롯은 웹 리거가 깜박임·입 움직임에 사용하도록 포함합니다. 보관 차분은 선택으로 미리보며 표시 체크박스는 비활성화합니다.
 - 갤러리·내부 공유는 저장 버전을 사용합니다. 공개 워크스페이스는 관리자 **공개본 갱신**이 필요합니다.
-- Unity V1은 저장 ZIP을 사용합니다. V2는 저장 후 다시 생성해야 합니다. 모든 차분 PNG가 ZIP에 들어가지만, Unity 프리팹은 사이트에서 마지막으로 적용한 차분을 기존 슬롯으로 사용합니다. Unity 실행 중 임의 이름의 차분을 선택하는 API는 아직 제공하지 않습니다.
+- Unity V1은 저장 ZIP을 사용합니다. V2는 저장 후 다시 생성해야 합니다. 모든 차분 PNG가 ZIP에 들어가지만, Unity 프리팹은 사이트에서 마지막으로 적용한 차분을 기존 슬롯으로 사용합니다. V1 프리팹은 보관 차분도 숨긴 상태로 넣으며, `RiggingV1Avatar.SetExpression("이름")`과 `ClearExpression()`으로 실행 중 바꿀 수 있습니다. V2는 아직 제공하지 않습니다.
 
 ## 구현 위치
 
@@ -31,6 +31,6 @@
 - `web/rigging-expressions.js`: 생성·복제·PNG·슬롯 교체, 참고 미리보기, undo/redo.
 - `rigging_editor.py`: `variant_create`, `variant_png`, `paint`, `variant_apply` 검증 및 저장. 새 차분은 빈 상태로 보관할 수 있지만 빈 차분을 슬롯에 적용할 수는 없습니다.
 - `team_server.py`: 차분 메타데이터 전달, `/rigging-expressions.js`. 기존 작업/내부 공유 revision API를 사용합니다.
-- Unity V1/V2 importer: `variantOf` 보관 레이어는 프리팹 생성에서 제외합니다. V1 저장 패키지에 최신 importer를 포함합니다.
+- Unity importer: V2는 `variantOf` 보관 레이어를 프리팹에서 제외합니다. V1은 슬롯과 같은 순서로 숨겨서 넣습니다. V1 저장 패키지에 최신 importer를 포함합니다.
 
 검증: `.venv\Scripts\python.exe -m unittest test_rigging_expressions test_rigging_editor test_team_server test_rigging_upscale`; Playwright가 있는 `NODE_PATH`에서 `node tools/test_rigging_expressions.cjs`. 테스트는 임시 작업과 모의 API를 사용하며 운영 결과를 변경하지 않습니다. 실제 Unity Editor 임포트는 별도 확인이 필요합니다.
