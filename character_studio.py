@@ -191,11 +191,12 @@ def register(app,db,auth,data,payload):
         kind=p.get('jobType','video')
         if kind=='video':
             for key,label in [('gameSheet','게임용 시트'),('transparentSheet','투명 배경 시트'),('spriteSheet','원본 시트'),('loopTransparentSheet','루프 보정 · 투명'),('loopSheet','루프 보정 시트')]:
-                if r.get(key):out.append(dict(key=key,label=label,url=r[key],count=r.get('frameCount',p.get('frameCount',8)) if key in ('gameSheet','spriteSheet','transparentSheet') else p.get('frameCount',8)))
+                if r.get(key):out.append(dict(key=key,label=label,url=r[key],count=r.get('frameCount',p.get('frameCount',8)) if key in ('gameSheet','spriteSheet','transparentSheet') else p.get('frameCount',8),**({k:r['gameExport'][k] for k in ('columns','rows')} if key=='gameSheet' and r.get('gameExport') else {})))
             for key,url in r.get('exportSheets',{}).items():
+                if key.endswith('_atlas'):continue
                 info=r.get('exportSheetInfo',{}).get(key,{})
                 match=re.match(r'sheet_(\d+)_',key)
-                out.append(dict(key='export:'+key,label='재추출 · '+key,url=url,count=info.get('frameCount',int(match[1]) if match else 8)))
+                out.append(dict(key='export:'+key,label='재추출 · '+key,url=url,count=info.get('frameCount',int(match[1]) if match else 8),**{k:info[k] for k in ('columns','rows') if k in info}))
         elif kind=='image' and p.get('sheetLayout'):
             layout=p['sheetLayout']
             for i,item in enumerate(r.get('images',[])):

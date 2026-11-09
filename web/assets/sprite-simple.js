@@ -35,6 +35,9 @@
   // Attacks and casts often generate blasts that the plain cutout would erase.
   const matte=$('backgroundRemoval'),wanted=effectActions.includes(action)?'ai-soft':'ai';
   if(['ai','ai-soft'].includes(matte.value)&&matte.value!==wanted&&!matte.querySelector(`[value="${wanted}"]`).disabled){matte.value=wanted;fire(matte,'change')}
+  // Blasts need canvas; leave any margin the user chose alone.
+  const margin=$('motionPadding'),room=effectActions.includes(action)?'30':'10';
+  if(['10','30'].includes(margin.value)&&margin.value!==room){margin.value=room;fire(margin,'change','input')}
   if(!effectActions.includes(action)&&$('combatEffect').value!=='none'){$('combatEffect').value='none';fire($('combatEffect'),'change')}
   sync();
  }

@@ -195,7 +195,7 @@ const ResultActions={
     return d.title||'';
   },
   async loopFix(j){await api('api/jobs/'+j.id+'/loop',{});toast('루프 검사를 마쳤습니다. 기존 영상과 시트도 그대로 보관됩니다.',{tone:'success'})},
-  async extract(j,frameCount,backgroundRemoval='none'){await api('api/jobs/'+j.id+'/extract',{frameCount,removeBackground:backgroundRemoval!=='none',backgroundRemoval:backgroundRemoval==='none'?'flat':backgroundRemoval});toast(`${frameCount}프레임 시트를 추출했습니다.`,{tone:'success'})}
+  async extract(j,frameCount,backgroundRemoval='none',game={}){const d=await api('api/jobs/'+j.id+'/extract',{frameCount,removeBackground:backgroundRemoval!=='none',backgroundRemoval:backgroundRemoval==='none'?'flat':backgroundRemoval,...game});toast(d.game?.oversize?'시트를 만들었지만 한 변이 8192픽셀을 넘습니다. 열 수를 바꿔 보세요.':d.game?.edgeContactFrames?.length?`시트를 만들었습니다. ${d.game.edgeContactFrames.length}개 프레임은 캔버스 끝에 닿아 잘렸을 수 있어요.`:`${frameCount}프레임 시트를 추출했습니다.`,{tone:d.game?.oversize||d.game?.edgeContactFrames?.length?'warning':'success'})}
 };
 
 function refreshResults(){
@@ -444,7 +444,7 @@ function renderSpriteDetail(j,main,side){
   const downloads=detailSection('다운로드');
   for(const [name,desc,path,key] of [['게임용 시트','캐릭터에 맞춘 셀 · 지면 정렬',j.gameSheet],['게임용 시트 정보 (JSON)','Phaser·PixiJS용 프레임, 기준점, 재생 시간',j.gameAtlas],['스프라이트 시트','생성 영상에서 뽑은 프레임',j.spriteSheet,'spriteSheet'],['투명 시트','배경을 제거한 PNG 시트',j.transparentSheet,'transparentSheet'],['루프 보정 시트','자연스럽게 이어지는 구간으로 자른 시트',j.loopSheet,'loopSheet'],['루프 보정 투명 시트','',j.loopTransparentSheet,'loopTransparentSheet'],['영상 (MP4)','정규화된 결과 영상',j.video],['루프 보정 영상 (MP4)','',j.loopVideo],['H3 원본 영상','정규화 전 모델 출력',j.rawVideo]])
     if(path)downloads.append(detailRow(name,desc,linkButton(key?'PNG 저장':'저장',path,{download:true,iconName:'download'}),key&&linkButton('GIF · 인계용','api/jobs/'+encodeURIComponent(j.id)+'/sheet.gif?source='+encodeURIComponent(key),{download:true,iconName:'download'})));
-  for(const [key,path] of Object.entries(j.exportSheets||{}))downloads.append(detailRow(key.split('_')[1]+'프레임'+(key.endsWith('_transparent')?' 투명 시트':' 재추출 시트'),'',linkButton('PNG 저장',path,{download:true,iconName:'download'}),linkButton('GIF · 인계용','api/jobs/'+encodeURIComponent(j.id)+'/sheet.gif?source='+encodeURIComponent('export:'+key),{download:true,iconName:'download'})));
+  for(const [key,path] of Object.entries(j.exportSheets||{}))if(/_(game|atlas)$/.test(key))downloads.append(detailRow(key.split('_')[1]+'프레임 '+(key.endsWith('_atlas')?'게임용 JSON':'게임용 시트'),j.exportSheetInfo?.[key]?.fps?j.exportSheetInfo[key].fps+'FPS':'',linkButton('저장',path,{download:true,iconName:'download'})));else downloads.append(detailRow(key.split('_')[1]+'프레임'+(key.endsWith('_transparent')?' 투명 시트':' 재추출 시트'),'',linkButton('PNG 저장',path,{download:true,iconName:'download'}),linkButton('GIF · 인계용','api/jobs/'+encodeURIComponent(j.id)+'/sheet.gif?source='+encodeURIComponent('export:'+key),{download:true,iconName:'download'})));
   if(j.frameWorkspace?.id)downloads.append(detailRow('수정 프레임 GIF','저장된 재생 속도로 내보냅니다.',linkButton('GIF 저장','api/frames/'+encodeURIComponent(j.frameWorkspace.id)+'/animation.gif',{download:true,iconName:'download'})));
   downloads.append(node('p','시트 GIF는 저장된 재생 속도를 사용하며, 속도 정보가 없으면 8FPS입니다. 프레임 편집에서 속도·재생 구간을 바꿔 저장할 수 있습니다.','detail-text'));
   side.append(downloads);
@@ -460,11 +460,15 @@ function renderSpriteDetail(j,main,side){
       fix.onclick=()=>withBusy(fix,async()=>{await ResultActions.loopFix(j);openJob(j.id)});
       tools.append(detailRow('루프 보정본 만들기','시작과 끝이 매끄럽게 이어지는 구간을 찾아 별도 영상과 시트를 만듭니다.',fix));
     }
-    const count=node('input',undefined,'ui-input extract-count');count.type='number';count.min='2';count.max='64';count.step='1';count.value='64';count.setAttribute('aria-label','재추출 프레임 수');
+    const count=node('input',undefined,'ui-input extract-count');count.type='number';count.min='2';count.max='128';count.step='1';count.value='64';count.setAttribute('aria-label','재추출 프레임 수');
     const matte=node('select',undefined,'ui-input');matte.setAttribute('aria-label','재추출 배경 제거');for(const [value,label] of [['none','배경 유지'],['ai','AI 배경 제거'],['ai-soft','AI · 폭발과 연기 남기기'],['ai-smooth','AI · 윤곽 다듬기 (실험적)'],['flat','단색 배경 제거']])matte.add(new Option(label,value));
     const extract=actionButton('추출','ui-btn ui-btn--sm');
-    extract.onclick=()=>{if(!count.reportValidity())return;withBusy(extract,async()=>{await ResultActions.extract(j,Number(count.value),matte.value);openJob(j.id)})};
-    tools.append(detailRow('시트 다시 추출','2~64프레임 · 원본 보존 · AI 제거는 프레임 수에 따라 시간이 걸려요.',count,matte,extract));
+    const numeric=(label,min,max,hint)=>{const f=node('input',undefined,'ui-input extract-count');f.type='number';f.min=String(min);f.max=String(max);f.step='1';f.placeholder=hint;f.setAttribute('aria-label',label);return f};
+    const fps=numeric('시트 FPS',1,60,'FPS'),columns=numeric('시트 열 수',1,128,'열');
+    const remembered='sprite-export:'+(j.animationType||'idle');
+    try{const s=JSON.parse(localStorage.getItem(remembered)||'null');if(s){count.value=s.count;fps.value=s.fps||'';columns.value=s.columns||'';if([...matte.options].some(o=>o.value===s.matte))matte.value=s.matte}}catch{}
+    extract.onclick=()=>{if(!count.reportValidity()||!fps.reportValidity()||!columns.reportValidity())return;try{localStorage.setItem(remembered,JSON.stringify({count:count.value,fps:fps.value,columns:columns.value,matte:matte.value}))}catch{}const game={};if(fps.value)game.sheetFps=Number(fps.value);if(columns.value)game.sheetColumns=Number(columns.value);withBusy(extract,async()=>{await ResultActions.extract(j,Number(count.value),matte.value,game);openJob(j.id)})};
+    tools.append(detailRow('시트 다시 추출','2~128프레임 · 원본 보존 · FPS를 넣고 배경을 지우면 그 프레임 수와 속도로 게임용 시트와 JSON을 만들어요. 값은 동작별로 기억합니다.',count,fps,columns,matte,extract));
     side.append(tools);
   }
   const note=node('div',undefined,'ui-alert ui-alert--neutral');note.append(icon('globe'),node('span','완료된 스프라이트 영상과 시트는 로그인 없이 볼 수 있는 공개 갤러리에도 표시됩니다. 원하지 않으면 갤러리에서 내리세요.'));

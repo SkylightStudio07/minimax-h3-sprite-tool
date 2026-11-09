@@ -16,6 +16,7 @@ ALPHA_VISIBLE = 16
 ALPHA_SOLID = 128
 MAX_GROUND_SHIFT = .05   # of character height; beyond this the frame is treated as a real leap
 TIME_WEIGHT = .012       # keeps a long hold from leaving a gap in the timeline
+MAX_TEXTURE_SIDE = 8192  # common GPU and WebGL limit
 MIN_STRIDE = 8           # frames; anything shorter is a half stride with the legs swapped
 
 
@@ -82,6 +83,29 @@ def pick(frames, count, action, loop):
     return dict(indices=sprite_loop.sample_indices(n, count, loop), end=n, method='even')
 
 
+def exact_indices(total, count, loop):
+    """Frames for a sheet with a fixed count and frame rate, consecutive whenever the clip allows."""
+    if loop and count == total - 1:  # a closed loop's last frame repeats the first
+        return list(range(count))
+    return sprite_loop.sample_indices(total, count, loop) if count < total else list(range(total))
+
+
+def uniform_ms(count, fps):
+    ticks = [round(i * 1000 / fps) for i in range(count + 1)]
+    return [b - a for a, b in zip(ticks, ticks[1:])]
+
+
+def fit_columns(count, width, height, requested=None):
+    """Grid columns: the requested number, else the nearest to 8 that fits the texture limit, else the smallest sheet."""
+    if requested:
+        return min(int(requested), count)
+    def sides(columns):
+        return width * columns, height * ((count + columns - 1) // columns)
+    usual = min(count, 8)
+    fitting = [c for c in range(1, count + 1) if max(sides(c)) <= MAX_TEXTURE_SIDE]
+    return min(fitting, key=lambda c: abs(c - usual)) if fitting else min(range(1, count + 1), key=lambda c: max(sides(c)))
+
+
 def durations_ms(indices, total, fps):
     """Each picked frame lasts until the next one, so the action keeps its real length."""
     bounds = [round(int(i) * 1000 / fps) for i in indices] + [round(total * 1000 / fps)]
@@ -142,7 +166,7 @@ def edge_frames(frames):
     return touching
 
 
-def build(frames, action, loop, durations):
+def build(frames, action, loop, durations, columns=None):
     """Return (sheet, cell layout, report) for equal-size RGBA frames."""
     facts = [measure(f) for f in frames]
     shifts, ground, center = plan_shifts(facts, action, loop)
@@ -156,7 +180,7 @@ def build(frames, action, loop, durations):
     width, height = x1 - x0, y1 - y0
     width += width % 2
     height += height % 2
-    columns = min(len(frames), 8)
+    columns = fit_columns(len(frames), width, height, columns)
     rows = (len(frames) + columns - 1) // columns
     sheet = Image.new('RGBA', (width * columns, height * rows), (0, 0, 0, 0))
     for i, (frame, shift) in enumerate(zip(frames, shifts)):
@@ -167,11 +191,12 @@ def build(frames, action, loop, durations):
     layout = dict(columns=columns, rows=rows, cellWidth=width, cellHeight=height, pivotX=center - x0, pivotY=ground - y0)
     report = dict(version=VERSION, action=action, loop=loop, frameCount=len(frames), durationMs=[int(d) for d in durations],
                   characterHeight=int(np.median(heights)), shifts=[list(s) for s in shifts],
-                  movedFrames=sum(1 for s in shifts if s != (0, 0)), edgeContactFrames=edge_frames(frames), **layout)
+                  movedFrames=sum(1 for s in shifts if s != (0, 0)), edgeContactFrames=edge_frames(frames),
+                  oversize=max(width * columns, height * rows) > MAX_TEXTURE_SIDE, **layout)
     return sheet, layout, report
 
 
-def atlas(image_name, action, loop, layout, durations):
+def atlas(image_name, action, loop, layout, durations, fps=None):
     """TexturePacker-style JSON hash, readable by Phaser and PixiJS, with pivot and per-frame time."""
     w, h = layout['cellWidth'], layout['cellHeight']
     pivot = dict(x=round(layout['pivotX'] / w, 4), y=round(layout['pivotY'] / h, 4))
@@ -182,12 +207,13 @@ def atlas(image_name, action, loop, layout, durations):
                             spriteSourceSize=dict(x=0, y=0, w=w, h=h), sourceSize=dict(w=w, h=h), pivot=pivot, anchor=pivot, duration=int(duration))
     return dict(frames=frames, animations={action: names},
                 meta=dict(app='Sprite Lab', version=str(VERSION), image=image_name, format='RGBA8888', scale='1', loop=bool(loop),
+                          frameCount=len(names), **({'fps': fps} if fps else {}),
                           size=dict(w=w * layout['columns'], h=h * layout['rows']), pivotPixels=dict(x=layout['pivotX'], y=layout['pivotY'])))
 
 
-def write(frames, action, loop, durations, png_path, json_path):
+def write(frames, action, loop, durations, png_path, json_path, columns=None, fps=None):
     """Write the game sheet and its atlas next to the untouched original sheets."""
-    sheet, layout, report = build(frames, action, loop, durations)
-    sheet.save(png_path, optimize=True)
-    json_path.write_text(json.dumps(atlas(png_path.name, action, loop, layout, durations), ensure_ascii=False, indent=1), encoding='utf-8')
+    sheet, layout, report = build(frames, action, loop, durations, columns)
+    sheet.save(png_path, compress_level=6)
+    json_path.write_text(json.dumps(atlas(png_path.name, action, loop, layout, durations, fps), ensure_ascii=False, indent=1), encoding='utf-8')
     return report

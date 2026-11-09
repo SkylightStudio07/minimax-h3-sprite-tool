@@ -140,7 +140,26 @@ def upload_image(image_bytes: bytes, filename: str) -> str:
     return payload.get("name", safe_name)
 
 
-def prepare_reference_image(image_bytes: bytes, width: int, height: int, motion_padding: int = 0, pixel_art: bool = False) -> bytes:
+EFFECT_ROOM_SHIFT = 2.0  # lean is rarely above .3, so this moves about half of the free margin at most
+
+
+def effect_room_offset(resized: Image.Image, left: int, top: int, width: int, height: int) -> tuple[int, int]:
+    """Move the subject away from the side its weapon reaches toward, so a blast has more canvas."""
+    alpha = np.asarray(resized.getchannel('A')) >= 128
+    ys, xs = np.nonzero(alpha)
+    if not len(xs):
+        return 0, 0
+    x0, x1, y0, y1 = int(xs.min()), int(xs.max()) + 1, int(ys.min()), int(ys.max()) + 1
+    def shift(mass, low, high, start, canvas):
+        # Mass sits away from the center of the bounding box when a long barrel or blade sticks out.
+        lean = max(-1., min(1., 2 * (float(mass) - (low + high) / 2) / max(high - low, 1)))
+        room = canvas - (start + high) if lean > 0 else start + low
+        return round(lean * max(room, 0) * EFFECT_ROOM_SHIFT)
+    return shift(xs.mean(), x0, x1, left, width), shift(ys.mean(), y0, y1, top, height)
+
+
+def prepare_reference_image(image_bytes: bytes, width: int, height: int, motion_padding: int = 0, pixel_art: bool = False,
+                            effect_room: bool = False) -> bytes:
     """Fit the source without distortion onto the exact H3 canvas size."""
     source = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
     if type(motion_padding) is not int or motion_padding not in (0,10,20,30,40,50,58):
@@ -157,7 +176,11 @@ def prepare_reference_image(image_bytes: bytes, width: int, height: int, motion_
         # H3 encodes RGB and otherwise interprets transparent pixels as black.
         # A deliberate neutral matte is more stable and easier to remove later.
         canvas = Image.new("RGBA", (width, height), (128, 128, 128, 255))
-        canvas.alpha_composite(resized, ((width - resized.width) // 2, (height - resized.height) // 2))
+        left, top = (width - resized.width) // 2, (height - resized.height) // 2
+        if effect_room and not pixel_art:
+            dx, dy = effect_room_offset(resized, left, top, width, height)
+            left, top = left + dx, top + dy
+        canvas.alpha_composite(resized, (left, top))
     else:
         rgb = np.asarray(source.convert("RGB"))
         border = np.concatenate((rgb[:8].reshape(-1, 3), rgb[-8:].reshape(-1, 3), rgb[:, :8].reshape(-1, 3), rgb[:, -8:].reshape(-1, 3)))
@@ -442,6 +465,16 @@ def find_saved_video(history: dict) -> Path:
     return path
 
 
+def sheet_options(payload):
+    """Optional fixed frame rate and grid columns for a sheet meant for a game."""
+    fps, columns = payload.get('sheetFps'), payload.get('sheetColumns')
+    if fps is not None and (type(fps) is not int or not 1 <= fps <= 60):
+        raise ValueError('시트 FPS는 1~60 정수여야 합니다.')
+    if columns is not None and (type(columns) is not int or not 1 <= columns <= 128):
+        raise ValueError('시트 열 수는 1~128 정수여야 합니다.')
+    return fps, columns
+
+
 def background_options(payload):
     enabled=payload.get('removeBackground',False)
     if type(enabled) is not bool:raise ValueError('배경 제거 옵션을 확인하세요.')
@@ -487,7 +520,8 @@ def video_thumbnail(video_path: Path) -> bytes:
 
 def make_sprite_sheet(video_path: Path, output_path: Path, count: int, loop: bool = True,
                       transparent_path: Path | None = None, tolerance: int = 24, background_mode: str = 'flat',
-                      action: str | None = None, game_paths: tuple[Path, Path] | None = None) -> dict:
+                      action: str | None = None, game_paths: tuple[Path, Path] | None = None,
+                      sheet_fps: int | None = None, game_columns: int | None = None) -> dict:
     """Pack a sheet. With `action`, picks frames by motion; with `game_paths`, also writes the game sheet."""
     if background_mode not in ('ai','ai-sparks','ai-smooth','ai-soft','flat','subtle'):raise ValueError('배경 제거 방식을 확인하세요.')
     if transparent_path is not None and background_mode in ('ai','ai-sparks','ai-smooth','ai-soft','subtle') and not image_background.status()['ready']:
@@ -500,10 +534,13 @@ def make_sprite_sheet(video_path: Path, output_path: Path, count: int, loop: boo
         raise RuntimeError("No frames were decoded from the generated video.")
     count = max(2, min(count, len(frames)))
     # Uniform samples of a half-open cycle; do not blindly discard a unique final frame.
-    pick = sprite_finish.pick(frames, count, action, loop) if action else dict(indices=sprite_loop.sample_indices(len(frames), count, loop), end=len(frames), method='even')
+    if sheet_fps:
+        pick = dict(indices=sprite_finish.exact_indices(len(frames), count, loop), end=len(frames), method='exact')
+    else:
+        pick = sprite_finish.pick(frames, count, action, loop) if action else dict(indices=sprite_loop.sample_indices(len(frames), count, loop), end=len(frames), method='even')
     indices = pick['indices']
     count = len(indices)
-    timing = sprite_finish.durations_ms(indices, pick['end'], fps)
+    timing = sprite_finish.uniform_ms(count, sheet_fps) if sheet_fps else sprite_finish.durations_ms(indices, pick['end'], fps)
     selected = [frames[index] for index in indices]
     cell_w = max(image.width for image in selected)
     cell_h = max(image.height for image in selected)
@@ -541,14 +578,14 @@ def make_sprite_sheet(video_path: Path, output_path: Path, count: int, loop: boo
             transparent.paste(cutout,((index % columns)*cell_w+(cell_w-image.width)//2,(index//columns)*cell_h+(cell_h-image.height)//2))
         transparent.save(transparent_path, optimize=True)
         if game_paths:
-            game = write_game_sheet(cutouts, action, loop, timing, game_paths)
+            game = write_game_sheet(cutouts, action, loop, timing, game_paths, game_columns, sheet_fps)
     return dict(indices=[int(i) for i in indices], method=pick['method'], durationMs=timing, game=game)
 
 
-def write_game_sheet(frames, action, loop, timing, paths):
+def write_game_sheet(frames, action, loop, timing, paths, columns=None, sheet_fps=None):
     """The game sheet is an extra; failing to make one must not cost the finished job."""
     try:
-        return sprite_finish.write(frames, action or 'custom', loop, timing, *paths)
+        return sprite_finish.write(frames, action or 'custom', loop, timing, *paths, columns, sheet_fps)
     except Exception:
         for path in paths:
             path.unlink(missing_ok=True)
@@ -678,7 +715,8 @@ def run_job(job_id: str, payload: dict) -> None:
         if width % 32 or height % 32 or width < 256 or height < 256:
             raise ValueError("해상도의 가로·세로는 256 이상이며 32의 배수여야 합니다.")
         motion_padding = payload.get('motionPadding',10)
-        prepared_bytes = prepare_reference_image(image_bytes, width, height, motion_padding, pixel_art=combat['pixelOutput'])
+        prepared_bytes = prepare_reference_image(image_bytes, width, height, motion_padding, pixel_art=combat['pixelOutput'],
+                                                 effect_room=payload.get('animationType', 'idle') in ('attack', 'cast'))
         result_dir = RESULT_ROOT / job_id
         result_dir.mkdir(parents=True, exist_ok=True)
         (result_dir / "reference_prepared.png").write_bytes(prepared_bytes)
@@ -797,6 +835,7 @@ def run_job(job_id: str, payload: dict) -> None:
         pixel_report = None
         sheet_timing=None
         packed=None
+        sheet_settings=sheet_options(payload)
         game_paths=(result_dir/f'{animation_type}_game.png',result_dir/f'{animation_type}_game.json') if transparent_path else None
         effective_count=int(payload.get('frameCount',8))
         if timing_report:
@@ -816,9 +855,11 @@ def run_job(job_id: str, payload: dict) -> None:
                 sheet_mode='subtle' if subtle else background_mode
                 if transparent_path and subtle:update_job(job_id,state='packing',message='캐릭터와 옅은 검기 경계를 함께 정리하는 중')
                 packed=make_sprite_sheet(video_path, sheet_path, effective_count, loop,
-                                  transparent_path, int(payload.get("backgroundTolerance", 24)), sheet_mode, animation_type, game_paths)
+                                  transparent_path, int(payload.get("backgroundTolerance", 24)), sheet_mode, animation_type, game_paths, *sheet_settings)
                 effective_count=len(packed['indices'])
                 if timing_report or packed['method']!='even':sheet_timing=packed['durationMs']
+                if (packed['game'] or {}).get('oversize'):
+                    stabilization_warning=' / '.join(filter(None,[stabilization_warning,'게임용 시트의 한 변이 8192픽셀을 넘습니다. 일부 기기나 WebGL에서 불러오지 못할 수 있습니다.']))
                 if (packed['game'] or {}).get('edgeContactFrames'):
                     stabilization_warning=' / '.join(filter(None,[stabilization_warning,'일부 프레임이 캔버스 가장자리에 닿습니다. 결과를 확인하고 필요하면 동작 여백을 늘려 주세요.']))
         except Exception:

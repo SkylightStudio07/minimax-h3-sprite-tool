@@ -223,7 +223,7 @@ class TeamTests(unittest.TestCase):
         endpoint='jobs/'+jid+'/extract'
         self.assertEqual(self.post(self.guest,endpoint,frameCount=64).status_code,401)
         self.assertEqual(self.post(self.member,endpoint,frameCount=64).status_code,403)
-        self.assertEqual(self.post(self.admin,endpoint,frameCount=65).status_code,400)
+        self.assertEqual(self.post(self.admin,endpoint,frameCount=129).status_code,400)
         self.assertEqual(self.post(self.admin,endpoint,frameCount=64).status_code,409)
         root=self.data/'results';folder=root/jid;folder.mkdir(parents=True)
         (folder/'idle.mp4').touch()

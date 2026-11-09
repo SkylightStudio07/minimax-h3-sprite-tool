@@ -177,6 +177,7 @@ def register(app, *, GALLERY_PRIVATE_KEYS, ROOT, auth, database, db, link_charac
         item=dict(id=row['id'],created=row['created'],updated=row['updated'],animationType=p.get('animationType','idle'),jobType=p.get('jobType','video'),title=p.get('resultTitle'),
             poster=f'/gallery-media/{row["id"]}/poster' if result.get('video') else None,
             exportSheets={k:f'/gallery-media/{row["id"]}/{k}' for k in result.get('exportSheets',{})},
+            exportSheetInfo={k:{'fps':v['fps']} for k,v in result.get('exportSheetInfo',{}).items() if v.get('fps')},
             loop=bool(p.get('loop',True)),loopReport=result.get('loopReport'),
             **{k:f'/gallery-media/{row["id"]}/{k}' if result.get(k) else None for k in ('video','spriteSheet','transparentSheet','loopVideo','loopSheet','loopTransparentSheet','gameSheet','gameAtlas')})
         if approved:
@@ -245,7 +246,7 @@ def register(app, *, GALLERY_PRIVATE_KEYS, ROOT, auth, database, db, link_charac
     @app.get('/gallery-media/<jid>/<kind>')
     def public_result(jid,kind):
         # Only presentation assets are public, never rawVideo or input images.
-        if kind not in ('video','spriteSheet','transparentSheet','poster','loopVideo','loopSheet','loopTransparentSheet','gameSheet','gameAtlas') and not re.fullmatch(r'sheet_[0-9]+_[0-9a-f]{16}(?:_transparent)?',kind):
+        if kind not in ('video','spriteSheet','transparentSheet','poster','loopVideo','loopSheet','loopTransparentSheet','gameSheet','gameAtlas') and not re.fullmatch(r'sheet_[0-9]+_[0-9a-f]{16}(?:_transparent|_game|_atlas)?',kind):
             return jsonify(error='결과를 찾을 수 없습니다.'),404
         with db() as con:
             row=con.execute("SELECT result FROM jobs WHERE id=? AND state='complete'",(jid,)).fetchone()

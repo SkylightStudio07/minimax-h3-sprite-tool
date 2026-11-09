@@ -25,7 +25,7 @@ class SpriteMotionCliTest(unittest.TestCase):
         self.assertEqual((payload['seed'], payload['samplingMode']), (7, 'quality'))
 
     def test_invalid_sizes_are_rejected_before_any_gpu_work(self):
-        for extra in (['--width', '700'], ['--width', '2048', '--height', '2048'], ['--seconds', '9'], ['--frames', '65']):
+        for extra in (['--width', '700'], ['--width', '2048', '--height', '2048'], ['--seconds', '9'], ['--frames', '129']):
             with self.assertRaises(ValueError):
                 cli.build_payload(self.args(*extra), b'x')
 

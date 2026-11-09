@@ -38,13 +38,15 @@ def parse_args(argv=None):
     p.add_argument('--seconds', type=float, default=3, help='3 to 5')
     p.add_argument('--width', type=int, default=768)
     p.add_argument('--height', type=int, default=768)
-    p.add_argument('--frames', type=int, default=8, help='sprite sheet frames, 2 to 64')
+    p.add_argument('--frames', type=int, default=8, help='sprite sheet frames, 2 to 128')
+    p.add_argument('--fps', type=int, help='fixed sheet frame rate, 1 to 60; uses consecutive frames instead of picking by motion')
+    p.add_argument('--columns', type=int, help='game sheet columns; default keeps every side within 8192 pixels')
     p.add_argument('--background', choices=['ai', 'ai-smooth', 'ai-sparks', 'ai-soft', 'flat', 'none'],
                    help='default: ai-soft for attack and cast, which keeps blasts and smoke; ai otherwise')
     p.add_argument('--subject', default='human', choices=['human', *engine.SUBJECT_DEFAULTS])
     p.add_argument('--strength', default='normal', choices=sorted(engine.MOTION_PROMPTS))
     p.add_argument('--facing', default='preserve', choices=sorted(engine.FACING_PROMPTS))
-    p.add_argument('--padding', type=int, default=10, choices=[0, 10, 20, 30, 40, 50, 58], help='margin percent for wide motion')
+    p.add_argument('--padding', type=int, choices=[0, 10, 20, 30, 40, 50, 58], help='margin percent for wide motion; default 30 for attack and cast, otherwise 10')
     p.add_argument('--loop', action=argparse.BooleanOptionalAction, default=None, help='default depends on the action')
     p.add_argument('--seed', type=int, default=None)
     p.add_argument('--wait', type=int, default=3600, help='seconds to wait for other GPU work')
@@ -55,8 +57,8 @@ def parse_args(argv=None):
 def build_payload(args, image_bytes):
     if args.width % 32 or args.height % 32 or min(args.width, args.height) < 256 or args.width * args.height > 1_100_000:
         raise ValueError('width and height must be multiples of 32, at least 256, and at most 1.1 megapixels in total')
-    if not 3 <= args.seconds <= 5 or not 2 <= args.frames <= 64:
-        raise ValueError('seconds must be 3 to 5 and frames 2 to 64')
+    if not 3 <= args.seconds <= 5 or not 2 <= args.frames <= 128:
+        raise ValueError('seconds must be 3 to 5 and frames 2 to 128')
     if len(args.prompt) > 4000:
         raise ValueError('prompt must be 4000 characters or fewer')
     background = args.background or ('ai-soft' if args.action in ('attack', 'cast') else 'ai')
@@ -65,9 +67,13 @@ def build_payload(args, image_bytes):
         workflowId='standard', samplingMode=args.mode or engine.default_sampling_mode(), animationType=args.action,
         prompt=args.prompt, duration=args.seconds, width=args.width, height=args.height, frameCount=args.frames,
         removeBackground=background != 'none', backgroundRemoval='flat' if background == 'none' else background,
-        subjectType=args.subject, motionStrength=args.strength, facing=args.facing, motionPadding=args.padding,
+        subjectType=args.subject, motionStrength=args.strength, facing=args.facing, motionPadding=args.padding if args.padding is not None else (30 if args.action in ('attack', 'cast') else 10),
         blinkMode='none', stabilize=True, optimizeLoop=True,
     )
+    if args.fps is not None:
+        payload['sheetFps'] = args.fps
+    if args.columns is not None:
+        payload['sheetColumns'] = args.columns
     if args.loop is not None:
         payload['loop'] = args.loop
     if args.seed is not None:

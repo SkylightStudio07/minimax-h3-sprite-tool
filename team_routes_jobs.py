@@ -150,8 +150,9 @@ def register(app, *, GALLERY_PRIVATE_KEYS, TERMINAL, auth, build_rig_v2_response
         count=extraction.get('frameCount')
         method=engine.background_options(extraction)
         transparent_requested=extraction.get('removeBackground',False)
-        if type(count) is not int or not 2<=count<=64:
-            raise ValueError('프레임 수는 2~64 정수여야 합니다.')
+        if type(count) is not int or not 2<=count<=128:
+            raise ValueError('프레임 수는 2~128 정수여야 합니다.')
+        sheet_fps,sheet_columns=engine.sheet_options(extraction)
         with db() as con:
             row=con.execute('SELECT * FROM jobs WHERE id=?',(jid,)).fetchone()
         if not row:
@@ -179,10 +180,12 @@ def register(app, *, GALLERY_PRIVATE_KEYS, TERMINAL, auth, build_rig_v2_response
             output=folder/(key+'.png')
             p=json.loads(row['payload'])
             transparent=folder/(key+'_transparent.png') if transparent_requested else None
-            created=[output]+([transparent] if transparent else [])
+            game=(folder/(key+'_game.png'),folder/(key+'_game.json')) if transparent and sheet_fps else None
+            created=[output]+([transparent] if transparent else [])+list(game or ())
+            packed=None
             if transparent:
                 sheet_mode='subtle' if p.get('combatEffect')=='subtle' and not p.get('pixelOutput') else method
-                engine.make_sprite_sheet(video,output,count,bool(p.get('loop',True)),transparent,24,sheet_mode)
+                packed=engine.make_sprite_sheet(video,output,count,bool(p.get('loop',True)),transparent,24,sheet_mode,*((p.get('animationType','idle'),game,sheet_fps,sheet_columns) if game else ()))
             else:
                 engine.make_sprite_sheet(video,output,count,bool(p.get('loop',True)))
             path=f'/outputs/results/{jid}/{output.name}'
@@ -196,9 +199,14 @@ def register(app, *, GALLERY_PRIVATE_KEYS, TERMINAL, auth, build_rig_v2_response
                 if transparent:
                     updated['exportSheets'][key+'_transparent']=f'/outputs/results/{jid}/{transparent.name}'
                     updated.setdefault('exportSheetInfo',{})[key+'_transparent']=dict(backgroundRemoval=method,frameCount=count)
+                made=(packed or {}).get('game')
+                if made:
+                    updated['exportSheets'][key+'_game']=f'/outputs/results/{jid}/{game[0].name}'
+                    updated['exportSheets'][key+'_atlas']=f'/outputs/results/{jid}/{game[1].name}'
+                    updated['exportSheetInfo'][key+'_game']=dict(frameCount=made['frameCount'],columns=made['columns'],rows=made['rows'],fps=sheet_fps,oversize=made['oversize'],edgeContactFrames=made['edgeContactFrames'])
                 con.execute('UPDATE jobs SET result=? WHERE id=?',(json.dumps(updated),jid))
             created=[]
-            return jsonify(ok=True,spriteSheet=path,transparentSheet=f'/outputs/results/{jid}/{transparent.name}' if transparent else None,backgroundRemoval=method if transparent else None)
+            return jsonify(ok=True,spriteSheet=path,transparentSheet=f'/outputs/results/{jid}/{transparent.name}' if transparent else None,backgroundRemoval=method if transparent else None,game=(packed or {}).get('game'))
         except Exception:
             app.logger.exception('Sprite sheet extraction failed')
             return jsonify(error='시트 추출에 실패했습니다. 서버 로그를 확인하세요.'),500
