@@ -45,6 +45,18 @@ class Picking(unittest.TestCase):
         self.assertEqual(picked['indices'], sorted(set(picked['indices'])))
         self.assertNotIn(27, [i * len(arms) // 6 for i in range(6)], 'Even spacing would have missed this peak')
 
+    def test_a_slow_windup_is_not_starved_by_a_huge_blast(self):
+        arms = [0] * 4 + list(range(2, 26, 2)) + [24] * 8
+        frames = [figure(arm=a) for a in arms]
+        blast = np.asarray(figure(arm=24)).copy()
+        for i in range(10):
+            lit = blast.copy()
+            lit[(i * 3) % 40:60 + (i * 7) % 40, :70] = (255, 200 - i * 12, i * 20)
+            frames.append(Image.fromarray(lit))
+        frames += [figure(arm=24)] * 10
+        picked = sprite_finish.pick(frames, 12, 'attack', False)['indices']
+        self.assertGreaterEqual(sum(1 for i in picked if 4 < i < 16), 2, picked)
+
     def test_durations_keep_the_real_length(self):
         self.assertEqual(sum(sprite_finish.durations_ms([0, 10, 40], 48, 24)), 2000)
         self.assertEqual(sprite_finish.durations_ms([0, 10, 40], 48, 24)[1], 1250)

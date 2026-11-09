@@ -44,7 +44,7 @@ def options(p):
         raise ValueError('직접 만들 이펙트의 색·모양·등장 시점을 적어 주세요.')
     if any(type(p.get(k, default)) is not bool for k, default in [('pixelOutput', False), ('pixelColorLock', True)]):
         raise ValueError('도트 출력과 색상 안정화는 체크박스로 선택하세요.')
-    if (kind != 'none' or p.get('pixelOutput')) and p.get('removeBackground') and p.get('backgroundRemoval', 'flat') in ('ai','ai-sparks','ai-smooth'):
+    if (kind != 'none' or p.get('pixelOutput')) and p.get('removeBackground') and p.get('backgroundRemoval', 'flat') in ('ai','ai-sparks','ai-smooth','ai-soft'):
         raise ValueError('공격 이펙트를 보존하려면 배경 제거를 ‘단색 배경’으로 바꿔 주세요. 단순한 배경의 입력 이미지를 권장합니다.')
     return dict(combatEffect=kind, effectStrength=strength, effectDescription=detail.strip(),
                 pixelOutput=p.get('pixelOutput', False), pixelColorLock=p.get('pixelColorLock', True))

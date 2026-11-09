@@ -39,7 +39,8 @@ def parse_args(argv=None):
     p.add_argument('--width', type=int, default=768)
     p.add_argument('--height', type=int, default=768)
     p.add_argument('--frames', type=int, default=8, help='sprite sheet frames, 2 to 64')
-    p.add_argument('--background', default='ai', choices=['ai', 'ai-smooth', 'ai-sparks', 'flat', 'none'])
+    p.add_argument('--background', choices=['ai', 'ai-smooth', 'ai-sparks', 'ai-soft', 'flat', 'none'],
+                   help='default: ai-soft for attack and cast, which keeps blasts and smoke; ai otherwise')
     p.add_argument('--subject', default='human', choices=['human', *engine.SUBJECT_DEFAULTS])
     p.add_argument('--strength', default='normal', choices=sorted(engine.MOTION_PROMPTS))
     p.add_argument('--facing', default='preserve', choices=sorted(engine.FACING_PROMPTS))
@@ -58,11 +59,12 @@ def build_payload(args, image_bytes):
         raise ValueError('seconds must be 3 to 5 and frames 2 to 64')
     if len(args.prompt) > 4000:
         raise ValueError('prompt must be 4000 characters or fewer')
+    background = args.background or ('ai-soft' if args.action in ('attack', 'cast') else 'ai')
     payload = dict(
         imageData=base64.b64encode(image_bytes).decode('ascii'), filename='reference.png', jobType='video',
         workflowId='standard', samplingMode=args.mode or engine.default_sampling_mode(), animationType=args.action,
         prompt=args.prompt, duration=args.seconds, width=args.width, height=args.height, frameCount=args.frames,
-        removeBackground=args.background != 'none', backgroundRemoval='flat' if args.background == 'none' else args.background,
+        removeBackground=background != 'none', backgroundRemoval='flat' if background == 'none' else background,
         subjectType=args.subject, motionStrength=args.strength, facing=args.facing, motionPadding=args.padding,
         blinkMode='none', stabilize=True, optimizeLoop=True,
     )

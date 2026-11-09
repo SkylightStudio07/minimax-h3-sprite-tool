@@ -38,6 +38,11 @@ def key_indices(frames, count):
         return list(range(n))
     distance = pose_distances(pose_features(frames))
     picked = list(dict.fromkeys([0, n - 1, int(np.argmax(distance[0])), int(np.argmax(np.diag(distance, 1))) + 1]))[:max(count, 2)]
+    # Reserve about half the frames evenly in time, or one big blast takes them all from a slow windup.
+    for share in range(1, count // 2 + 1):
+        even = round((n - 1) * share / (count // 2 + 1))
+        if even not in picked and len(picked) < count:
+            picked.append(even)
     cost = distance + TIME_WEIGHT * np.abs(np.arange(n)[:, None] - np.arange(n)[None]) / max(n - 1, 1)
     while len(picked) < count:
         picked.append(int(np.argmax(cost[:, picked].min(axis=1))))

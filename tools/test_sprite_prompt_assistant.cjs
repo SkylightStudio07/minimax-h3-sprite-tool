@@ -31,7 +31,7 @@ const drafted='Preserve the exact black mask and green visor, dark suit, existin
   assert.equal(await page.locator('#prompt').inputValue(),original,'Analysis must preserve manual prompt');
   assert.equal(analyses.length,1);await page.locator('#spriteUseSuggested').click();
   assert.equal(await page.locator('#facing').inputValue(),'left');
-  await page.locator('[data-action=attack]').click();await page.locator('#duration').selectOption('3');
+  await page.locator('[data-action=attack]').click();assert.equal(await page.locator('#backgroundRemoval').inputValue(),'ai-soft','Attacks keep blasts by default');await page.locator('#duration').selectOption('3');
   await page.locator('#spriteMotionNotes').fill('가방은 고정하고 권총으로 두 발 쏘기');
   await page.locator('#spritePlan').click();await page.locator('#spriteDraft').waitFor({state:'visible'});
   assert.equal(plans[0].animationType,'attack');assert.equal(plans[0].loop,false);assert.equal(plans[0].duration,3);assert.equal(jobs.length,0);

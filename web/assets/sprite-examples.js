@@ -84,7 +84,7 @@
   if(assetType!=='side'||!selected||category(selected)!==filter)return;
   try{
    const p={...selected.recipe};
-   if(p.removeBackground&&(['ai','ai-sparks','ai-smooth'].includes(p.backgroundRemoval)||p.combatEffect==='subtle')&&el('backgroundRemoval').querySelector('[value="ai"]').dataset.ready==='false')throw Error('AI 배경 제거가 아직 준비되지 않았어요. 준비 후 이 설정을 적용해 주세요.');
+   if(p.removeBackground&&(['ai','ai-sparks','ai-smooth','ai-soft'].includes(p.backgroundRemoval)||p.combatEffect==='subtle')&&el('backgroundRemoval').querySelector('[value="ai"]').dataset.ready==='false')throw Error('AI 배경 제거가 아직 준비되지 않았어요. 준비 후 이 설정을 적용해 주세요.');
    if(p.workflowId==='fasth3-sprite'&&!workflowStates.some(x=>x.id===p.workflowId&&x.ready))throw Error('이 일러스트 동작의 생성 설정이 아직 준비되지 않았어요. 잠시 후 다시 시도하거나 도트 예시를 선택해 주세요.');
    if(!p.prompt)p.prompt=presets[p.animationType]+(p.pixelOutput?'. Preserve the reference pixel art, head and body proportions, face, costume, one rigid existing weapon and square pixel clusters. No new scenery or camera movement.':'');
    p.assetSpec={type:'side',facing:['front','right','left','back'].includes(p.facing)?p.facing:p.animationType==='idle'?'front-right':'right',directionCount:1};

@@ -60,6 +60,31 @@ class CharacterTests(unittest.TestCase):
             result=json.loads(con.execute("SELECT result FROM jobs WHERE id='sprite'").fetchone()[0])
             self.assertEqual(result['frameWorkspace']['revision'],2)
 
+    def test_select_keeps_chosen_frames_and_their_time(self):
+        self.approve();folder=self.fixture()
+        with patch.object(server.engine,'RESULT_ROOT',folder.parent):
+            wid=self.post(self.admin,'jobs/sprite/frames',source='spriteSheet').json['id']
+        with self.connect() as con:
+            row=json.loads(con.execute('SELECT document FROM frame_workspaces WHERE id=?',(wid,)).fetchone()[0])
+            source=row['frames'][0]
+            row['frames']=[dict(source,durationMs=d) for d in (100,200,300,400)]
+            row['columns'],row['rows']=4,1
+            row['clips']=[dict(name='a',start=0,end=1),dict(name='b',start=2,end=3)]
+            con.execute('UPDATE frame_workspaces SET document=? WHERE id=?',(json.dumps(row),wid));con.commit()
+        endpoint='frames/'+wid+'/select'
+        self.assertEqual(self.post(self.member,endpoint,revision=0,keep=[0]).status_code,403)
+        for keep in ([],[9],[-1],[1,0],[1,1],[True],'0',[0.5]):
+            self.assertEqual(self.post(self.admin,endpoint,revision=0,keep=keep).status_code,400,keep)
+        self.assertEqual(self.post(self.admin,endpoint,revision=99,keep=[0]).status_code,400)
+        self.assertEqual(self.post(self.admin,endpoint,revision=0,keep=[0,1,2,3]).json['revision'],0)
+        self.assertEqual(self.post(self.admin,endpoint,revision=0,keep=[1,3]).json['revision'],1)
+        doc=self.admin.get('/api/frames/'+wid).json
+        self.assertEqual([f['durationMs'] for f in doc['frames']],[500,400])
+        self.assertEqual((doc['columns'],doc['rows']),(2,1))
+        self.assertEqual([(c['name'],c['start'],c['end']) for c in doc['clips']],[('a',0,0),('b',1,1)])
+        self.assertEqual(self.post(self.admin,'frames/'+wid+'/restore',revision=1,target=0).status_code,200)
+        self.assertNotIn('durationMs',self.admin.get('/api/frames/'+wid).json['frames'][0],'Restore brings back the saved version')
+
     def fixture(self):
         uid=self.admin.get('/api/me').json['user']['id'];folder=self.data/'results'/'sprite';folder.mkdir(parents=True)
         sheet=Image.new('RGBA',(64,32));ImageDraw.Draw(sheet).rectangle((4,4,24,26),fill=(100,40,80,255));ImageDraw.Draw(sheet).rectangle((35,7,58,29),fill=(40,100,80,255));sheet.save(folder/'sheet.png')

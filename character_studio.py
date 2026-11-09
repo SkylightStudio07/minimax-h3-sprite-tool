@@ -190,8 +190,8 @@ def register(app,db,auth,data,payload):
         p=json.loads(row['payload']);r=json.loads(row['result'] or '{}');jid=row['id'];out=[]
         kind=p.get('jobType','video')
         if kind=='video':
-            for key,label in [('transparentSheet','투명 배경 시트'),('spriteSheet','원본 시트'),('loopTransparentSheet','루프 보정 · 투명'),('loopSheet','루프 보정 시트')]:
-                if r.get(key):out.append(dict(key=key,label=label,url=r[key],count=r.get('frameCount',p.get('frameCount',8)) if key in ('spriteSheet','transparentSheet') else p.get('frameCount',8)))
+            for key,label in [('gameSheet','게임용 시트'),('transparentSheet','투명 배경 시트'),('spriteSheet','원본 시트'),('loopTransparentSheet','루프 보정 · 투명'),('loopSheet','루프 보정 시트')]:
+                if r.get(key):out.append(dict(key=key,label=label,url=r[key],count=r.get('frameCount',p.get('frameCount',8)) if key in ('gameSheet','spriteSheet','transparentSheet') else p.get('frameCount',8)))
             for key,url in r.get('exportSheets',{}).items():
                 info=r.get('exportSheetInfo',{}).get(key,{})
                 match=re.match(r'sheet_(\d+)_',key)
@@ -223,8 +223,8 @@ def register(app,db,auth,data,payload):
         if not fps.isdecimal() or not 1<=int(fps)<=60:raise ValueError('GIF 재생 FPS는 1~60입니다.')
         with Image.open(source) as sheet:images=sprite_gif.split_sheet(sheet,cols,rows,count)
         report=json.loads(row['result']).get('pixelExport') or {}
-        timing=report.get('durationMs') if choice['key'] in ('spriteSheet','transparentSheet') and 'fps' not in request.args else None
-        if not timing and choice['key'] in ('spriteSheet','transparentSheet') and 'fps' not in request.args:
+        timing=report.get('durationMs') if choice['key'] in ('gameSheet','spriteSheet','transparentSheet') and 'fps' not in request.args else None
+        if not timing and choice['key'] in ('gameSheet','spriteSheet','transparentSheet') and 'fps' not in request.args:
             timing=json.loads(row['result']).get('sheetTimingMs')
         if not isinstance(timing,list) or len(timing)!=count:timing=[1000/int(fps)]*count
         content,_=sprite_gif.encode(images,timing)
@@ -258,7 +258,7 @@ def register(app,db,auth,data,payload):
         folder.mkdir()
         doc=dict(revision=0,source=choice['key'],width=cw,height=ch,columns=cols,rows=rows,fps=8,frames=[],originalSheetSize=list(sheet.size),gridNormalized=bool(sheet.width%cols or sheet.height%rows))
         saved_timing=json.loads(row['result'] or '{}').get('sheetTimingMs')
-        if choice['key'] not in ('spriteSheet','transparentSheet') or count!=choice['count'] or not isinstance(saved_timing,list) or len(saved_timing)!=count:
+        if choice['key'] not in ('gameSheet','spriteSheet','transparentSheet') or count!=choice['count'] or not isinstance(saved_timing,list) or len(saved_timing)!=count:
             saved_timing=None
         if saved_timing:
             doc['fps']=max(1,min(60,round(1000*count/sum(saved_timing))))
@@ -396,6 +396,40 @@ def register(app,db,auth,data,payload):
                 if start<=anchor<=end:motion['appearanceAnchorFrame']=anchor-start
                 else:motion.pop('appearanceAnchorFrame',None)
             doc['trim']=dict(sourceRevision=doc['revision'],start=start,end=end)
+            save_document(con,row,doc)
+        return jsonify(ok=True,revision=doc['revision'])
+
+    @app.post('/api/frames/<wid>/select')
+    @auth()
+    def frame_select(wid):
+        p=payload()
+        with db() as con:
+            con.execute('BEGIN IMMEDIATE');row=workspace(wid,True,con);doc=json.loads(row['document']);check_revision(doc,p)
+            count=len(doc['frames']);keep=p.get('keep')
+            if not isinstance(keep,list) or not keep or any(type(i) is not int or not 0<=i<count for i in keep) or keep!=sorted(set(keep)):
+                raise ValueError('남길 프레임을 확인하세요.')
+            if len(keep)==count:return jsonify(ok=True,revision=doc['revision'])
+            # A removed frame's time goes to the frame before it, so the action keeps its length.
+            spans=[(i,keep[n+1] if n+1<len(keep) else count) for n,i in enumerate(keep)]
+            merge=lambda times:[sum(times[a:b]) for a,b in spans]
+            if all(isinstance(f.get('durationMs'),(int,float)) for f in doc['frames']):
+                for frame,total in zip([doc['frames'][i] for i in keep],merge([f['durationMs'] for f in doc['frames']])):frame['durationMs']=total
+            if isinstance(doc.get('durationMs'),list) and len(doc['durationMs'])==count:doc['durationMs']=merge(doc['durationMs'])
+            moved={old:new for new,old in enumerate(keep)}
+            doc['frames']=[doc['frames'][i] for i in keep]
+            doc['columns']=min(doc['columns'],len(keep));doc['rows']=math.ceil(len(keep)/doc['columns'])
+            clips=[]
+            for clip in doc.get('clips',[]):
+                inside=[moved[i] for i in keep if clip['start']<=i<=clip['end']]
+                if inside:clips.append(dict(clip,start=inside[0],end=inside[-1]))
+            if 'clips' in doc:doc['clips']=clips
+            motion=doc.get('motion',{})
+            if len(motion.get('poses',[]))==count:motion['poses']=[motion['poses'][i] for i in keep]
+            anchor=motion.get('appearanceAnchorFrame')
+            if anchor is not None:
+                if anchor in moved:motion['appearanceAnchorFrame']=moved[anchor]
+                else:motion.pop('appearanceAnchorFrame',None)
+            doc['selection']=dict(sourceRevision=doc['revision'],keep=keep)
             save_document(con,row,doc)
         return jsonify(ok=True,revision=doc['revision'])
 

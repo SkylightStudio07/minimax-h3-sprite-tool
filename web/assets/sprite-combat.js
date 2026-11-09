@@ -22,7 +22,7 @@
    // Leaving a pixel/effect preset must release its temporary AI lock.
    // Engine availability is recorded by check(), separately from this lock.
    for(const option of el('backgroundRemoval').querySelectorAll('[value^="ai"]'))option.disabled=option.dataset?.ready==='false';
-   el('spriteBackgroundNote').textContent=el('backgroundRemoval').value==='ai-sparks'?'AI로 캐릭터를 남기고 단색 배경 위 작은 금빛 불꽃도 함께 보존합니다. 복잡한 배경이나 다른 색 효과는 결과를 확인하세요.':el('backgroundRemoval').value==='ai'?'AI가 프레임별 배경을 제거합니다. 원본 영상과 시트는 함께 보존합니다. 머리카락·반투명 소품은 결과를 확인하세요.':'가장자리에서 이어지는 단색 배경을 제거합니다. 원본 영상과 시트는 함께 보존합니다.';
+   el('spriteBackgroundNote').textContent=el('backgroundRemoval').value==='ai-soft'?'AI로 캐릭터를 남기고, 단색 배경 위의 폭발과 연기는 가장자리가 부드럽게 남습니다. 배경이 단색이 아니면 일반 AI 제거로 처리됩니다.':el('backgroundRemoval').value==='ai-sparks'?'AI로 캐릭터를 남기고 단색 배경 위 작은 금빛 불꽃도 함께 보존합니다. 복잡한 배경이나 다른 색 효과는 결과를 확인하세요.':el('backgroundRemoval').value==='ai'?'AI가 프레임별 배경을 제거합니다. 원본 영상과 시트는 함께 보존합니다. 머리카락·반투명 소품은 결과를 확인하세요.':'가장자리에서 이어지는 단색 배경을 제거합니다. 원본 영상과 시트는 함께 보존합니다.';
   }
   if(pixel){const [w,h]=calculatedSize();el('pixelExportSize').textContent=`시트 한 칸 ${w/4}×${h/4}px · PNG와 인계용 GIF로 받기`}
  };

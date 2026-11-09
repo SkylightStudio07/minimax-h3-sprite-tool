@@ -121,3 +121,53 @@ def remove_sprite_with_sparks(image):
     rgba[warm,:3]=np.rint(recovered[warm]).astype('uint8')
     rgba[warm,3]=np.maximum(rgba[warm,3],np.rint(alpha[warm]*255).astype('uint8'))
     return Image.fromarray(rgba)
+
+
+def sprite_floor(image):
+    """Row where the legs begin to meet the floor. Use a frame without a blast, whose light can confuse the cutout."""
+    rows=np.nonzero((np.asarray(remove_sprite(image).getchannel('A'))>=128).any(axis=1))[0]
+    return int(rows[0]+(rows[-1]-rows[0])*.75) if len(rows) else None
+
+
+def remove_sprite_soft(image,floor=None):
+    """Keep generated blasts and smoke with soft edges by unmixing them from a verified flat backdrop.
+
+    The body still comes from the semantic cutout. A textured backdrop cannot be
+    unmixed, so it falls back to the plain cutout.
+    """
+    import cv2
+    result=remove_sprite(image)
+    rgb=np.asarray(image.convert('RGB'),dtype=np.float32)
+    border=np.concatenate((rgb[:4].reshape(-1,3),rgb[-4:].reshape(-1,3),rgb[:,:4].reshape(-1,3),rgb[:,-4:].reshape(-1,3)))
+    bg=np.median(border,axis=0)
+    # A blast may reach the canvas edge, so only most of the border has to match.
+    if np.mean(np.max(np.abs(border-bg),axis=1)<=16)<.75:
+        return result
+    body=np.asarray(result.getchannel('A'),dtype=np.float32)/255
+    delta=rgb-bg
+    distance=np.max(np.abs(delta),axis=2)
+    # Small openings such as cable loops show pure backdrop. Larger areas may be gray clothing.
+    solid=body>=.5
+    count,labels,stats,_=cv2.connectedComponentsWithStats((solid&(distance<=10)).astype(np.uint8),connectivity=8)
+    limit=max(12,int(solid.sum()*.01))
+    for i in range(1,count):
+        if 12<=stats[i,cv2.CC_STAT_AREA]<=limit:
+            body[labels==i]=0
+    strength=np.clip((np.max(np.abs(delta)/np.maximum(np.where(delta>=0,255-bg,bg),1),axis=2)-.05)/.95,0,1)
+    outside=(body<.5)&(strength>.05)
+    count,labels,stats,_=cv2.connectedComponentsWithStats(outside.astype(np.uint8),connectivity=8)
+    peaks=np.zeros(count,dtype=np.float32)
+    np.maximum.at(peaks,labels[outside],strength[outside])
+    # Faint haze and compression noise have no strong core; a blast's glow is attached to one.
+    keep=(peaks>=.25)&(stats[:,cv2.CC_STAT_AREA]>=40)
+    keep[0]=False
+    effect=np.where(keep[labels],strength,0)
+    # Light thrown on the floor would stay behind as a stain, so only strong effects survive around the feet.
+    if floor is None:
+        rows=np.nonzero(solid.any(axis=1))[0]
+        floor=int(rows[0]+(rows[-1]-rows[0])*.75) if len(rows) else effect.shape[0]
+    effect[floor:][strength[floor:]<.6]=0
+    alpha=np.maximum(body,effect)
+    unmixed=np.clip((rgb-bg*(1-effect[:,:,None]))/np.maximum(effect[:,:,None],.01),0,255)
+    color=np.where((effect>body)[:,:,None],unmixed,rgb)
+    return Image.fromarray(np.dstack((color,alpha*255)).round().astype('uint8'),'RGBA')
