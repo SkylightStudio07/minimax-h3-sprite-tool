@@ -56,6 +56,11 @@ class SoftMatte(unittest.TestCase):
         rgb[100:106, 90:96] = GRAY
         self.assertEqual(cut(rgb, body_mask())[103, 93, 3], 0)
 
+    def test_shaded_armor_near_the_backdrop_color_is_not_opened(self):
+        rgb = scene()
+        rgb[100:106, 90:96] = (136, 136, 136)
+        self.assertEqual(cut(rgb, body_mask())[103, 93, 3], 255)
+
     def test_large_gray_panel_stays_as_clothing(self):
         rgb = scene()
         rgb[80:140, 80:120] = GRAY

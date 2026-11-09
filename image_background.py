@@ -146,12 +146,13 @@ def remove_sprite_soft(image,floor=None):
     body=np.asarray(result.getchannel('A'),dtype=np.float32)/255
     delta=rgb-bg
     distance=np.max(np.abs(delta),axis=2)
-    # Small openings such as cable loops show pure backdrop. Larger areas may be gray clothing.
+    # Small openings such as cable loops show pure backdrop. Larger areas may be gray clothing,
+    # and shaded armor can pass close to the backdrop color, so a real opening has to match it almost exactly.
     solid=body>=.5
     count,labels,stats,_=cv2.connectedComponentsWithStats((solid&(distance<=10)).astype(np.uint8),connectivity=8)
     limit=max(12,int(solid.sum()*.01))
     for i in range(1,count):
-        if 12<=stats[i,cv2.CC_STAT_AREA]<=limit:
+        if 12<=stats[i,cv2.CC_STAT_AREA]<=limit and np.median(distance[labels==i])<=4:
             body[labels==i]=0
     strength=np.clip((np.max(np.abs(delta)/np.maximum(np.where(delta>=0,255-bg,bg),1),axis=2)-.05)/.95,0,1)
     outside=(body<.5)&(strength>.05)
