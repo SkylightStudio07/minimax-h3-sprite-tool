@@ -159,7 +159,8 @@ def publish(job, job_id, output, payload, seconds):
     source = engine.RESULT_ROOT / job_id
     action = job['animationType']
     files = {'video': f'{action}.mp4', 'rawVideo': f'{action}_raw.mp4', 'spriteSheet': f'{action}_sprite_sheet.png',
-             'transparentSheet': f'{action}_transparent.png', 'promptRecord': 'generation_prompt.json'}
+             'transparentSheet': f'{action}_transparent.png', 'gameSheet': f'{action}_game.png', 'gameAtlas': f'{action}_game.json',
+             'promptRecord': 'generation_prompt.json'}
     copied = {}
     for key, name in files.items():
         if (source / name).is_file():
@@ -173,7 +174,7 @@ def publish(job, job_id, output, payload, seconds):
     result = dict(status='complete', files=copied, frameCount=count, columns=columns, rows=rows,
                   cellWidth=width // columns, cellHeight=height // rows, loop=job['loop'], seed=job['seed'],
                   mode=payload['samplingMode'], action=action, backgroundRemoval=job.get('backgroundRemoval'),
-                  warning=job.get('warning'), sheetTimingMs=job.get('sheetTimingMs'), elapsedSeconds=round(seconds, 1))
+                  warning=job.get('warning'), sheetTimingMs=job.get('sheetTimingMs'), sheetSelection=job.get('sheetSelection'), elapsedSeconds=round(seconds, 1))
     save_json(output / 'result.json', result)
     return result
 

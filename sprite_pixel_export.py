@@ -4,6 +4,7 @@ import av
 import cv2
 import numpy as np
 from PIL import Image
+import sprite_finish
 import sprite_loop
 from tools.sprite_matte import clean_flat_matte
 
@@ -96,7 +97,7 @@ def video_palette(video_path, reference):
     return np.array(palette, np.float32)
 
 
-def export(video_path, reference_bytes, sheet_path, transparent_path, count, loop, color_lock=True):
+def export(video_path, reference_bytes, sheet_path, transparent_path, count, loop, color_lock=True, action=None, game_paths=None):
     """Same 4x palette vote, matte cleanup and flow gating as the accepted tests."""
     reference = Image.open(io.BytesIO(reference_bytes)).convert('RGBA')
     palette = video_palette(video_path, reference)
@@ -120,7 +121,9 @@ def export(video_path, reference_bytes, sheet_path, transparent_path, count, loo
         frames, _ = temporal_cleanup(colors, coverages, grays, palette)
     else:
         frames = [np.dstack((rgb, (alpha>=.5).astype(np.uint8)*255)).astype(np.uint8) for rgb, alpha in zip(colors, coverages)]
-    indices = sprite_loop.sample_indices(len(frames), min(count, len(frames)), loop)
+    images = [Image.fromarray(a) for a in frames]
+    pick = sprite_finish.pick(images, count, action, loop) if action else dict(indices=sprite_loop.sample_indices(len(frames), min(count, len(frames)), loop), end=len(frames), method='even')
+    indices = pick['indices']
     h, w = frames[0].shape[:2]
     columns = min(len(indices), 8)
     size = (columns*w, ((len(indices)+columns-1)//columns)*h)
@@ -142,9 +145,15 @@ def export(video_path, reference_bytes, sheet_path, transparent_path, count, loo
     opaque.save(sheet_path)
     if transparent_path:
         transparent.save(transparent_path)
-    boundaries = [round(i*1000/fps) for i in indices]+[round(len(frames)*1000/fps)]
-    duration_ms = [b-a for a,b in zip(boundaries, boundaries[1:])]
-    return dict(version='pixel-video-v1', width=w, height=h, colors=len(palette), durationMs=duration_ms,
+    duration_ms = sprite_finish.durations_ms(indices, pick['end'], fps)
+    game = None
+    if game_paths and transparent_path:
+        try:
+            game = sprite_finish.write([images[i] for i in indices], action, loop, duration_ms, *game_paths)
+        except Exception:
+            for path in game_paths:
+                path.unlink(missing_ok=True)
+    return dict(version='pixel-video-v1', width=w, height=h, colors=len(palette), durationMs=duration_ms, method=pick['method'], game=game,
                 frameCount=len(indices), sourceIndices=[int(i) for i in indices],
                 edgeContactFrames=edges, pixelColorLock=color_lock,
                 separateEffectLayers=False, palette=palette.astype(np.uint8).tolist())

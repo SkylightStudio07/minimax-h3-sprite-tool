@@ -178,7 +178,7 @@ def register(app, *, GALLERY_PRIVATE_KEYS, ROOT, auth, database, db, link_charac
             poster=f'/gallery-media/{row["id"]}/poster' if result.get('video') else None,
             exportSheets={k:f'/gallery-media/{row["id"]}/{k}' for k in result.get('exportSheets',{})},
             loop=bool(p.get('loop',True)),loopReport=result.get('loopReport'),
-            **{k:f'/gallery-media/{row["id"]}/{k}' if result.get(k) else None for k in ('video','spriteSheet','transparentSheet','loopVideo','loopSheet','loopTransparentSheet')})
+            **{k:f'/gallery-media/{row["id"]}/{k}' if result.get(k) else None for k in ('video','spriteSheet','transparentSheet','loopVideo','loopSheet','loopTransparentSheet','gameSheet','gameAtlas')})
         if approved:
             item['frameWorkspace']=result.get('frameWorkspace')
             item.update(owner=row['name'],userId=row['user_id'],rawVideo=result.get('rawVideo'))
@@ -245,7 +245,7 @@ def register(app, *, GALLERY_PRIVATE_KEYS, ROOT, auth, database, db, link_charac
     @app.get('/gallery-media/<jid>/<kind>')
     def public_result(jid,kind):
         # Only presentation assets are public, never rawVideo or input images.
-        if kind not in ('video','spriteSheet','transparentSheet','poster','loopVideo','loopSheet','loopTransparentSheet') and not re.fullmatch(r'sheet_[0-9]+_[0-9a-f]{16}(?:_transparent)?',kind):
+        if kind not in ('video','spriteSheet','transparentSheet','poster','loopVideo','loopSheet','loopTransparentSheet','gameSheet','gameAtlas') and not re.fullmatch(r'sheet_[0-9]+_[0-9a-f]{16}(?:_transparent)?',kind):
             return jsonify(error='결과를 찾을 수 없습니다.'),404
         with db() as con:
             row=con.execute("SELECT result FROM jobs WHERE id=? AND state='complete'",(jid,)).fetchone()
@@ -511,7 +511,7 @@ def register(app, *, GALLERY_PRIVATE_KEYS, ROOT, auth, database, db, link_charac
             row=con.execute("SELECT result FROM jobs WHERE id=? AND state='complete'",(jid,)).fetchone()
         allowed=json.loads(row['result']) if row else {}
         relative=f'/outputs/results/{jid}/{filename}'
-        if relative not in [allowed.get(k) for k in ('video','rawVideo','spriteSheet','transparentSheet','loopVideo','loopSheet','loopTransparentSheet')]+list(allowed.get('exportSheets',{}).values()):
+        if relative not in [allowed.get(k) for k in ('video','rawVideo','spriteSheet','transparentSheet','loopVideo','loopSheet','loopTransparentSheet','gameSheet','gameAtlas')]+list(allowed.get('exportSheets',{}).values()):
             return jsonify(error='결과를 찾을 수 없습니다.'),404
         target=(engine.RESULT_ROOT/jid/filename).resolve()
         if not target.is_relative_to(engine.RESULT_ROOT.resolve()) or not target.is_file():

@@ -253,6 +253,7 @@ function resultCard(j,{guest=false}={}){
       {label:'자세히 보기',icon:'eye',href:detail},
       j.video&&{label:'영상 저장 (MP4)',icon:'download',href:j.video,download:true},
       j.transparentSheet&&{label:'투명 시트 저장',icon:'download',href:j.transparentSheet,download:true},
+      j.gameSheet&&{label:'게임용 시트 저장',icon:'download',href:j.gameSheet,download:true},
       renameItem(j),recreateItem(j),removeItem(j)]));
   }else if(kind==='rigging'){
     actions.append(canEdit(j)?linkButton('리깅 스튜디오','rigging-editor?job='+encodeURIComponent(j.id),{cls:'ui-btn ui-btn--soft ui-btn--sm',iconName:'edit'}):linkButton('자세히',detail,{iconName:'eye'}));
@@ -441,7 +442,7 @@ function renderSpriteDetail(j,main,side){
   }
 
   const downloads=detailSection('다운로드');
-  for(const [name,desc,path,key] of [['스프라이트 시트','생성 영상에서 고르게 뽑은 프레임',j.spriteSheet,'spriteSheet'],['투명 시트','배경을 제거한 PNG 시트',j.transparentSheet,'transparentSheet'],['루프 보정 시트','자연스럽게 이어지는 구간으로 자른 시트',j.loopSheet,'loopSheet'],['루프 보정 투명 시트','',j.loopTransparentSheet,'loopTransparentSheet'],['영상 (MP4)','정규화된 결과 영상',j.video],['루프 보정 영상 (MP4)','',j.loopVideo],['H3 원본 영상','정규화 전 모델 출력',j.rawVideo]])
+  for(const [name,desc,path,key] of [['게임용 시트','캐릭터에 맞춘 셀 · 지면 정렬',j.gameSheet],['게임용 시트 정보 (JSON)','Phaser·PixiJS용 프레임, 기준점, 재생 시간',j.gameAtlas],['스프라이트 시트','생성 영상에서 뽑은 프레임',j.spriteSheet,'spriteSheet'],['투명 시트','배경을 제거한 PNG 시트',j.transparentSheet,'transparentSheet'],['루프 보정 시트','자연스럽게 이어지는 구간으로 자른 시트',j.loopSheet,'loopSheet'],['루프 보정 투명 시트','',j.loopTransparentSheet,'loopTransparentSheet'],['영상 (MP4)','정규화된 결과 영상',j.video],['루프 보정 영상 (MP4)','',j.loopVideo],['H3 원본 영상','정규화 전 모델 출력',j.rawVideo]])
     if(path)downloads.append(detailRow(name,desc,linkButton(key?'PNG 저장':'저장',path,{download:true,iconName:'download'}),key&&linkButton('GIF · 인계용','api/jobs/'+encodeURIComponent(j.id)+'/sheet.gif?source='+encodeURIComponent(key),{download:true,iconName:'download'})));
   for(const [key,path] of Object.entries(j.exportSheets||{}))downloads.append(detailRow(key.split('_')[1]+'프레임'+(key.endsWith('_transparent')?' 투명 시트':' 재추출 시트'),'',linkButton('PNG 저장',path,{download:true,iconName:'download'}),linkButton('GIF · 인계용','api/jobs/'+encodeURIComponent(j.id)+'/sheet.gif?source='+encodeURIComponent('export:'+key),{download:true,iconName:'download'})));
   if(j.frameWorkspace?.id)downloads.append(detailRow('수정 프레임 GIF','저장된 재생 속도로 내보냅니다.',linkButton('GIF 저장','api/frames/'+encodeURIComponent(j.frameWorkspace.id)+'/animation.gif',{download:true,iconName:'download'})));

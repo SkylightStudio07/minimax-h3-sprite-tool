@@ -24,6 +24,7 @@ import requests
 from PIL import Image
 from scipy import ndimage
 from subject_prompts import SUBJECT_DEFAULTS, subject_constraints
+import sprite_finish
 import sprite_loop
 import sprite_workflows
 import sprite_combat
@@ -485,23 +486,30 @@ def video_thumbnail(video_path: Path) -> bytes:
 
 
 def make_sprite_sheet(video_path: Path, output_path: Path, count: int, loop: bool = True,
-                      transparent_path: Path | None = None, tolerance: int = 24, background_mode: str = 'flat') -> None:
+                      transparent_path: Path | None = None, tolerance: int = 24, background_mode: str = 'flat',
+                      action: str | None = None, game_paths: tuple[Path, Path] | None = None) -> dict:
+    """Pack a sheet. With `action`, picks frames by motion; with `game_paths`, also writes the game sheet."""
     if background_mode not in ('ai','ai-sparks','ai-smooth','flat','subtle'):raise ValueError('배경 제거 방식을 확인하세요.')
     if transparent_path is not None and background_mode in ('ai','ai-sparks','ai-smooth','subtle') and not image_background.status()['ready']:
         raise ValueError('AI 배경 제거 모델이 준비되지 않았습니다.')
     container = av.open(str(video_path))
+    fps = float(container.streams.video[0].average_rate or 24)
     frames = [frame.to_image().convert("RGBA") for frame in container.decode(video=0)]
     container.close()
     if not frames:
         raise RuntimeError("No frames were decoded from the generated video.")
     count = max(2, min(count, len(frames)))
     # Uniform samples of a half-open cycle; do not blindly discard a unique final frame.
-    indices = sprite_loop.sample_indices(len(frames), count, loop)
+    pick = sprite_finish.pick(frames, count, action, loop) if action else dict(indices=sprite_loop.sample_indices(len(frames), count, loop), end=len(frames), method='even')
+    indices = pick['indices']
+    count = len(indices)
+    timing = sprite_finish.durations_ms(indices, pick['end'], fps)
     selected = [frames[index] for index in indices]
     cell_w = max(image.width for image in selected)
     cell_h = max(image.height for image in selected)
     columns = min(count, 8)
     rows = (count + columns - 1) // columns
+    game = None
     sheet = Image.new("RGBA", (cell_w * columns, cell_h * rows), (0, 0, 0, 0))
     for index, image in enumerate(selected):
         x = (index % columns) * cell_w + (cell_w - image.width) // 2
@@ -515,6 +523,7 @@ def make_sprite_sheet(video_path: Path, output_path: Path, count: int, loop: boo
         if background_mode == 'ai-smooth':
             import sprite_temporal_matte
             smoothed = sprite_temporal_matte.smooth_selected(frames, indices, image_background.remove_sprite, loop)
+        cutouts = []
         for index, image in enumerate(selected):
             if smoothed is not None:
                 cutout=smoothed[index]
@@ -525,8 +534,22 @@ def make_sprite_sheet(video_path: Path, output_path: Path, count: int, loop: boo
                 cutout=image_background.remove_sprite_with_sparks(image)
             else:
                 cutout=image_background.remove_sprite(image) if background_mode=='ai' else remove_flat_background(image,tolerance)
+            cutouts.append(cutout.convert('RGBA'))
             transparent.paste(cutout,((index % columns)*cell_w+(cell_w-image.width)//2,(index//columns)*cell_h+(cell_h-image.height)//2))
         transparent.save(transparent_path, optimize=True)
+        if game_paths:
+            game = write_game_sheet(cutouts, action, loop, timing, game_paths)
+    return dict(indices=[int(i) for i in indices], method=pick['method'], durationMs=timing, game=game)
+
+
+def write_game_sheet(frames, action, loop, timing, paths):
+    """The game sheet is an extra; failing to make one must not cost the finished job."""
+    try:
+        return sprite_finish.write(frames, action or 'custom', loop, timing, *paths)
+    except Exception:
+        for path in paths:
+            path.unlink(missing_ok=True)
+        return None
 
 
 def _subject_bbox(image: Image.Image) -> tuple[int, int, int, int]:
@@ -770,6 +793,8 @@ def run_job(job_id: str, payload: dict) -> None:
         background_mode=background_options(payload)
         pixel_report = None
         sheet_timing=None
+        packed=None
+        game_paths=(result_dir/f'{animation_type}_game.png',result_dir/f'{animation_type}_game.json') if transparent_path else None
         effective_count=int(payload.get('frameCount',8))
         if timing_report:
             effective_count=min(effective_count,timing_report['outputFrames'])
@@ -780,21 +805,27 @@ def run_job(job_id: str, payload: dict) -> None:
                 import sprite_pixel_export
                 update_job(job_id,state='packing',message='배경 윤곽·공통 팔레트·시간축을 정리해 도트 시트로 만드는 중')
                 pixel_report = sprite_pixel_export.export(video_path, prepared_bytes, sheet_path, transparent_path,
-                    effective_count, loop, combat['pixelColorLock'])
+                    effective_count, loop, combat['pixelColorLock'], animation_type, game_paths)
                 (result_dir/'pixel_export.json').write_text(json.dumps(pixel_report,ensure_ascii=False,indent=2),encoding='utf-8')
                 if pixel_report['edgeContactFrames']:
                     stabilization_warning=' / '.join(filter(None,[stabilization_warning,'일부 프레임이 캔버스 가장자리에 닿습니다. 결과를 확인하고 필요하면 동작 여백을 늘리거나 효과 강도를 낮춰 주세요.']))
             else:
                 sheet_mode='subtle' if subtle else background_mode
                 if transparent_path and subtle:update_job(job_id,state='packing',message='캐릭터와 옅은 검기 경계를 함께 정리하는 중')
-                make_sprite_sheet(video_path, sheet_path, effective_count, loop,
-                                  transparent_path, int(payload.get("backgroundTolerance", 24)), sheet_mode)
+                packed=make_sprite_sheet(video_path, sheet_path, effective_count, loop,
+                                  transparent_path, int(payload.get("backgroundTolerance", 24)), sheet_mode, animation_type, game_paths)
+                effective_count=len(packed['indices'])
+                if timing_report or packed['method']!='even':sheet_timing=packed['durationMs']
+                if (packed['game'] or {}).get('edgeContactFrames'):
+                    stabilization_warning=' / '.join(filter(None,[stabilization_warning,'일부 프레임이 캔버스 가장자리에 닿습니다. 결과를 확인하고 필요하면 동작 여백을 늘려 주세요.']))
         except Exception:
             if combat['pixelOutput']:raise
             if not transparent_path or not sheet_path.is_file():raise
             transparent_path.unlink(missing_ok=True)
             transparent_path=None
+            packed=None
             stabilization_warning=' / '.join(filter(None,[stabilization_warning,'배경 제거에 실패해 원본 영상과 시트만 저장했습니다.']))
+        game_report=(pixel_report or packed or {}).get('game')
         update_job(
             job_id,
             state="complete",
@@ -812,6 +843,10 @@ def run_job(job_id: str, payload: dict) -> None:
             backgroundRemoval=('flat' if combat['pixelOutput'] else background_mode) if transparent_path else None,
             pixelExport=pixel_report,
             motionTiming=timing_report,
+            gameSheet=f"/outputs/results/{job_id}/{animation_type}_game.png" if game_report else None,
+            gameAtlas=f"/outputs/results/{job_id}/{animation_type}_game.json" if game_report else None,
+            gameExport=game_report,
+            sheetSelection=(pixel_report or packed or {}).get('method'),
             sheetTimingMs=pixel_report['durationMs'] if pixel_report else sheet_timing,
             frameCount=pixel_report['frameCount'] if pixel_report else effective_count,
         )
