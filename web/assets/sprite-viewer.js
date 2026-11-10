@@ -1,5 +1,6 @@
-/* Read-only sprite sheet viewer. Opens a finished job (?job=<id>[&source=<key>]) or dropped local files,
- * which never leave the browser. A sheet is cut by its atlas JSON when it has one, otherwise by a grid. */
+/* Sprite sheet viewer. Opens a finished job (?job=<id>[&source=<key>]) or dropped local files, which never
+ * leave the browser. A sheet is cut by its atlas JSON when it has one, otherwise by a grid. A job's
+ * transparent frame can also be turned into a breathing loop, which the server adds as a new sheet. */
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
@@ -10,7 +11,7 @@ const DEFAULT_FPS = 8, THUMB = 56, ZOOM_STEP = 1.25, MIN_ZOOM = .1, MAX_ZOOM = 1
 const canvas = $('svCanvas'), ctx = canvas.getContext('2d'), stage = $('svStage'), strip = $('svStrip');
 const scratch = document.createElement('canvas'), scratchCtx = scratch.getContext('2d');
 const loaded = new Map();
-let sheets = [], sheet = null, image = null, frames = [], timed = false;
+let sheets = [], sheet = null, image = null, frames = [], timed = false, jobId = null;
 let index = 0, ticket = 0, mode = 'color', zoom = 1, fit = true;
 let playing = false, lastTick = 0, carried = 0, thumbs = [], thumbWatch = null;
 
@@ -58,6 +59,23 @@ function draw() {
     ctx.fillRect(0, 0, f.sw, f.sh);
     ctx.drawImage(scratch, f.ox, f.oy);
   } else ctx.drawImage(image, f.x, f.y, f.w, f.h, f.ox, f.oy, f.w, f.h);
+  if (!$('svBreathe').hidden) drawMarks(f);
+}
+const markValue = id => Number($(id).value);
+function drawMarks(f) {
+  const neck = markValue('svNeck'), axis = markValue('svAxis'), half = markValue('svHalf');
+  ctx.save();
+  ctx.lineWidth = Math.max(1, 1.5 / zoom);
+  ctx.strokeStyle = '#ff3b6b';
+  ctx.beginPath(); ctx.moveTo(0, neck); ctx.lineTo(f.sw, neck); ctx.stroke();
+  ctx.strokeStyle = '#19c8ff';
+  ctx.beginPath(); ctx.moveTo(axis, 0); ctx.lineTo(axis, f.sh); ctx.stroke();
+  ctx.setLineDash([8 / zoom, 6 / zoom]);
+  ctx.strokeStyle = '#ffd21f';
+  ctx.beginPath();
+  for (const x of [axis - half, axis + half]) { ctx.moveTo(x, neck); ctx.lineTo(x, f.sh); }
+  ctx.stroke();
+  ctx.restore();
 }
 function updateReadout() {
   const f = frames[index];
@@ -190,6 +208,8 @@ async function selectSheet(target) {
     $('svGrid').hidden = !!sheet.atlasData;
     if (!sheet.atlasData) { $('svColumns').value = sheet.columns; $('svRows').value = sheet.rows; $('svFrames').value = sheet.count; }
     $('svEmpty').hidden = true; canvas.hidden = false; $('svControls').hidden = false;
+    $('svBreatheOpen').hidden = !(jobId && sheet.alpha);
+    if ($('svBreatheOpen').hidden) closeBreathe();
     layOut();
     status(sheet.guessed ? 'JSON이 없어 칸 수를 추정했습니다. 프레임이 어긋나면 열·행을 맞춰 주세요.' : '');
   } catch (error) { if (mine === ticket) status(error.message); }
@@ -233,6 +253,58 @@ async function openFiles(files) {
   $('svTitle').textContent = list.length === 1 ? list[0].label : `시트 ${list.length}개`;
   await useSheets(list);
 }
+
+/* ------------------------------------------------------------ breathing loop */
+function closeBreathe() {
+  $('svBreathe').hidden = true;
+  stage.classList.remove('is-marking');
+  if (frames.length) draw();
+}
+// Only a starting point: a held weapon pulls these off, which is why the lines can be dragged.
+function guessMarks(f) {
+  scratch.width = f.w; scratch.height = f.h;
+  scratchCtx.drawImage(image, f.x, f.y, f.w, f.h, 0, 0, f.w, f.h);
+  const data = scratchCtx.getImageData(0, 0, f.w, f.h).data;
+  let top = f.h, bottom = 0, left = f.w, right = 0;
+  for (let y = 0; y < f.h; y++) for (let x = 0; x < f.w; x++) {
+    if (data[(y * f.w + x) * 4 + 3] < 128) continue;
+    top = Math.min(top, y); bottom = Math.max(bottom, y); left = Math.min(left, x); right = Math.max(right, x);
+  }
+  if (bottom <= top) return null;
+  const band = [top + (bottom - top) * .22, top + (bottom - top) * .5];
+  let sum = 0, weight = 0;
+  for (let y = Math.round(band[0]); y < band[1]; y++) for (let x = 0; x < f.w; x++) if (data[(y * f.w + x) * 4 + 3] >= 128) { sum += x; weight++; }
+  return {neck: Math.round(top + (bottom - top) * .2) + f.oy, axis: Math.round(weight ? sum / weight : (left + right) / 2) + f.ox, half: Math.max(2, Math.round((bottom - top) * .13))};
+}
+$('svBreatheOpen').onclick = () => {
+  if (!$('svBreathe').hidden) { closeBreathe(); return; }
+  setPlaying(false);
+  const f = frames[index], marks = guessMarks(f);
+  if (!marks) { status('이 프레임에는 보이는 캐릭터가 없습니다.'); return; }
+  $('svNeck').max = f.sh - 1; $('svAxis').max = f.sw - 1; $('svHalf').max = Math.floor(f.sw / 2);
+  $('svNeck').value = marks.neck; $('svAxis').value = marks.axis; $('svHalf').value = marks.half;
+  $('svBreathe').hidden = false;
+  stage.classList.add('is-marking');
+  status('');
+  draw();
+};
+$('svBreatheClose').onclick = closeBreathe;
+for (const id of ['svNeck', 'svAxis', 'svHalf']) $(id).oninput = draw;
+$('svBreathe').onsubmit = async event => {
+  event.preventDefault();
+  const button = $('svBreatheMake');
+  button.disabled = true;
+  status('숨쉬기 루프를 만드는 중…');
+  try {
+    const made = await api('/api/jobs/' + encodeURIComponent(jobId) + '/breathe', {source: sheet.key, frame: index, neck: markValue('svNeck'), axis: markValue('svAxis'), half: markValue('svHalf'), frameCount: markValue('svBreatheCount'), fps: markValue('svBreatheFps')});
+    const data = await api('/api/jobs/' + encodeURIComponent(jobId) + '/sheets');
+    closeBreathe();
+    await useSheets(data.sheets, made.key);
+    setPlaying(true);
+    status('숨쉬기 루프를 시트 목록에 추가했습니다.');
+  } catch (error) { status(error.message); }
+  button.disabled = false;
+};
 
 /* ------------------------------------------------------------------- inputs */
 $('svPlay').onclick = () => setPlaying(!playing);
@@ -285,19 +357,40 @@ stage.addEventListener('wheel', event => {
   event.preventDefault();
   setZoom(zoom * (event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP), event);
 }, {passive: false});
-let pan = null;
+let pan = null, marking = null;
+function framePoint(event) {
+  const box = canvas.getBoundingClientRect();
+  return {x: (event.clientX - box.left) / box.width * canvas.width, y: (event.clientY - box.top) / box.height * canvas.height};
+}
+function nearestMark(event) {
+  const p = framePoint(event), reach = 12 / (canvas.getBoundingClientRect().width / canvas.width);
+  const axis = markValue('svAxis'), half = markValue('svHalf');
+  const lines = [['neck', Math.abs(p.y - markValue('svNeck'))], ['axis', Math.abs(p.x - axis)], ['left', Math.abs(p.x - (axis - half))], ['right', Math.abs(p.x - (axis + half))]];
+  const [name, distance] = lines.sort((a, b) => a[1] - b[1])[0];
+  return distance <= reach ? name : null;
+}
+function moveMark(event) {
+  const p = framePoint(event), clamp = (value, low, high) => Math.round(Math.max(low, Math.min(high, value)));
+  if (marking === 'neck') $('svNeck').value = clamp(p.y, 0, canvas.height - 1);
+  else if (marking === 'axis') $('svAxis').value = clamp(p.x, 0, canvas.width - 1);
+  else $('svHalf').value = clamp(Math.abs(p.x - markValue('svAxis')), 2, Math.floor(canvas.width / 2));
+  draw();
+}
 stage.addEventListener('pointerdown', event => {
   if (!frames.length) return;
+  marking = $('svBreathe').hidden ? null : nearestMark(event);
+  if (marking) { stage.setPointerCapture(event.pointerId); return; }
   pan = {x: event.clientX, y: event.clientY, left: stage.scrollLeft, top: stage.scrollTop};
   stage.setPointerCapture(event.pointerId);
   stage.classList.add('is-panning');
 });
 stage.addEventListener('pointermove', event => {
+  if (marking) { moveMark(event); return; }
   if (!pan) return;
   stage.scrollLeft = pan.left - (event.clientX - pan.x);
   stage.scrollTop = pan.top - (event.clientY - pan.y);
 });
-for (const type of ['pointerup', 'pointercancel']) stage.addEventListener(type, () => { pan = null; stage.classList.remove('is-panning'); });
+for (const type of ['pointerup', 'pointercancel']) stage.addEventListener(type, () => { pan = null; marking = null; stage.classList.remove('is-panning'); });
 new ResizeObserver(() => { if (fit && frames.length) applyZoom(); }).observe(stage);
 
 let dragDepth = 0;
@@ -322,6 +415,7 @@ document.addEventListener('drop', async event => {
 (async () => {
   const params = new URLSearchParams(location.search), job = params.get('job');
   if (!job) return;
+  jobId = job;
   $('svBack').href = '/#/jobs/' + encodeURIComponent(job);
   $('svBack').textContent = '결과로 돌아가기';
   try {

@@ -15,6 +15,8 @@ from PIL import Image
 import idle_tool as engine
 import image_engine
 import rigging_engine
+import sprite_breathe
+import sprite_finish
 import sprite_gif
 
 RECIPE_KEYS=('model','preset','prompt','negativePrompt','styleId','styleStrength','lookId','width','height','steps','cfg','denoise','assetSpec','counterMixStrength','cutsceneMixStrength','cutsceneFaceStrength')
@@ -201,13 +203,21 @@ def register(app,db,auth,data,payload):
                 info=r.get('exportSheetInfo',{}).get(key,{})
                 match=re.match(r'sheet_(\d+)_',key)
                 count=info.get('frameCount',int(match[1]) if match else 8)
-                kind_label='투명' if key.endswith('_transparent') else '게임용' if key.endswith('_game') else '재추출'
+                kind_label='숨쉬기 루프' if info.get('kind')=='breathe' else '투명' if key.endswith('_transparent') else '게임용' if key.endswith('_game') else '재추출'
                 out.append(dict(key='export:'+key,label=f'{count}프레임 {kind_label} · {key.split("_")[2][:4] if match else key}',url=url,count=count,**{k:info[k] for k in ('columns','rows') if k in info}))
         elif kind=='image' and p.get('sheetLayout'):
             layout=p['sheetLayout']
             for i,item in enumerate(r.get('images',[])):
                 out.append(dict(key='image:'+str(i),label='시트 후보 '+str(i+1),url=item['url'],count=layout['columns']*layout['rows'],columns=layout['columns'],rows=layout['rows']))
         return out
+
+    def sheet_detail(choice,r):
+        key=choice['key'];count=int(choice['count']);columns=choice.get('columns',min(count,8))
+        sheet=dict(choice,columns=columns,rows=choice.get('rows',math.ceil(count/columns)))
+        sheet['alpha']=key in ('gameSheet','transparentSheet','loopTransparentSheet') or (key.startswith('export:') and key.endswith(('_transparent','_game')))
+        atlas=r.get('gameAtlas') if key=='gameSheet' else r.get('exportSheets',{}).get(key[len('export:'):-len('_game')]+'_atlas') if key.startswith('export:') and key.endswith('_game') else None
+        if atlas:sheet['atlas']=atlas
+        return sheet
 
     @app.get('/api/jobs/<jid>/sheets')
     @auth()
@@ -219,13 +229,46 @@ def register(app,db,auth,data,payload):
         timing=(r.get('pixelExport') or {}).get('durationMs') or r.get('sheetTimingMs')
         sheets=[]
         for choice in sheet_choices(row):
-            key=choice['key'];count=int(choice['count']);columns=choice.get('columns',min(count,8))
-            sheet=dict(choice,columns=columns,rows=choice.get('rows',math.ceil(count/columns)))
-            atlas=r.get('gameAtlas') if key=='gameSheet' else r.get('exportSheets',{}).get(key[len('export:'):-len('_game')]+'_atlas') if key.startswith('export:') and key.endswith('_game') else None
-            if atlas:sheet['atlas']=atlas
-            if key in ('gameSheet','spriteSheet','transparentSheet') and isinstance(timing,list) and len(timing)==count:sheet['durationMs']=timing
+            sheet=sheet_detail(choice,r)
+            if sheet['key'] in ('gameSheet','spriteSheet','transparentSheet') and isinstance(timing,list) and len(timing)==int(sheet['count']):sheet['durationMs']=timing
             sheets.append(sheet)
         return jsonify(title=p.get('resultTitle') or p.get('title') or p.get('animationType') or '스프라이트',sheets=sheets)
+
+    @app.post('/api/jobs/<jid>/breathe')
+    @auth()
+    def breathe_sheet(jid):
+        p=payload();count=p.get('frameCount');fps=p.get('fps');index=p.get('frame')
+        if type(fps) is not int or not 1<=fps<=60:raise ValueError('FPS는 1~60으로 입력하세요.')
+        if type(index) is not int:raise ValueError('프레임 번호를 확인하세요.')
+        with db() as con:row=con.execute('SELECT * FROM jobs WHERE id=?',(jid,)).fetchone()
+        if not row or row['state']!='complete':raise ValueError('완료된 결과를 선택하세요.')
+        if row['user_id']!=request.team_user['id'] and request.team_user['role']!='admin':return jsonify(error='본인 결과 또는 관리자만 만들 수 있습니다.'),403
+        r=json.loads(row['result'] or '{}')
+        choice=next((c for c in sheet_choices(row) if c['key']==p.get('source')),None)
+        if not choice:raise ValueError('시트를 선택하세요.')
+        sheet=sheet_detail(choice,r)
+        if not sheet['alpha']:raise ValueError('투명 배경 시트에서만 만들 수 있습니다.')
+        folder=(engine.RESULT_ROOT/jid).resolve();prefix=f'/outputs/results/{jid}/'
+        files=[folder/Path(u[len(prefix):]).name for u in (sheet['url'],sheet.get('atlas')) if u]
+        if not sheet['url'].startswith(prefix) or not all(f.is_file() for f in files):return jsonify(error='시트 파일을 찾을 수 없습니다.'),404
+        still=sprite_breathe.read_frame(files[0],index,sheet['columns'],sheet['rows'],files[1] if len(files)>1 else None)
+        frames=sprite_breathe.loop(still,p.get('neck'),p.get('axis'),p.get('half'),count)
+        key=f'sheet_{count}_{secrets.token_hex(8)}';png=folder/(key+'_game.png');atlas=folder/(key+'_game.json')
+        try:
+            made=sprite_finish.write(frames,'idle',True,sprite_finish.uniform_ms(count,fps),png,atlas,None,fps)
+            with db() as con:
+                con.execute('BEGIN IMMEDIATE')
+                current=con.execute("SELECT result FROM jobs WHERE id=? AND state='complete'",(jid,)).fetchone()
+                if not current:return jsonify(error='만드는 중 결과가 삭제되었습니다.'),409
+                updated=json.loads(current['result'] or '{}')
+                updated.setdefault('exportSheets',{}).update({key+'_game':prefix+png.name,key+'_atlas':prefix+atlas.name})
+                updated.setdefault('exportSheetInfo',{})[key+'_game']=dict(kind='breathe',frameCount=made['frameCount'],columns=made['columns'],rows=made['rows'],fps=fps,oversize=made['oversize'],edgeContactFrames=made['edgeContactFrames'])
+                con.execute('UPDATE jobs SET result=? WHERE id=?',(json.dumps(updated),jid))
+            png=atlas=None
+            return jsonify(ok=True,key=f'export:{key}_game')
+        finally:
+            for leftover in (png,atlas):
+                if leftover:leftover.unlink(missing_ok=True)
 
     @app.get('/api/jobs/<jid>/sheet.gif')
     @auth()

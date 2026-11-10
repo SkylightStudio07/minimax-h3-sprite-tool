@@ -27,6 +27,8 @@ canvas[data-bg="magenta"] { background: #f0f; }
 .sv-field { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-2); }
 .sv-field select { width: auto; }
 .sv-num { width: 68px; }
+.sv-hint { flex-basis: 100%; font-size: 13px; color: var(--text-2); }
+.sv-stage.is-marking { cursor: crosshair; }
 .sv-grid, .sv-zoom { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .sv-zoom output { min-width: 48px; text-align: center; font-size: 13px; font-variant-numeric: tabular-nums; }
 .sv-info { margin-left: auto; font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }

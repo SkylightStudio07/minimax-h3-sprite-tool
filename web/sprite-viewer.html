@@ -67,8 +67,19 @@
       <button id="svFit" class="ui-btn ui-btn--sm" type="button">맞춤</button>
       <button id="svActual" class="ui-btn ui-btn--sm" type="button">1:1</button>
     </span>
+    <button id="svBreatheOpen" class="ui-btn ui-btn--sm" type="button" hidden title="이 프레임 한 장으로 숨 쉬는 루프를 만듭니다. GPU를 쓰지 않아요.">숨쉬기 루프</button>
     <output id="svInfo" class="sv-info"></output>
   </div>
+  <form id="svBreathe" class="sv-row" hidden>
+    <span class="sv-hint">화면의 선을 끌어 목선, 몸 중심, 몸통 폭에 맞춰 주세요.</span>
+    <label class="sv-field">목 높이 <input id="svNeck" class="ui-input sv-num" type="number" min="0" required></label>
+    <label class="sv-field">몸 중심 <input id="svAxis" class="ui-input sv-num" type="number" min="0" required></label>
+    <label class="sv-field">몸통 반폭 <input id="svHalf" class="ui-input sv-num" type="number" min="2" required></label>
+    <label class="sv-field">프레임 <input id="svBreatheCount" class="ui-input sv-num" type="number" min="6" max="64" value="24" required></label>
+    <label class="sv-field">FPS <input id="svBreatheFps" class="ui-input sv-num" type="number" min="1" max="60" value="12" required></label>
+    <button id="svBreatheMake" class="ui-btn ui-btn--sm ui-btn--primary" type="submit">만들기</button>
+    <button id="svBreatheClose" class="ui-btn ui-btn--sm" type="button">닫기</button>
+  </form>
 </section>
 
 <nav id="svStrip" class="sv-strip" aria-label="프레임 목록" hidden></nav>

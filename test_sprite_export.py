@@ -188,6 +188,33 @@ class Route(CharacterTests):
         self.assertEqual(self.admin.get('/sprite-viewer').status_code, 200)
         self.assertEqual(self.admin.get('/api/jobs/missing/sheets').status_code, 400)
 
+    def breathe(self, source, **kw):
+        return self.post(self.admin, 'jobs/done/breathe', **{'source': source, 'frame': 0, 'neck': 40, 'axis': 60, 'half': 8, 'frameCount': 12, 'fps': 12, **kw})
+
+    def test_breathing_loop_becomes_a_sheet_with_an_atlas(self):
+        self.assertEqual(self.extract(frameCount=20, removeBackground=True, backgroundRemoval='flat', sheetFps=36, sheetColumns=5).status_code, 200)
+        before = self.admin.get('/api/jobs/done/sheets').json['sheets']
+        source = next(s for s in before if s['key'].endswith('_game'))
+        self.assertTrue(source['alpha'])
+        cell = next(iter(self.admin.get(source['atlas']).json['frames'].values()))['sourceSize']
+        response = self.breathe(source['key'], neck=cell['h'] // 3, axis=cell['w'] // 2, half=4)
+        self.assertEqual(response.status_code, 200, response.json)
+        made = next(s for s in self.admin.get('/api/jobs/done/sheets').json['sheets'] if s['key'] == response.json['key'])
+        self.assertIn('숨쉬기 루프', made['label'])
+        self.assertEqual(made['count'], 12)
+        self.assertEqual(len(self.admin.get(made['atlas']).json['frames']), 12)
+
+    def test_breathing_needs_a_transparent_sheet_and_sensible_marks(self):
+        self.assertEqual(self.extract(frameCount=20, removeBackground=True, backgroundRemoval='flat').status_code, 200)
+        sheets = self.admin.get('/api/jobs/done/sheets').json['sheets']
+        opaque = next(s for s in sheets if not s['alpha'])
+        clear = next(s for s in sheets if s['key'].endswith('_transparent'))
+        self.assertEqual(self.breathe(opaque['key']).status_code, 400)
+        self.assertEqual(self.breathe(clear['key'], neck=9999).status_code, 400)
+        self.assertEqual(self.breathe(clear['key'], frameCount=3).status_code, 400)
+        self.assertEqual(self.breathe(clear['key'], frame=9999).status_code, 400)
+        self.assertEqual(self.post(self.guest, 'jobs/done/breathe', source=clear['key']).status_code, 401)
+
     def test_more_than_64_frames_is_allowed(self):
         self.assertEqual(self.extract(frameCount=129).status_code, 400)
         self.assertEqual(self.extract(frameCount=80).status_code, 200)
